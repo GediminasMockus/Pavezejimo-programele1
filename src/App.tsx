@@ -23,6 +23,8 @@ import {
   type RequestStatus,
   type UserProfile,
 } from '@/lib/supabase';
+import { useToast } from '@/lib/useToast';
+import { ToastContainer } from '@/components/Toast';
 import { TripForm } from '@/components/TripForm';
 import { TripCard } from '@/components/TripCard';
 import { ChatDrawer } from '@/components/ChatDrawer';
@@ -46,6 +48,7 @@ export default function App() {
   const [activeRole, setActiveRole] = useState<TripRole | null>(null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const { toasts, success, error, info, warning, remove } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -76,6 +79,7 @@ export default function App() {
   return (
     <div className="min-h-screen text-slate-800">
       <Background />
+      <ToastContainer toasts={toasts} onRemove={remove} />
       {screen === 'home' && (
         <HomeScreen
           userId={userId}
@@ -94,6 +98,7 @@ export default function App() {
             setScreen('home');
             setActiveRole(null);
           }}
+          toast={{ success, error, info, warning }}
         />
       )}
     </div>
@@ -200,7 +205,7 @@ function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (ro
   );
 }
 
-function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; onBack: () => void }) {
+function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: string; onBack: () => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
@@ -395,9 +400,13 @@ function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; 
         ? 'Šiai kelionei nepakanka laisvų vietų.'
         : 'Nepavyko atnaujinti užklausos. Bandykite dar kartą.';
       setError(message);
+      toast.error(message);
       setTimeout(() => setError(null), 3000);
     } else {
       loadRequests();
+      if (status === 'accepted') toast.success('Užklausa patvirtinta!');
+      else if (status === 'rejected') toast.info('Užklausa atmesta');
+      else if (status === 'cancelled') toast.info('Užklausa atšaukta');
     }
   }
 
@@ -489,6 +498,7 @@ function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; 
             onSubmitted={() => {
               setShowForm(false);
               loadTrips();
+              toast.success('Skelbimas sukurtas!');
             }}
           />
         )}
@@ -502,6 +512,7 @@ function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; 
             onSubmitted={() => {
               setEditTrip(null);
               loadTrips();
+              toast.success('Skelbimas atnaujintas!');
             }}
           />
         )}
@@ -528,7 +539,7 @@ function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; 
             driverTrips={ownTrips.filter((t) => t.role === 'driver')}
             userId={userId}
             onClose={() => setOfferTarget(null)}
-            onSubmitted={() => { setOfferTarget(null); loadRequests(); }}
+            onSubmitted={() => { setOfferTarget(null); loadRequests(); toast.success('Pasiūlymas išsiųstas!'); }}
           />
         )}
 
@@ -540,6 +551,7 @@ function ListScreen({ role, userId, onBack }: { role: TripRole; userId: string; 
             onSubmitted={() => {
               setRequestTarget(null);
               loadRequests();
+              toast.success('Užklausa išsiųsta!');
             }}
           />
         )}

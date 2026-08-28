@@ -135,6 +135,7 @@ export function RequestModal({
 
     const payload: NewRideRequest = {
       trip_id: trip.id,
+      request_type: 'passenger_request',
       passenger_name: passengerName.trim(),
       passenger_id: userId,
       pickup_location: pickupAddr.display_name.trim(),
