@@ -15,6 +15,7 @@ export type TripRole = 'driver' | 'passenger';
 export type PriceUnit = 'asmeniui' | 'viso';
 export type RequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 export type TripStatus = 'active' | 'completed';
+export type NotificationType = 'request_accepted' | 'request_rejected' | 'trip_reminder' | 'new_message';
 
 export interface Trip {
   id: string;
@@ -166,4 +167,16 @@ export interface NewMessage {
   author_id: string;
   author_name: string;
   body: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  related_trip_id: string | null;
+  related_request_id: string | null;
+  read: boolean;
+  created_at: string;
 }

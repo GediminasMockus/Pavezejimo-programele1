@@ -9,6 +9,7 @@ import {
   Loader2,
   Map as MapIcon,
   List,
+  Grid,
   Bell,
   Inbox,
   Shield,
@@ -40,6 +41,7 @@ import { AdminLogs } from '@/components/AdminLogs';
 import { AuthScreen } from '@/components/AuthScreen';
 import { Background } from '@/components/Background';
 import { SettingsModal } from '@/components/SettingsModal';
+import { NotificationDrawer } from '@/components/NotificationDrawer';
 
 type Screen = 'home' | 'list';
 
@@ -108,16 +110,66 @@ export default function App() {
 function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (role: TripRole) => void; onSignOut: () => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     supabase.from('user_profiles').select('is_admin').eq('id', userId).maybeSingle()
       .then(({ data }) => setIsAdmin(data?.is_admin === true));
   }, [userId]);
 
+  useEffect(() => {
+    // Load unread count
+    const loadUnreadCount = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('read', false);
+      setUnreadCount(data?.length || 0);
+    };
+    loadUnreadCount();
+
+    // Listen for new notifications
+    const channel = supabase
+      .channel('notifications-count')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        if (payload.new.user_id === userId && !payload.new.read) {
+          setUnreadCount(prev => prev + 1);
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
+        if (payload.new.user_id === userId) {
+          if (payload.new.read && !payload.old.read) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+          } else if (!payload.new.read && payload.old.read) {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative">
       <div className="absolute top-4 right-4 flex items-center gap-1">
+        <button
+          onClick={() => setShowNotifications(true)}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors relative"
+          aria-label="Pranešimai"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => setShowSettings(true)}
           className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
@@ -151,6 +203,12 @@ function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (ro
         />
       )}
       {showAdmin && <AdminLogs onClose={() => setShowAdmin(false)} />}
+      {showNotifications && (
+        <NotificationDrawer
+          userId={userId}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
 
       <div className="text-center mb-10 sm:mb-14">
         <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 shadow-xl shadow-blue-500/40 mb-6 animate-pulse-slow">
@@ -217,12 +275,14 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   const [chatRequest, setChatRequest] = useState<RideRequest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [requestTarget, setRequestTarget] = useState<Trip | null>(null);
   const [offerTarget, setOfferTarget] = useState<Trip | null>(null);
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
   const [previewRequest, setPreviewRequest] = useState<RideRequest | null>(null);
   const [profileTarget, setProfileTarget] = useState<{ userId: string; name: string; trip: Trip } | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'grid'>('list');
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -232,6 +292,42 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // Load unread notifications count
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('read', false);
+      setUnreadCount(data?.length || 0);
+    };
+    loadUnreadCount();
+
+    const channel = supabase
+      .channel('notifications-count-list')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        if (payload.new.user_id === userId && !payload.new.read) {
+          setUnreadCount(prev => prev + 1);
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
+        if (payload.new.user_id === userId) {
+          if (payload.new.read && !payload.old.read) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+          } else if (!payload.new.read && payload.old.read) {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
   const clientId = userId;
 
   const loadTrips = useCallback(async () => {
@@ -449,6 +545,18 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
             </div>
           )}
           <button
+            onClick={() => setShowNotifications(true)}
+            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors relative"
+            aria-label="Pranešimai"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => setShowForm(true)}
             className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white text-sm font-semibold shadow-md shadow-blue-600/25 hover:bg-blue-700 active:scale-95 transition-all"
           >
@@ -476,6 +584,15 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
           >
             <List className="w-4 h-4" />
             Sąrašas
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+              viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Grid className="w-4 h-4" />
+            Kortelės
           </button>
           <button
             onClick={() => setViewMode('map')}
@@ -597,6 +714,12 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
             userId={userId}
             onClose={() => setShowSettings(false)}
             onSignOut={() => supabase.auth.signOut()}
+          />
+        )}
+        {showNotifications && (
+          <NotificationDrawer
+            userId={userId}
+            onClose={() => setShowNotifications(false)}
           />
         )}
 
@@ -784,7 +907,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Mano skelbimai ({ownTrips.length})
                 </h2>
-                <div className="flex flex-col gap-3">
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {ownTrips.map((t) => {
                     const tripRequests = requestsByTrip.get(t.id) ?? [];
                     const pendingCount = tripRequests.filter((r) => r.status === 'pending').length;
@@ -831,7 +954,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {filteredOtherTrips.map((t) => {
                     const alreadyRequested = mySentRequestTripIds.has(t.id);
                     const myRequest = mySentRequests.find((r) => r.trip_id === t.id);
