@@ -282,7 +282,10 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
   const [previewRequest, setPreviewRequest] = useState<RideRequest | null>(null);
   const [profileTarget, setProfileTarget] = useState<{ userId: string; name: string; trip: Trip } | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map' | 'grid'>(() => {
+    const saved = localStorage.getItem('viewMode');
+    return (saved === 'list' || saved === 'map' || saved === 'grid') ? saved : 'list';
+  });
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -292,6 +295,10 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('viewMode', viewMode);
+  }, [viewMode]);
 
   // Load unread notifications count
   useEffect(() => {
@@ -774,7 +781,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 </h2>
 
                 {pendingDriverRequests.length > 0 && (
-                  <div className="flex flex-col gap-3 mb-4">
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4 mb-4' : 'flex flex-col gap-3 mb-4'}>
                     {pendingDriverRequests.map((r) => {
                       const t = findTripById(r.trip_id);
                       if (!t) return null;
@@ -797,8 +804,8 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 )}
 
                 {acceptedDriverRequests.length > 0 && (
-                  <div className="flex flex-col gap-3 mb-4">
-                    <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Patvirtintos</p>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4 mb-4' : 'flex flex-col gap-3 mb-4'}>
+                    <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-emerald-600 uppercase tracking-wide' : 'text-xs font-semibold text-emerald-600 uppercase tracking-wide'}>Patvirtintos</p>
                     {acceptedDriverRequests.map((r) => {
                       const t = findTripById(r.trip_id);
                       if (!t) return null;
@@ -820,8 +827,8 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 )}
 
                 {rejectedDriverRequests.length > 0 && (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-semibold text-red-500 uppercase tracking-wide">Atmestos</p>
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
+                    <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-red-500 uppercase tracking-wide' : 'text-xs font-semibold text-red-500 uppercase tracking-wide'}>Atmestos</p>
                     {rejectedDriverRequests.map((r) => {
                       const t = findTripById(r.trip_id);
                       if (!t) return null;
@@ -836,7 +843,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
             {isDriver && mySentOffers.length > 0 && (
               <section className="mb-8">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Mano pasiūlymai keleiviams ({mySentOffers.length})</h2>
-                <div className="flex flex-col gap-3">
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {mySentOffers.map((r) => { const t = findTripById(r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} />; })}
                 </div>
               </section>
@@ -848,7 +855,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                   <Car className="w-4 h-4" /> Vairuotojų pasiūlymai ({myReceivedOffers.length})
                 </h2>
-                <div className="flex flex-col gap-3">
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {myReceivedOffers.map((r) => {
                     const t = findTripById(r.trip_id);
                     if (!t) return null;
@@ -869,7 +876,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Mano užklausos ({mySentRequests.length})
                 </h2>
-                <div className="flex flex-col gap-3">
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {mySentRequests.map((r) => {
                     const t = findTripById(r.trip_id);
                     if (!t) return null;
@@ -898,7 +905,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Mano skelbimai ({ownTrips.length})
                 </h2>
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {ownTrips.map((t) => {
                     const tripRequests = requestsByTrip.get(t.id) ?? [];
                     const pendingCount = tripRequests.filter((r) => r.status === 'pending').length;
@@ -945,7 +952,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                   </p>
                 </div>
               ) : (
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {filteredOtherTrips.map((t) => {
                     const alreadyRequested = mySentRequestTripIds.has(t.id);
                     const myRequest = mySentRequests.find((r) => r.trip_id === t.id);
