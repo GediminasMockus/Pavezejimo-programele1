@@ -246,7 +246,7 @@ export function ChatDrawer({
                     Kita pusė {otherConfirmed ? 'patvirtino' : 'laukia'}
                   </span>
                 </div>
-                {!myConfirmed && (
+                {!myConfirmed && !bothConfirmed && (
                   <button
                     onClick={handleConfirm}
                     disabled={confirming}

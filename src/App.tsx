@@ -442,7 +442,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     return map;
   }, [allRequests]);
 
-  const mySentRequests = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'passenger_request');
+  const mySentRequests = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'passenger_request' && r.status !== 'cancelled');
   const myReceivedOffers = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'driver_offer');
   const mySentOffers = allRequests.filter((r) => r.driver_id === clientId && r.request_type === 'driver_offer');
   const mySentRequestTripIds = new Set(mySentRequests.map((r) => r.trip_id));
@@ -577,22 +577,13 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
       <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-4">
         <div className="inline-flex rounded-full bg-slate-100 p-1 gap-1">
           <button
-            onClick={() => setViewMode('list')}
+            onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
             className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              viewMode === 'list' || viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            <List className="w-4 h-4" />
-            Sąrašas
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-            Kortelės
+            {viewMode === 'list' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+            {viewMode === 'list' ? 'Kortelės' : 'Sąrašas'}
           </button>
           <button
             onClick={() => setViewMode('map')}
