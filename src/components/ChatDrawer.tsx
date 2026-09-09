@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, X, Loader2, Check, CheckCheck, Star } from 'lucide-react';
+import { MessageSquare, Send, X, Loader2, Check, CheckCheck, Star, Navigation } from 'lucide-react';
 import {
   supabase,
   type Trip,
@@ -68,12 +68,22 @@ export function ChatDrawer({
 
   async function loadConfirmation() {
     if (!request) return;
-    if (isPassengerSide) {
-      setMyConfirmed(request.passenger_confirmed);
-      setOtherConfirmed(request.driver_confirmed);
-    } else if (isDriverSide) {
-      setMyConfirmed(request.driver_confirmed);
-      setOtherConfirmed(request.passenger_confirmed);
+    
+    // Fetch fresh request data from database to get latest confirmation status
+    const { data: freshRequest } = await supabase
+      .from('ride_requests')
+      .select('*')
+      .eq('id', request.id)
+      .single();
+    
+    if (freshRequest) {
+      if (isPassengerSide) {
+        setMyConfirmed(freshRequest.passenger_confirmed);
+        setOtherConfirmed(freshRequest.driver_confirmed);
+      } else if (isDriverSide) {
+        setMyConfirmed(freshRequest.driver_confirmed);
+        setOtherConfirmed(freshRequest.passenger_confirmed);
+      }
     }
   }
 
@@ -131,6 +141,13 @@ export function ChatDrawer({
 
   async function handleConfirm() {
     if (!request) return;
+    
+    // Check if already confirmed to avoid unnecessary RPC call
+    if (myConfirmed) {
+      setError(null);
+      return;
+    }
+    
     setConfirming(true);
     setError(null);
     const { data, error } = await supabase.rpc('confirm_ride', { p_request_id: request.id });
@@ -168,6 +185,76 @@ export function ChatDrawer({
 
   const priceStr = formatPrice(trip);
 
+  function openGoogleMapsNavigation() {
+    let url;
+    
+    // Log data for debugging
+    console.log('Google Maps Navigation Data:', {
+      trip: {
+        from_location: trip.from_location,
+        from_lat: trip.from_lat,
+        from_lng: trip.from_lng,
+        to_location: trip.to_location,
+        to_lat: trip.to_lat,
+        to_lng: trip.to_lng,
+      },
+      request: request ? {
+        pickup_location: request.pickup_location,
+        pickup_lat: request.pickup_lat,
+        pickup_lng: request.pickup_lng,
+        dropoff_location: request.dropoff_location,
+        dropoff_lat: request.dropoff_lat,
+        dropoff_lng: request.dropoff_lng,
+      } : null,
+    });
+    
+    // If there's a passenger request with pickup/dropoff, show multi-stop route
+    if (request && request.pickup_location && request.dropoff_location) {
+      // Only use multi-stop route if ALL coordinates are available
+      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng && 
+          request.pickup_lat && request.pickup_lng && request.dropoff_lat && request.dropoff_lng) {
+        const origin = `${trip.from_lat},${trip.from_lng}`;
+        const pickup = `${request.pickup_lat},${request.pickup_lng}`;
+        const dropoff = `${request.dropoff_lat},${request.dropoff_lng}`;
+        const destination = `${trip.to_lat},${trip.to_lng}`;
+        
+        console.log('Using multi-stop route with coordinates:', { origin, pickup, dropoff, destination });
+        
+        // Use dir format with coordinates only - no encoding needed for coordinates
+        url = `https://www.google.com/maps/dir/${origin}/${pickup}/${dropoff}/${destination}/`;
+      } else {
+        // Fallback to simple route if coordinates are missing
+        const origin = trip.from_lat && trip.from_lng 
+          ? `${trip.from_lat},${trip.from_lng}` 
+          : trip.from_location;
+        
+        const destination = trip.to_lat && trip.to_lng 
+          ? `${trip.to_lat},${trip.to_lng}` 
+          : trip.to_location;
+        
+        console.log('Coordinates missing, using simple route:', { origin, destination });
+        
+        url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
+      }
+    } else {
+      // Driver alone - show simple route
+      const origin = trip.from_lat && trip.from_lng 
+        ? `${trip.from_lat},${trip.from_lng}` 
+        : trip.from_location;
+      
+      const destination = trip.to_lat && trip.to_lng 
+        ? `${trip.to_lat},${trip.to_lng}` 
+        : trip.to_location;
+      
+      console.log('No passenger request, using simple route:', { origin, destination });
+      
+      url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
+    }
+    
+    console.log('Final URL:', url);
+    window.open(url, '_blank');
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
       <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl h-[85vh] sm:h-[80vh] flex flex-col">
@@ -181,13 +268,23 @@ export function ChatDrawer({
               {priceStr && ` · ${priceStr}`}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-            aria-label="Uždaryti"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openGoogleMapsNavigation}
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors"
+              aria-label="Google Maps navigacija"
+              title="Atidaryti Google Maps"
+            >
+              <Navigation className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+              aria-label="Uždaryti"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {canConfirm && (
