@@ -95,8 +95,11 @@ export function ChatDrawer({
   }, [messages]);
 
   useEffect(() => {
-    if (bothConfirmed && onBothConfirmed) {
-      onBothConfirmed();
+    if (bothConfirmed) {
+      setError(null);
+      if (onBothConfirmed) {
+        onBothConfirmed();
+      }
     }
   }, [bothConfirmed, onBothConfirmed]);
 
@@ -129,6 +132,7 @@ export function ChatDrawer({
   async function handleConfirm() {
     if (!request) return;
     setConfirming(true);
+    setError(null);
     const { data, error } = await supabase.rpc('confirm_ride', { p_request_id: request.id });
     setConfirming(false);
     if (error || !data) {
