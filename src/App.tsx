@@ -299,6 +299,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     }
     return emptyFilters;
   });
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { position: userPos, status: gpsStatus } = useGeolocation();
 
@@ -397,7 +398,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
         { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for loadRequests:`, err.message) }
       );
       if (data) setAllRequests(data);
-    } catch {
+    } catch (err) {
       console.error('Failed to load requests:', err);
     }
   }, []);

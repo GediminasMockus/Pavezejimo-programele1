@@ -129,11 +129,9 @@ export function useGeolocation() {
         const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setPosition(next);
         setStatus('granted');
-        globalThis.userLocation = next;
       },
       () => {
         setStatus('denied');
-        globalThis.userLocation = null;
       },
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 },
     );
