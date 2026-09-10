@@ -35,7 +35,6 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           def edit(path, fn):
               p = Path(path)
@@ -54,16 +53,13 @@ jobs:
           edit('src/components/UserProfileModal.tsx', lambda s: s.replace('X, User, Star, TrendingUp, Calendar, Car, Users', 'X, Star, TrendingUp, Calendar, Car, Users').replace('  const [hasRated, setHasRated] = useState(false);', '  const [hasRated, setHasRated] = useState(false);\n\n  void tripContext;'))
           edit('src/main.tsx', lambda s: s.replace('\nglobalThis.userLocation = null;\n', ''))
           Path('src/global.d.ts').unlink(missing_ok=True)
-
-          # Restore the permanent CI workflow; this temporary job must not remain.
-          Path('.github/workflows/ci.yml').write_text('''name: CI\n\non:\n  push:\n    branches: ['**']\n  pull_request:\n    branches: ['master']\n\njobs:\n  quality:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: npm\n      - run: npm ci\n      - run: npm run typecheck\n      - run: npm run lint\n      - run: npm run build\n''')
           PY
       - name: Commit lint fixes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -f .github/workflows/quality-fix.yml || true
           git add -A
+          git reset -- .github/workflows/ci.yml || true
           git diff --cached --quiet && exit 0
           git commit -m 'fix: resolve lint errors and remove obsolete bridge'
           git push origin HEAD:mvp-hardening-v2
