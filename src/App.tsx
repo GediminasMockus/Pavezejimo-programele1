@@ -299,7 +299,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     }
     return emptyFilters;
   });
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { position: userPos, status: gpsStatus } = useGeolocation();
 

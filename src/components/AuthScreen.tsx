@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
+import { Route, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Background } from '@/components/Background';
 

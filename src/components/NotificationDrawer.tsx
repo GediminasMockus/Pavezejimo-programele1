@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, X, Check, CheckCheck, Clock, MapPin, Car, Users } from 'lucide-react';
+import { Bell, X, Check, Clock } from 'lucide-react';
 import { supabase, type Notification } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
 
