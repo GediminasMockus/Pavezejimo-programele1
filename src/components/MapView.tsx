@@ -7,22 +7,12 @@ function createIcon(role: 'driver' | 'passenger', active: boolean) {
   const color = role === 'driver' ? '#2563eb' : '#059669';
   const size = active ? 36 : 28;
   const html = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`;
-  return L.divIcon({
-    html,
-    className: '',
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size],
-  });
+  return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size] });
 }
 
 function createUserIcon() {
   const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#dc2626;border:3px solid white;box-shadow:0 0 0 4px rgba(220,38,38,0.25),0 2px 6px rgba(0,0,0,0.3);"></div>`;
-  return L.divIcon({
-    html,
-    className: '',
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
+  return L.divIcon({ html, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
 }
 
 export interface MapMarker {
@@ -33,11 +23,7 @@ export interface MapMarker {
   isFrom: boolean;
 }
 
-export function MapView({
-  markers,
-  userPos,
-  onTripClick,
-}: {
+export function MapView({ markers, userPos, onTripClick }: {
   markers: MapMarker[];
   userPos: { lat: number; lng: number } | null;
   onTripClick?: (trip: Trip) => void;
@@ -51,30 +37,18 @@ export function MapView({
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
-
-    const map = L.map(mapRef.current, {
-      zoomControl: true,
-      attributionControl: true,
-    }).setView([54.6872, 25.2797], 7);
-
+    const map = L.map(mapRef.current, { zoomControl: true, attributionControl: true }).setView([54.6872, 25.2797], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
+      attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
-
     markerLayer.current = L.layerGroup().addTo(map);
     mapInstance.current = map;
-
     setTimeout(() => map.invalidateSize(), 100);
-
-    return () => {
-      map.remove();
-      mapInstance.current = null;
-    };
+    return () => { map.remove(); mapInstance.current = null; };
   }, []);
 
   const onTripClickRef = useRef(onTripClick);
-
   useEffect(() => { onTripClickRef.current = onTripClick; }, [onTripClick]);
 
   useEffect(() => {
@@ -106,7 +80,7 @@ export function MapView({
     if (!mapInstance.current) return;
     if (!userPos) { userMarker.current?.remove(); userMarker.current = null; return; }
     if (userMarker.current) userMarker.current.setLatLng([userPos.lat, userPos.lng]);
-    else userMarker.current = L.marker([userPos.lat, userPos.lng], { icon: createUserIcon() }).addTo(mapInstance.current).bindPopup('<div style=\"font-weight:600;font-size:13px;\">Jūsų pozicija</div>');
+    else userMarker.current = L.marker([userPos.lat, userPos.lng], { icon: createUserIcon() }).addTo(mapInstance.current).bindPopup('<div style="font-weight:600;font-size:13px;">Jūsų pozicija</div>');
   }, [userPos]);
 
   function locateUser() {
@@ -119,17 +93,11 @@ export function MapView({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        if (mapInstance.current) {
-          mapInstance.current.setView([latitude, longitude], 13);
-        }
+        if (mapInstance.current) mapInstance.current.setView([latitude, longitude], 13);
         setLocating(false);
       },
       (err) => {
-        setGpsError(
-          err.code === 1
-            ? 'Vietos nustatymas atmestas. Leiskite prieigą prie vietos.'
-            : 'Nepavyko nustatyti vietos. Bandykite dar kartą.',
-        );
+        setGpsError(err.code === 1 ? 'Vietos nustatymas atmestas. Leiskite prieigą prie vietos.' : 'Nepavyko nustatyti vietos. Bandykite dar kartą.');
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -138,33 +106,13 @@ export function MapView({
 
   return (
     <div className="relative">
-      <div
-        ref={mapRef}
-        className="w-full h-[300px] sm:h-[400px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0"
-      />
-      <button
-        onClick={locateUser}
-        disabled={locating}
-        className="absolute bottom-4 right-4 z-[1000] inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-sm font-semibold shadow-lg border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-60"
-      >
-        {locating ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Crosshair className="w-4 h-4 text-blue-500" />
-        )}
+      <div ref={mapRef} className="w-full h-[300px] sm:h-[400px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0" />
+      <button onClick={locateUser} disabled={locating} className="absolute bottom-4 right-4 z-[1000] inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-sm font-semibold shadow-lg border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-60">
+        {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crosshair className="w-4 h-4 text-blue-500" />}
         <span className="hidden sm:inline">Mano vieta</span>
       </button>
-      {gpsError && (
-        <div className="absolute top-3 left-3 right-3 z-[1000] bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 text-center">
-          {gpsError}
-        </div>
-      )}
-      {markers.length === 0 && !userPos && (
-        <div className="absolute top-3 left-3 z-[1000] bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-xs text-slate-500 flex items-center gap-1.5 shadow-sm">
-          <MapPin className="w-3.5 h-3.5" />
-          Žemėlapyje matysis visi skelbimai su koordinatėmis
-        </div>
-      )}
+      {gpsError && <div className="absolute top-3 left-3 right-3 z-[1000] bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 text-center">{gpsError}</div>}
+      {markers.length === 0 && !userPos && <div className="absolute top-3 left-3 z-[1000] bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-xs text-slate-500 flex items-center gap-1.5 shadow-sm"><MapPin className="w-3.5 h-3.5" />Žemėlapyje matysis vieši skelbimų taškai</div>}
     </div>
   );
 }
@@ -174,18 +122,18 @@ export function useGeolocation() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'granted' | 'denied'>('idle');
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setStatus('denied');
-      return;
-    }
+    if (!navigator.geolocation) { setStatus('denied'); return; }
     setStatus('loading');
     const watcher = navigator.geolocation.watchPosition(
       (pos) => {
-        setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setPosition(next);
         setStatus('granted');
+        globalThis.userLocation = next;
       },
       () => {
         setStatus('denied');
+        globalThis.userLocation = null;
       },
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 },
     );
