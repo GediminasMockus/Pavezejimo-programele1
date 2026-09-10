@@ -351,7 +351,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                         </div>
                         <div className="flex gap-1">
                           <button
-                            onClick={() => handleToggleAdmin(p.id, p.is_admin)}
+                            onClick={() => handleToggleAdmin(p.id, p.is_admin ?? false)}
                             disabled={actionLoading === p.id}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors disabled:opacity-50"
                             title={p.is_admin ? 'Atimti admin teises' : 'Suteikti admin teises'}

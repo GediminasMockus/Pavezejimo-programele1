@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { X, MapPin, Route as RouteIcon, Loader2 } from 'lucide-react';
 import type { Trip, RideRequest } from '@/lib/supabase';
-import { haversineDistance, formatDistance, calculateDetour } from '@/lib/distance';
+import { haversineDistance, formatDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 
 interface RouteData {
@@ -125,18 +125,18 @@ export function RoutePreviewModal({
       let fullRouteData: RouteData | null = null;
       let detour: number | undefined;
       if (hasDriverCoords && hasRequestCoords) {
-        L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
+        L.marker([request!.pickup_lat!!, request!.pickup_lng!!], { icon: greenPin('A') })
           .addTo(map)
           .bindPopup(`<b>Keleivio paėmimas</b><br/>${request!.pickup_location}`);
-        L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: greenPin('B') })
+        L.marker([request!.dropoff_lat!!, request!.dropoff_lng!!], { icon: greenPin('B') })
           .addTo(map)
           .bindPopup(`<b>Keleivio išlaipinimas</b><br/>${request!.dropoff_location}`);
 
         // Fetch all three legs of the route
         const [leg1, leg2, leg3] = await Promise.all([
-          fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat, request!.pickup_lng),
-          fetchRoute(request!.pickup_lat, request!.pickup_lng, request!.dropoff_lat, request!.dropoff_lng),
-          fetchRoute(request!.dropoff_lat, request!.dropoff_lng, trip.to_lat!, trip.to_lng!),
+          fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat!, request!.pickup_lng!),
+          fetchRoute(request!.pickup_lat!, request!.pickup_lng!, request!.dropoff_lat!, request!.dropoff_lng!),
+          fetchRoute(request!.dropoff_lat!, request!.dropoff_lng!, trip.to_lat!, trip.to_lng!),
         ]);
 
         const allCoords: [number, number][] = [];
@@ -160,16 +160,16 @@ export function RoutePreviewModal({
           L.polyline(
             [
               [trip.from_lat!, trip.from_lng!],
-              [request!.pickup_lat, request!.pickup_lng],
-              [request!.dropoff_lat, request!.dropoff_lng],
+              [request!.pickup_lat!, request!.pickup_lng!],
+              [request!.dropoff_lat!, request!.dropoff_lng!],
               [trip.to_lat!, trip.to_lng!],
             ],
             { color: '#059669', weight: 5, opacity: 0.85 },
           ).addTo(map);
         }
 
-        points.push([request!.pickup_lat, request!.pickup_lng]);
-        points.push([request!.dropoff_lat, request!.dropoff_lng]);
+        points.push([request!.pickup_lat!, request!.pickup_lng!]);
+        points.push([request!.dropoff_lat!, request!.dropoff_lng!]);
 
         const driverDist = driverRouteData?.distance ?? haversineDistance(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!);
         detour = Math.max(0, totalDist - driverDist);

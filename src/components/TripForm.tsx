@@ -79,7 +79,8 @@ export function TripForm({
     // Load last own driver trip through the private owner RPC.
     if (isDriver) {
       supabase.rpc('get_my_trips').then(({ data }) => {
-        const lastDriverTrip = (data ?? [])
+        const ownTrips = (data ?? []) as Trip[];
+        const lastDriverTrip = ownTrips
           .filter((trip) => trip.role === 'driver')
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
         if (lastDriverTrip) {
