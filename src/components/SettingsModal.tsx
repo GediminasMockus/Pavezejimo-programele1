@@ -64,16 +64,14 @@ export function SettingsModal({
 
   useEffect(() => {
     supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
+      .rpc('get_my_profile')
       .then(({ data }) => {
-        if (data) {
-          setProfile(data);
-          setDisplayName(data.display_name ?? '');
-          setPhone(data.phone ?? '');
-          setDefaultRole(data.default_role ?? '');
+        const profileData = data?.[0];
+        if (profileData) {
+          setProfile(profileData);
+          setDisplayName(profileData.display_name ?? '');
+          setPhone(profileData.phone ?? '');
+          setDefaultRole(profileData.default_role ?? '');
         }
         setLoading(false);
       });
