@@ -1,14 +1,10 @@
 /*
-  Production privacy hardening.
+  Privacy and matching hardening foundation.
 
-  Public clients must not be able to read:
-  - phone numbers
-  - exact trip coordinates
-  - vehicle registration plates
-  - profile email/phone/admin flag
-
-  Public trip coordinates are rounded to ~1 km for discovery.
-  Owners can still retrieve their complete trips through a SECURITY DEFINER RPC.
+  This migration adds safe public trip discovery primitives without revoking
+  existing client column privileges yet. The application can migrate to the
+  public view and owner RPC first; privilege revocation is intentionally a
+  later migration so the current editor/profile flows are not broken.
 */
 
 CREATE OR REPLACE FUNCTION public.get_my_trips()
@@ -61,15 +57,6 @@ WHERE t.deleted_at IS NULL
 
 GRANT SELECT ON public.public_trips TO authenticated;
 
--- Remove sensitive column access from direct client reads while retaining the
--- existing row-level policies for writes and owner operations.
-REVOKE SELECT (phone, from_lat, from_lng, to_lat, to_lng, car_plate)
-  ON public.trips FROM authenticated;
-
--- Profile discovery only needs public identity and rating data.
-REVOKE SELECT (email, phone, is_admin)
-  ON public.user_profiles FROM authenticated;
-
 CREATE OR REPLACE FUNCTION public.get_my_profile_flags()
 RETURNS TABLE (
   is_admin boolean,
@@ -88,8 +75,8 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_my_profile_flags() TO authenticated;
 
--- A rating must target the exact accepted participant, not whichever accepted
--- request happened to be newest for the trip.
+-- Exact participant-aware rating RPC. The optional request id fixes the
+-- previous ambiguity when a driver has multiple accepted passengers.
 CREATE OR REPLACE FUNCTION public.submit_rating(
   p_trip_id uuid,
   p_rated_id text,
@@ -166,8 +153,20 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.submit_rating(uuid, text, text, integer, text, uuid) TO authenticated;
 
--- Prevent duplicate passenger requests for the same driver trip while keeping
--- cancelled requests reusable.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_active_passenger_request_per_trip
-ON public.ride_requests (trip_id, passenger_id)
-WHERE request_type = 'passenger_request' AND status <> 'cancelled';
+-- Keep the legacy five-argument API working until the UI passes request_id.
+CREATE OR REPLACE FUNCTION public.submit_rating(
+  p_trip_id uuid,
+  p_rated_id text,
+  p_role text,
+  p_score integer,
+  p_comment text DEFAULT NULL
+)
+RETURNS public.ratings
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.submit_rating(p_trip_id, p_rated_id, p_role, p_score, p_comment, NULL);
+$$;
+
+GRANT EXECUTE ON FUNCTION public.submit_rating(uuid, text, text, integer, text) TO authenticated;
