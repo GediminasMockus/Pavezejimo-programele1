@@ -35,6 +35,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('src/components/AdminLogs.tsx')
           s = p.read_text()
@@ -43,11 +44,12 @@ jobs:
 
           p = Path('src/components/TripForm.tsx')
           s = p.read_text()
-          old = """      const lastDriverTrip = (data ?? [])\n        .filter((trip) => trip.role === 'driver')\n        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];"""
-          new = """      const ownTrips = (data ?? []) as Trip[];\n      const lastDriverTrip = ownTrips\n        .filter((trip) => trip.role === 'driver')\n        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];"""
-          if old not in s:
+          pattern = re.compile(r"const lastDriverTrip = \(data \?\? \[\]\)\s*\.filter\(\(trip\) => trip\.role === 'driver'\)\s*\.sort\(\(a, b\) => new Date\(b\.created_at\)\.getTime\(\) - new Date\(a\.created_at\)\.getTime\(\)\)\[0\];")
+          replacement = "const ownTrips = (data ?? []) as Trip[];\n        const lastDriverTrip = ownTrips\n          .filter((trip) => trip.role === 'driver')\n          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];"
+          s, count = pattern.subn(replacement, s, count=1)
+          if count != 1:
               raise SystemExit('TripForm target not found')
-          p.write_text(s.replace(old, new))
+          p.write_text(s)
 
           p = Path('src/components/RoutePreviewModal.tsx')
           s = p.read_text()
