@@ -115,8 +115,8 @@ function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (ro
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    supabase.from('user_profiles').select('is_admin').eq('id', userId).maybeSingle()
-      .then(({ data }) => setIsAdmin(data?.is_admin === true));
+    supabase.rpc('get_my_profile_flags')
+      .then(({ data }) => setIsAdmin(data?.[0]?.is_admin === true));
   }, [userId]);
 
   useEffect(() => {
@@ -361,18 +361,26 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await withRetry(
-        () => supabase
-          .from('trips')
-          .select('*')
-          .is('deleted_at', null)
-          .order('departure_time', { ascending: true }),
-        { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for loadTrips:`, err.message) }
-      );
-      if (error) {
+      const [publicResult, ownResult] = await Promise.all([
+        withRetry(
+          () => supabase
+            .from('public_trips')
+            .select('*')
+            .order('departure_time', { ascending: true }),
+          { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for public trips:`, err.message) }
+        ),
+        withRetry(
+          () => supabase.rpc('get_my_trips'),
+          { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for own trips:`, err.message) }
+        ),
+      ]);
+      if (publicResult.error || ownResult.error) {
         setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
       } else {
-        setTrips(data ?? []);
+        const merged = new Map<string, Trip>();
+        for (const trip of publicResult.data ?? []) merged.set(trip.id, trip as Trip);
+        for (const trip of ownResult.data ?? []) merged.set(trip.id, trip as Trip);
+        setTrips([...merged.values()].sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()));
       }
     } catch (err) {
       setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
@@ -399,7 +407,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     if (userIds.length === 0) return;
     const { data } = await supabase
       .from('user_profiles')
-      .select('*')
+      .select('id,display_name,total_ratings,avg_rating,default_role,created_at')
       .in('id', userIds);
     if (data) {
       setProfiles((prev) => {
@@ -455,14 +463,17 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   const ownTrips = visibleTrips.filter((t) => t.role === role && t.created_by === clientId);
   const otherTrips = visibleTrips.filter((t) => t.role === othersRole);
   const filteredOtherTrips = useMemo(
-    () => applyFilters(otherTrips, filters, userLocation?.lat, userLocation?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
-    [otherTrips, filters, userLocation],
+    () => applyFilters(otherTrips, filters, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
+    [otherTrips, filters, userPos],
   );
 
   const bestMatches = useMemo(() => {
     if (ownTrips.length === 0) return [];
-    const latestOwnTrip = ownTrips[0];
-    return findBestMatches(latestOwnTrip, otherTrips, 3);
+    const nextOwnTrip = [...ownTrips]
+      .filter((t) => t.status === 'active' && new Date(t.departure_time).getTime() >= now)
+      .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime())[0];
+    if (!nextOwnTrip) return [];
+    return findBestMatches(nextOwnTrip, otherTrips, 3);
   }, [ownTrips, otherTrips]);
 
   const requestsByTrip = useMemo(() => {
@@ -750,12 +761,18 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
             onRate={async (score, comment) => {
               const ratedId = profileTarget.userId;
               const rateRole: TripRole = profileTarget.trip.role === 'driver' ? 'driver' : 'passenger';
+              const ratingRequest = allRequests.find((r) =>
+                r.status === 'accepted' &&
+                ((r.trip_id === profileTarget.trip.id && (r.passenger_id === ratedId || r.passenger_id === clientId)) ||
+                 (r.driver_trip_id === profileTarget.trip.id && (r.driver_id === ratedId || r.driver_id === clientId)))
+              );
               const { error: ratingError } = await supabase.rpc('submit_rating', {
                 p_trip_id: profileTarget.trip.id,
                 p_rated_id: ratedId,
                 p_role: rateRole,
                 p_score: score,
                 p_comment: comment ?? null,
+                p_request_id: ratingRequest?.id ?? null,
               });
               if (ratingError) {
                 throw new Error(ratingError.message.includes('already submitted') ? 'Šią kelionę jau įvertinote.' : 'Nepavyko pateikti vertinimo.');
