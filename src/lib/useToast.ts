@@ -1,25 +1,27 @@
 import { useState, useCallback } from 'react';
 
-type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
-interface Toast {
+export interface Toast {
   id: string;
   type: ToastType;
   message: string;
   duration?: number;
 }
 
-let toastListeners: ((toast: Toast) => void)[] = [];
+type ToastInput = Omit<Toast, 'id'>;
+
+let toastListeners: ((toast: ToastInput) => void)[] = [];
 
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((toast: Toast) => {
-    const id = Math.random().toString(36).substring(7);
-    const newToast = { ...toast, id };
+  const addToast = useCallback((toastInput: ToastInput) => {
+    const id = Math.random().toString(36).substring(2, 10);
+    const newToast: Toast = { ...toastInput, id };
     setToasts(prev => [...prev, newToast]);
-    
-    const duration = toast.duration ?? 3000;
+
+    const duration = toastInput.duration ?? 3000;
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, duration);
@@ -62,3 +64,10 @@ export const toast = {
     toastListeners.forEach(listener => listener({ type: 'warning', message, duration }));
   },
 };
+
+export function subscribeToToasts(listener: (toast: ToastInput) => void) {
+  toastListeners = [...toastListeners, listener];
+  return () => {
+    toastListeners = toastListeners.filter(current => current !== listener);
+  };
+}
