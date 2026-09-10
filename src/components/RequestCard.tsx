@@ -12,6 +12,7 @@ import {
   MessageSquare,
   AlertCircle,
   Map as MapIcon,
+  Navigation,
 } from 'lucide-react';
 import type { Trip, RideRequest, RequestStatus } from '@/lib/supabase';
 import { calculateDetour, formatDistance, haversineDistance } from '@/lib/distance';
@@ -33,6 +34,7 @@ export function RequestCard({
   onCancel,
   onChat,
   onPreviewRoute,
+  onNavigation,
   isOffer = false,
 }: {
   request: RideRequest;
@@ -43,6 +45,7 @@ export function RequestCard({
   onCancel?: () => void;
   onChat?: () => void;
   onPreviewRoute?: () => void;
+  onNavigation?: () => void;
   isOffer?: boolean;
 }) {
   const status = STATUS_CONFIG[request.status];
@@ -218,14 +221,27 @@ export function RequestCard({
         </button>
       )}
 
-      {request.status === 'accepted' && onChat && (
-        <button
-          onClick={onChat}
-          className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 active:scale-[0.98] transition-all"
-        >
-          <MessageSquare className="w-4 h-4" />
-          Susisiekti
-        </button>
+      {request.status === 'accepted' && (
+        <div className="mt-3 flex gap-2">
+          {onChat && (
+            <button
+              onClick={onChat}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 active:scale-[0.98] transition-all"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Susisiekti
+            </button>
+          )}
+          {onNavigation && (
+            <button
+              onClick={onNavigation}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 active:scale-95 transition-all shadow-md shadow-blue-500/30"
+            >
+              <Navigation className="w-4 h-4" />
+              Navigacija
+            </button>
+          )}
+        </div>
       )}
 
       {onPreviewRoute && (

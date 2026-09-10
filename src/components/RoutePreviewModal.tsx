@@ -221,38 +221,47 @@ export function RoutePreviewModal({
             <div ref={mapRef} className="w-full h-full" />
           </div>
 
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-4 text-sm">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-4 h-1 rounded bg-blue-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #2563eb 0 6px, transparent 6px 12px)' }} />
-                <span className="text-slate-600">Vairuotojo maršrutas</span>
-              </span>
-              {hasRequestCoords && (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-4 h-1 rounded bg-emerald-500" />
-                  <span className="text-slate-600">Su keleiviu</span>
-                </span>
-              )}
-            </div>
-
-            {driverDist !== null && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <RouteIcon className="w-4 h-4 text-slate-400" />
-                Vairuotojo atstumas: {formatDistance(driverDist)}
+          <div className="mt-4 space-y-3">
+            {hasDriverCoords && (
+              <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-900 mb-1">
+                  <span className="w-4 h-1 rounded bg-blue-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #2563eb 0 6px, transparent 6px 12px)' }} />
+                  Vairuotojo maršrutas
+                </div>
+                <div className="text-sm text-blue-800">
+                  {trip.from_location} → {trip.to_location}
+                </div>
+                {driverDist !== null && (
+                  <div className="flex items-center gap-1.5 text-sm text-blue-700 mt-1">
+                    <RouteIcon className="w-3.5 h-3.5" />
+                    {formatDistance(driverDist)}
+                  </div>
+                )}
               </div>
             )}
 
-            {fullDist !== null && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <RouteIcon className="w-4 h-4 text-emerald-500" />
-                Pilnas maršrutas su keleiviu: {formatDistance(fullDist)}
+            {hasRequestCoords && (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900 mb-1">
+                  <span className="w-4 h-1 rounded bg-emerald-500" />
+                  Maršrutas su keleiviu
+                </div>
+                <div className="text-sm text-emerald-800">
+                  {request!.pickup_location} → {request!.dropoff_location}
+                </div>
+                {fullDist !== null && (
+                  <div className="flex items-center gap-1.5 text-sm text-emerald-700 mt-1">
+                    <RouteIcon className="w-3.5 h-3.5" />
+                    {formatDistance(fullDist)}
+                  </div>
+                )}
               </div>
             )}
 
             {routeInfo.detour !== undefined && routeInfo.detour > 0 && (
               <div className={`rounded-xl p-3 text-sm ${
                 routeInfo.detour < 5
-                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                  ? 'bg-amber-50 border border-amber-200 text-amber-700'
                   : routeInfo.detour < 15
                     ? 'bg-amber-50 border border-amber-200 text-amber-700'
                     : 'bg-red-50 border border-red-200 text-red-700'
@@ -261,9 +270,6 @@ export function RoutePreviewModal({
                   <MapPin className="w-4 h-4" />
                   Papildomas nuokrypis: +{formatDistance(routeInfo.detour)}
                 </div>
-                <p className="mt-0.5">
-                  {driverDist !== null && `Iš ${formatDistance(driverDist)} → ${formatDistance(fullDist ?? 0)}`}
-                </p>
               </div>
             )}
 

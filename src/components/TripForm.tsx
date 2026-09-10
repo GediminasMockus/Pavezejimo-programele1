@@ -74,7 +74,27 @@ export function TripForm({
       if (data?.display_name) setName(data.display_name);
       if (data?.phone) setPhone(data.phone);
     });
-  }, [userId, editTrip]);
+
+    // Load last driver trip car details for pre-filling
+    if (isDriver) {
+      supabase
+        .from('trips')
+        .select('car_make, car_color, car_plate')
+        .eq('created_by', userId)
+        .eq('role', 'driver')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            if (data.car_make) setCarMake(data.car_make);
+            if (data.car_color) setCarColor(data.car_color);
+            if (data.car_plate) setCarPlate(data.car_plate);
+          }
+        });
+    }
+  }, [userId, editTrip, isDriver]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

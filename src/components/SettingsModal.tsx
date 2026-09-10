@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, User, Phone, Car, Users, Bell, LogOut, Loader2, Check, Moon, Sun } from 'lucide-react';
+import { Settings, User, Phone, Car, Users, Bell, LogOut, Loader2, Check, Moon, Sun, Globe } from 'lucide-react';
 import { supabase, type UserProfile, type TripRole } from '@/lib/supabase';
 import { useDarkMode } from '@/lib/useDarkMode';
 
@@ -9,7 +9,10 @@ type NotificationPrefs = {
   tripReminders: boolean;
 };
 
+type Language = 'lt' | 'en';
+
 const STORAGE_KEY = 'pavezejimai_settings';
+const LANGUAGE_KEY = 'pavezejimai_language';
 
 function loadLocalPrefs(): NotificationPrefs {
   try {
@@ -27,6 +30,18 @@ function saveLocalPrefs(prefs: NotificationPrefs) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* ignore */ }
 }
 
+function loadLanguage(): Language {
+  try {
+    const raw = localStorage.getItem(LANGUAGE_KEY);
+    if (raw === 'lt' || raw === 'en') return raw;
+  } catch { /* ignore */ }
+  return 'lt';
+}
+
+function saveLanguage(lang: Language) {
+  try { localStorage.setItem(LANGUAGE_KEY, lang); } catch { /* ignore */ }
+}
+
 export function SettingsModal({
   userId,
   onClose,
@@ -41,6 +56,7 @@ export function SettingsModal({
   const [phone, setPhone] = useState('');
   const [defaultRole, setDefaultRole] = useState<TripRole | ''>('');
   const [prefs, setPrefs] = useState<NotificationPrefs>(loadLocalPrefs);
+  const [language, setLanguage] = useState<Language>(loadLanguage);
   const { isDark, toggle: toggleDarkMode } = useDarkMode();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -243,20 +259,53 @@ export function SettingsModal({
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
                 Išvaizda
               </h3>
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center gap-3">
-                  {isDark ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-amber-500" />}
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">Tamsusis režimas</p>
-                    <p className="text-xs text-slate-400">Eksperimentinis</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    {isDark ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-amber-500" />}
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Tamsusis režimas</p>
+                      <p className="text-xs text-slate-400">Eksperimentinis</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={toggleDarkMode}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} />
+                  </button>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Globe className="w-5 h-5 text-slate-600" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Kalba</p>
+                      <p className="text-xs text-slate-400">Pasirinkite programos kalbą</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => { setLanguage('lt'); saveLanguage('lt'); }}
+                      className={`py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
+                        language === 'lt'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      Lietuvių
+                    </button>
+                    <button
+                      onClick={() => { setLanguage('en'); saveLanguage('en'); }}
+                      className={`py-2.5 px-4 rounded-xl text-sm font-semibold transition-all ${
+                        language === 'en'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      English
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={toggleDarkMode}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} />
-                </button>
               </div>
             </section>
 

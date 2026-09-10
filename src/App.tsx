@@ -34,7 +34,7 @@ import { MapView, useGeolocation, type MapMarker } from '@/components/MapView';
 import { RequestModal } from '@/components/RequestModal';
 import { RequestCard } from '@/components/RequestCard';
 import { OfferModal } from '@/components/OfferModal';
-import { FilterBar, applyFilters, emptyFilters, type FilterState } from '@/components/FilterBar';
+import { FilterBar, applyFilters, emptyFilters, findBestMatches, type FilterState } from '@/components/FilterBar';
 import { RoutePreviewModal } from '@/components/RoutePreviewModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
 import { AdminLogs } from '@/components/AdminLogs';
@@ -286,7 +286,19 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     const saved = localStorage.getItem('viewMode');
     return (saved === 'list' || saved === 'map' || saved === 'grid') ? saved : 'list';
   });
-  const [filters, setFilters] = useState<FilterState>(emptyFilters);
+  const [filters, setFilters] = useState<FilterState>(() => {
+    try {
+      const saved = localStorage.getItem('pavezejimai_filters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure radiusKm exists for backwards compatibility
+        return { ...emptyFilters, ...parsed, radiusKm: parsed.radiusKm ?? 0 };
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return emptyFilters;
+  });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { position: userPos, status: gpsStatus } = useGeolocation();
@@ -299,6 +311,14 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   useEffect(() => {
     localStorage.setItem('viewMode', viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pavezejimai_filters', JSON.stringify(filters));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [filters]);
 
   // Load unread notifications count
   useEffect(() => {
@@ -435,9 +455,15 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   const ownTrips = visibleTrips.filter((t) => t.role === role && t.created_by === clientId);
   const otherTrips = visibleTrips.filter((t) => t.role === othersRole);
   const filteredOtherTrips = useMemo(
-    () => applyFilters(otherTrips, filters).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
-    [otherTrips, filters],
+    () => applyFilters(otherTrips, filters, userLocation?.lat, userLocation?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
+    [otherTrips, filters, userLocation],
   );
+
+  const bestMatches = useMemo(() => {
+    if (ownTrips.length === 0) return [];
+    const latestOwnTrip = ownTrips[0];
+    return findBestMatches(latestOwnTrip, otherTrips, 3);
+  }, [ownTrips, otherTrips]);
 
   const requestsByTrip = useMemo(() => {
     const map = new Map<string, RideRequest[]>();
@@ -520,6 +546,39 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   function openChat(trip: Trip, request?: RideRequest | null) {
     setChatTrip(trip);
     setChatRequest(request ?? null);
+  }
+
+  function openGoogleMapsNavigation(trip: Trip, request?: RideRequest | null) {
+    let url;
+    
+    if (request && request.pickup_location && request.dropoff_location) {
+      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng && 
+          request.pickup_lat && request.pickup_lng && request.dropoff_lat && request.dropoff_lng) {
+        const origin = `${trip.from_lat},${trip.from_lng}`;
+        const pickup = `${request.pickup_lat},${request.pickup_lng}`;
+        const dropoff = `${request.dropoff_lat},${request.dropoff_lng}`;
+        const destination = `${trip.to_lat},${trip.to_lng}`;
+        url = `https://www.google.com/maps/dir/${origin}/${pickup}/${dropoff}/${destination}/`;
+      } else {
+        const origin = trip.from_lat && trip.from_lng 
+          ? `${trip.from_lat},${trip.from_lng}` 
+          : trip.from_location;
+        const destination = trip.to_lat && trip.to_lng 
+          ? `${trip.to_lat},${trip.to_lng}` 
+          : trip.to_location;
+        url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
+      }
+    } else {
+      const origin = trip.from_lat && trip.from_lng 
+        ? `${trip.from_lat},${trip.from_lng}` 
+        : trip.from_location;
+      const destination = trip.to_lat && trip.to_lng 
+        ? `${trip.to_lat},${trip.to_lng}` 
+        : trip.to_location;
+      url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
+    }
+    
+    window.open(url, '_blank');
   }
 
   function getUserRating(userId: string): { avg: number; total: number } | null {
@@ -816,6 +875,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                           trip={t}
                           isDriverView
                           onChat={() => openChat(t, r)}
+                          onNavigation={() => openGoogleMapsNavigation(t, r)}
                           onPreviewRoute={() => {
                             setPreviewTrip(t);
                             setPreviewRequest(r);
@@ -844,7 +904,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
               <section className="mb-8">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Mano pasiūlymai keleiviams ({mySentOffers.length})</h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {mySentOffers.map((r) => { const t = findTripById(r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} />; })}
+                  {mySentOffers.map((r) => { const t = findTripById(r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
                 </div>
               </section>
             )}
@@ -864,6 +924,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                       onReject={() => updateRequestStatus(r.id, 'rejected')}
                       onCancel={() => updateRequestStatus(r.id, 'cancelled')}
                       onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined}
+                      onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined}
                       onPreviewRoute={() => { setPreviewTrip(t); setPreviewRequest(r); }} />;
                   })}
                 </div>
@@ -888,6 +949,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                         isDriverView={false}
                         onCancel={() => updateRequestStatus(r.id, 'cancelled')}
                         onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined}
+                        onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined}
                         onPreviewRoute={() => {
                           setPreviewTrip(t);
                           setPreviewRequest(r);
@@ -929,6 +991,55 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                       />
                     );
                   })}
+                </div>
+              </section>
+            )}
+
+            {/* Best matches */}
+            {bestMatches.length > 0 && (
+              <section>
+                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  Geriausi atitikimai ({bestMatches.length})
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {bestMatches.map((match, idx) => (
+                    <div key={match.trip.id} className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                              {match.score} taškų
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {match.reasons.slice(0, 3).map((reason, i) => (
+                                <span key={i} className="text-xs text-slate-600">
+                                  {reason}
+                                  {i < Math.min(match.reasons.length - 1, 2) && ' · '}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <TripCard
+                            trip={match.trip}
+                            onSelect={isDriver ? () => setOfferTarget(match.trip) : () => setRequestTarget(match.trip)}
+                            highlight={mySentRequestTripIds.has(match.trip.id)}
+                            onPreviewRoute={() => {
+                              setPreviewTrip(match.trip);
+                              setPreviewRequest(mySentRequests.find((r) => r.trip_id === match.trip.id) ?? null);
+                            }}
+                            onShowProfile={() =>
+                              setProfileTarget({ userId: match.trip.created_by ?? '', name: match.trip.name, trip: match.trip })
+                            }
+                            userRating={match.trip.created_by ? getUserRating(match.trip.created_by) : null}
+                            selectLabel={isDriver ? 'Siūlyti pavežėjimą' : 'Siųsti užklausą'}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}

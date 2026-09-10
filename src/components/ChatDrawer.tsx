@@ -96,7 +96,49 @@ export function ChatDrawer({
       .eq('id', userId)
       .maybeSingle()
       .then(({ data }) => setAuthorName(data?.display_name ?? (isPassengerSide ? request?.passenger_name : trip.name) ?? ''));
-  }, [trip.id, request?.id, userId]);
+
+    // Set up real-time subscription for new messages
+    if (request) {
+      const channel = supabase
+        .channel(`messages-${request.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `request_id=eq.${request.id}`,
+          },
+          (payload) => {
+            setMessages((prev) => [...prev, payload.new as Message]);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'ride_requests',
+            filter: `id=eq.${request.id}`,
+          },
+          (payload) => {
+            const updatedRequest = payload.new as RideRequest;
+            if (isPassengerSide) {
+              setMyConfirmed(updatedRequest.passenger_confirmed);
+              setOtherConfirmed(updatedRequest.driver_confirmed);
+            } else if (isDriverSide) {
+              setMyConfirmed(updatedRequest.driver_confirmed);
+              setOtherConfirmed(updatedRequest.passenger_confirmed);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [trip.id, request?.id, userId, isPassengerSide, isDriverSide]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -271,11 +313,12 @@ export function ChatDrawer({
           <div className="flex items-center gap-2">
             <button
               onClick={openGoogleMapsNavigation}
-              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 active:scale-95 transition-all shadow-md shadow-blue-500/30"
               aria-label="Google Maps navigacija"
               title="Atidaryti Google Maps"
             >
-              <Navigation className="w-5 h-5" />
+              <Navigation className="w-4 h-4" />
+              Navigacija
             </button>
             <button
               onClick={onClose}
@@ -333,29 +376,40 @@ export function ChatDrawer({
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    myConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-                  }`}>
-                    <Check className="w-3.5 h-3.5" />
-                    Jūs {myConfirmed ? 'patvirtinote' : 'nepatvirtinote'}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                    otherConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-                  }`}>
-                    <Check className="w-3.5 h-3.5" />
-                    Kita pusė {otherConfirmed ? 'patvirtino' : 'laukia'}
-                  </span>
-                </div>
-                {!myConfirmed && !bothConfirmed && (
-                  <button
-                    onClick={handleConfirm}
-                    disabled={confirming}
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60"
-                  >
-                    {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Patvirtinti
-                  </button>
+                {request?.status === 'accepted' ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                      <CheckCheck className="w-4 h-4" />
+                      Kelionė patvirtinta
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        myConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Check className="w-3.5 h-3.5" />
+                        Jūs {myConfirmed ? 'patvirtinote' : 'nepatvirtinote'}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        otherConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                      }`}>
+                        <Check className="w-3.5 h-3.5" />
+                        Kita pusė {otherConfirmed ? 'patvirtino' : 'laukia'}
+                      </span>
+                    </div>
+                    {!myConfirmed && !bothConfirmed && (
+                      <button
+                        onClick={handleConfirm}
+                        disabled={confirming}
+                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60"
+                      >
+                        {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        Patvirtinti
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
