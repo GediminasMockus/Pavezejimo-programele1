@@ -5,12 +5,10 @@ ALTER TABLE public.matches
 
 DROP INDEX IF EXISTS public.uq_matches_trip_pair;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_matches_trip_pair
-  ON public.matches(driver_trip_id, passenger_trip_id)
-  WHERE passenger_trip_id IS NOT NULL;
+  ON public.matches(driver_trip_id, passenger_trip_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_matches_request_id
-  ON public.matches(request_id)
-  WHERE request_id IS NOT NULL;
+  ON public.matches(request_id);
 
 CREATE INDEX IF NOT EXISTS idx_matches_driver_request
   ON public.matches(driver_trip_id, request_id);
@@ -33,24 +31,16 @@ BEGIN
     SELECT * INTO v_driver_trip FROM public.trips WHERE id = v_request.driver_trip_id FOR SHARE;
     SELECT * INTO v_passenger_trip FROM public.trips WHERE id = v_request.trip_id FOR SHARE;
     IF v_passenger_trip.id IS NULL OR v_driver_trip.id IS NULL THEN RAISE EXCEPTION 'match trips not found'; END IF;
-    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN
-      RAISE EXCEPTION 'not authorized';
-    END IF;
+    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN RAISE EXCEPTION 'not authorized'; END IF;
   ELSE
     SELECT * INTO v_driver_trip FROM public.trips WHERE id = v_request.trip_id FOR SHARE;
     IF v_driver_trip.id IS NULL THEN RAISE EXCEPTION 'driver trip not found'; END IF;
-    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN
-      RAISE EXCEPTION 'not authorized';
-    END IF;
+    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN RAISE EXCEPTION 'not authorized'; END IF;
   END IF;
 
-  IF v_driver_trip.role <> 'driver' OR v_driver_trip.deleted_at IS NOT NULL THEN
-    RAISE EXCEPTION 'driver trip is not available';
-  END IF;
+  IF v_driver_trip.role <> 'driver' OR v_driver_trip.deleted_at IS NOT NULL THEN RAISE EXCEPTION 'driver trip is not available'; END IF;
   IF v_request.passenger_id IS NULL THEN RAISE EXCEPTION 'passenger is required'; END IF;
-  IF v_passenger_trip.id IS NOT NULL AND v_passenger_trip.created_by <> v_request.passenger_id THEN
-    RAISE EXCEPTION 'passenger trip owner mismatch';
-  END IF;
+  IF v_passenger_trip.id IS NOT NULL AND v_passenger_trip.created_by <> v_request.passenger_id THEN RAISE EXCEPTION 'passenger trip owner mismatch'; END IF;
 
   INSERT INTO public.matches (driver_trip_id, passenger_trip_id, request_id, status, updated_at)
   VALUES (v_driver_trip.id, v_passenger_trip.id, v_request.id,
