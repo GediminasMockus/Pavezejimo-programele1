@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: ['master']
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -22,44 +19,3 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
-
-  temporary-fix:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'mvp-hardening-v2' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: mvp-hardening-v2
-          fetch-depth: 0
-      - name: Apply lint fixes
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          def edit(path, fn):
-              p = Path(path)
-              p.write_text(fn(p.read_text()))
-
-          edit('src/App.tsx', lambda s: s.replace("  const [actionLoading, setActionLoading] = useState<string | null>(null);\n", '').replace('} catch (err) {', '} catch {'))
-          edit('src/components/AdminLogs.tsx', lambda s: s.replace('AlertTriangle, RefreshCw, X, TrendingUp, Clock, MapPin', 'TrendingUp, MapPin').replace("import { RatingStars } from '@/components/RatingStars';\n", ''))
-          edit('src/components/AuthScreen.tsx', lambda s: s.replace('ArrowLeft, ', ''))
-          edit('src/components/NotificationDrawer.tsx', lambda s: s.replace('CheckCheck, MapPin, Car, Users, ', ''))
-          edit('src/components/RequestCard.tsx', lambda s: s.replace('  Loader2,\n', ''))
-          edit('src/components/TripCard.tsx', lambda s: s.replace("import { RatingStars } from '@/components/RatingStars';\n", ''))
-          edit('src/components/RequestModal.tsx', lambda s: s.replace('[\\+]', '[+]').replace('[-\\s\\.]', '[-\\s.]'))
-          edit('src/components/SettingsModal.tsx', lambda s: s.replace('[\\+]', '[+]').replace('[-\\s\\.]', '[-\\s.]'))
-          edit('src/components/TripForm.tsx', lambda s: s.replace('[\\+]', '[+]').replace('[-\\s\\.]', '[-\\s.]'))
-          edit('src/components/RoutePreviewModal.tsx', lambda s: s.replace('!!', '!'))
-          edit('src/components/UserProfileModal.tsx', lambda s: s.replace('X, User, Star, TrendingUp, Calendar, Car, Users', 'X, Star, TrendingUp, Calendar, Car, Users').replace('  const [hasRated, setHasRated] = useState(false);', '  const [hasRated, setHasRated] = useState(false);\n\n  void tripContext;'))
-          edit('src/main.tsx', lambda s: s.replace('\nglobalThis.userLocation = null;\n', ''))
-          Path('src/global.d.ts').unlink(missing_ok=True)
-          PY
-      - name: Commit lint fixes
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git reset -- .github/workflows/ci.yml || true
-          git diff --cached --quiet && exit 0
-          git commit -m 'fix: resolve lint errors and remove obsolete bridge'
-          git push origin HEAD:mvp-hardening-v2
