@@ -4,9 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
-  );
+  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -122,9 +120,9 @@ export interface NewRideRequest {
 export interface UserProfile {
   id: string;
   display_name: string;
-  email: string | null;
-  is_admin: boolean;
-  phone: string | null;
+  email?: string | null;
+  is_admin?: boolean;
+  phone?: string | null;
   default_role: TripRole | null;
   total_ratings: number;
   avg_rating: number;
