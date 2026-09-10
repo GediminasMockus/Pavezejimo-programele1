@@ -70,29 +70,24 @@ export function TripForm({
 
   useEffect(() => {
     if (editTrip) return;
-    supabase.from('user_profiles').select('display_name, phone').eq('id', userId).maybeSingle().then(({ data }) => {
-      if (data?.display_name) setName(data.display_name);
-      if (data?.phone) setPhone(data.phone);
+    supabase.rpc('get_my_profile').then(({ data }) => {
+      const profileData = data?.[0];
+      if (profileData?.display_name) setName(profileData.display_name);
+      if (profileData?.phone) setPhone(profileData.phone);
     });
 
-    // Load last driver trip car details for pre-filling
+    // Load last own driver trip through the private owner RPC.
     if (isDriver) {
-      supabase
-        .from('trips')
-        .select('car_make, car_color, car_plate')
-        .eq('created_by', userId)
-        .eq('role', 'driver')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            if (data.car_make) setCarMake(data.car_make);
-            if (data.car_color) setCarColor(data.car_color);
-            if (data.car_plate) setCarPlate(data.car_plate);
-          }
-        });
+      supabase.rpc('get_my_trips').then(({ data }) => {
+        const lastDriverTrip = (data ?? [])
+          .filter((trip) => trip.role === 'driver')
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+        if (lastDriverTrip) {
+          if (lastDriverTrip.car_make) setCarMake(lastDriverTrip.car_make);
+          if (lastDriverTrip.car_color) setCarColor(lastDriverTrip.car_color);
+          if (lastDriverTrip.car_plate) setCarPlate(lastDriverTrip.car_plate);
+        }
+      });
     }
   }, [userId, editTrip, isDriver]);
 
