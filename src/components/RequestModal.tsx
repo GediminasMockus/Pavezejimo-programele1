@@ -44,7 +44,7 @@ export function RequestModal({ trip, userId, onClose, onSubmitted }: { trip: Tri
     if (!passengerName.trim() || !pickupAddr.display_name.trim() || !dropoffAddr.display_name.trim()) return setFormError('Užpildykite vardą, iš kur ir į kur laukus.');
     if (!Number.isInteger(seats) || seats < 1 || seats > 8) return setFormError('Keleivių skaičius turi būti nuo 1 iki 8.');
     if (passengerName.trim().length > 80 || pickupAddr.display_name.trim().length > 160 || dropoffAddr.display_name.trim().length > 160 || notes.trim().length > 500) return setFormError('Kai kurie laukai per ilgi. Sutrumpinkite tekstą.');
-    if (phone.trim() && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(phone.trim())) return setFormError('Įveskite teisingą telefono numerį.');
+    if (phone.trim() && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone.trim())) return setFormError('Įveskite teisingą telefono numerį.');
     if (seats > trip.seats) return setFormError(`Vairuotojas siūlo tik ${trip.seats} vietas.`);
     if (trip.status !== 'active' || trip.deleted_at) return setFormError('Šis skelbimas nebeaktyvus. Grįžkite į sąrašą ir pasirinkite kitą.');
     if (new Date(trip.departure_time).getTime() <= Date.now()) return setFormError('Ši kelionė jau prasidėjo arba išvykimo laikas praėjo.');

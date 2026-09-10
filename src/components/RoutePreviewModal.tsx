@@ -125,10 +125,10 @@ export function RoutePreviewModal({
       let fullRouteData: RouteData | null = null;
       let detour: number | undefined;
       if (hasDriverCoords && hasRequestCoords) {
-        L.marker([request!.pickup_lat!!, request!.pickup_lng!!], { icon: greenPin('A') })
+        L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
           .addTo(map)
           .bindPopup(`<b>Keleivio paėmimas</b><br/>${request!.pickup_location}`);
-        L.marker([request!.dropoff_lat!!, request!.dropoff_lng!!], { icon: greenPin('B') })
+        L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: greenPin('B') })
           .addTo(map)
           .bindPopup(`<b>Keleivio išlaipinimas</b><br/>${request!.dropoff_location}`);
 

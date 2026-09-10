@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Shield, Loader2, Car, Users, CheckCircle2, Mail, Star, Calendar, Trash2, Crown, AlertTriangle, RefreshCw, X, TrendingUp, Clock, MapPin } from 'lucide-react';
+import { Shield, Loader2, Car, Users, CheckCircle2, Mail, Star, Calendar, Trash2, Crown, TrendingUp, MapPin } from 'lucide-react';
 import { supabase, type Trip, type RideRequest, type UserProfile, type Rating } from '@/lib/supabase';
 import { formatDateTime } from '@/lib/format';
-import { RatingStars } from '@/components/RatingStars';
 
 type AdminTab = 'completed' | 'users' | 'trips' | 'requests' | 'stats';
 

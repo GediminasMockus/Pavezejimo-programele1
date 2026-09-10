@@ -163,7 +163,7 @@ export function SettingsModal({
                       className="form-input pl-10"
                     />
                   </div>
-                  {phone && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(phone.trim()) && (
+                  {phone && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone.trim()) && (
                     <p className="text-xs text-red-500 mt-1">Neteisingas telefono formatas</p>
                   )}
                 </div>

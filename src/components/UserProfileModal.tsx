@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, User, Star, TrendingUp, Calendar, Car, Users } from 'lucide-react';
+import { X, Star, TrendingUp, Calendar, Car, Users } from 'lucide-react';
 import { supabase, type UserProfile, type Rating, type Trip } from '@/lib/supabase';
 import { RatingStars, StarPicker } from '@/components/RatingStars';
 import { formatDateTime } from '@/lib/format';
@@ -28,6 +28,8 @@ export function UserProfileModal({
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+
+  void tripContext;
 
   useEffect(() => {
     // Reset state when switching to a different user

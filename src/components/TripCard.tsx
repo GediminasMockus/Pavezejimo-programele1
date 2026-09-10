@@ -21,7 +21,6 @@ import {
 import type { Trip } from '@/lib/supabase';
 import { haversineDistance, formatDistance } from '@/lib/distance';
 import { formatDateTime, formatPrice } from '@/lib/format';
-import { RatingStars } from '@/components/RatingStars';
 
 export function TripCard({
   trip,

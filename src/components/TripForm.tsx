@@ -121,7 +121,7 @@ export function TripForm({
       return;
     }
 
-    if (phone.trim() && !/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(phone.trim())) {
+    if (phone.trim() && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone.trim())) {
       setFormError('Įveskite teisingą telefono numerį.');
       return;
     }
