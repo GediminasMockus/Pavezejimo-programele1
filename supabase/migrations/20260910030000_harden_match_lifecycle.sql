@@ -33,12 +33,18 @@ BEGIN
     SELECT * INTO v_driver_trip FROM public.trips WHERE id = v_request.driver_trip_id FOR SHARE;
     SELECT * INTO v_passenger_trip FROM public.trips WHERE id = v_request.trip_id FOR SHARE;
     IF v_passenger_trip.id IS NULL OR v_driver_trip.id IS NULL THEN RAISE EXCEPTION 'match trips not found'; END IF;
+    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN
+      RAISE EXCEPTION 'not authorized';
+    END IF;
   ELSE
     SELECT * INTO v_driver_trip FROM public.trips WHERE id = v_request.trip_id FOR SHARE;
     IF v_driver_trip.id IS NULL THEN RAISE EXCEPTION 'driver trip not found'; END IF;
+    IF v_driver_trip.created_by <> auth.uid()::text AND v_request.passenger_id <> auth.uid()::text THEN
+      RAISE EXCEPTION 'not authorized';
+    END IF;
   END IF;
 
-  IF v_driver_trip.role <> 'driver' OR v_driver_trip.status <> 'active' OR v_driver_trip.deleted_at IS NOT NULL THEN
+  IF v_driver_trip.role <> 'driver' OR v_driver_trip.deleted_at IS NOT NULL THEN
     RAISE EXCEPTION 'driver trip is not available';
   END IF;
   IF v_request.passenger_id IS NULL THEN RAISE EXCEPTION 'passenger is required'; END IF;
@@ -50,6 +56,8 @@ BEGIN
   VALUES (v_driver_trip.id, v_passenger_trip.id, v_request.id,
           CASE WHEN v_request.status = 'accepted' THEN 'accepted' ELSE v_request.status END, now())
   ON CONFLICT (request_id) DO UPDATE SET
+    driver_trip_id = EXCLUDED.driver_trip_id,
+    passenger_trip_id = EXCLUDED.passenger_trip_id,
     status = CASE
       WHEN public.matches.status = 'completed' THEN 'completed'
       WHEN EXCLUDED.status IN ('accepted','rejected','cancelled') THEN EXCLUDED.status
