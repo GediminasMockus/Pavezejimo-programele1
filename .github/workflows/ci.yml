@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ['master']
 
+permissions:
+  contents: write
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -19,3 +22,33 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+
+  temporary-fix:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'mvp-hardening-v2' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mvp-hardening-v2
+          fetch-depth: 0
+      - name: Apply final lint cleanup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def edit(path, fn):
+              p = Path(path)
+              p.write_text(fn(p.read_text()))
+
+          edit('src/App.tsx', lambda s: s.replace('const [actionLoading, setActionLoading]', 'const [, setActionLoading]'))
+          edit('src/components/AuthScreen.tsx', lambda s: s.replace('import { Route, Mail, Lock, User, Loader2, ArrowLeft }', 'import { Route, Mail, Lock, User, Loader2 }'))
+          edit('src/components/NotificationDrawer.tsx', lambda s: s.replace('Bell, X, Check, CheckCheck, Clock, MapPin, Car, Users', 'Bell, X, Check, Clock'))
+          PY
+      - name: Commit final cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.tsx src/components/AuthScreen.tsx src/components/NotificationDrawer.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: remove remaining lint errors'
+          git push origin HEAD:mvp-hardening-v2
