@@ -1,24 +1,25 @@
 /*
   Fix settings persistence after the profile privacy boundary.
 
-  The settings screen must not depend on direct table writes because profile
-  fields are intentionally behind a SECURITY DEFINER read boundary. Keep the
-  write boundary equally explicit and limited to the authenticated user's
-  own editable fields.
+  The settings screen must not depend on direct table writes. Keep the write
+  boundary explicit, limited to the authenticated user's editable fields,
+  and do not return the complete user_profiles row to the browser.
 */
 
-CREATE OR REPLACE FUNCTION public.update_my_profile(
+-- Drop first so this migration also works if an earlier deployment created
+-- the same argument signature with a different return type.
+DROP FUNCTION IF EXISTS public.update_my_profile(text, text, text);
+
+CREATE FUNCTION public.update_my_profile(
   p_display_name text,
   p_phone text DEFAULT NULL,
   p_default_role text DEFAULT NULL
 )
-RETURNS public.user_profiles
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_profile public.user_profiles;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'authentication required';
@@ -49,10 +50,7 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET
     display_name = EXCLUDED.display_name,
     phone = EXCLUDED.phone,
-    default_role = EXCLUDED.default_role
-  RETURNING * INTO v_profile;
-
-  RETURN v_profile;
+    default_role = EXCLUDED.default_role;
 END;
 $$;
 
