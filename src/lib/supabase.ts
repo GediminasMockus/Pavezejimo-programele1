@@ -152,6 +152,7 @@ export interface NewRating {
 export interface Message {
   id: string;
   trip_id: string;
+  match_id: string | null;
   request_id: string | null;
   author_id: string | null;
   author_name: string;
@@ -161,6 +162,7 @@ export interface Message {
 
 export interface NewMessage {
   trip_id: string;
+  match_id?: string | null;
   request_id?: string | null;
   author_id: string;
   author_name: string;
