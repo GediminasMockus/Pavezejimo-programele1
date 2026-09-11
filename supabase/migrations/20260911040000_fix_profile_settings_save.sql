@@ -19,19 +19,15 @@ SET search_path = public
 AS $$
 DECLARE
   v_profile public.user_profiles;
-  v_role public.trip_role;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'authentication required';
   END IF;
 
-  IF p_default_role IS NOT NULL AND p_default_role <> '' THEN
-    IF p_default_role NOT IN ('driver', 'passenger') THEN
-      RAISE EXCEPTION 'invalid default role';
-    END IF;
-    v_role := p_default_role::public.trip_role;
-  ELSE
-    v_role := NULL;
+  IF p_default_role IS NOT NULL
+     AND p_default_role <> ''
+     AND p_default_role NOT IN ('driver', 'passenger') THEN
+    RAISE EXCEPTION 'invalid default role';
   END IF;
 
   INSERT INTO public.user_profiles (
@@ -46,7 +42,7 @@ BEGIN
     auth.uid()::text,
     COALESCE(NULLIF(trim(p_display_name), ''), 'Vartotojas'),
     NULLIF(trim(p_phone), ''),
-    v_role,
+    NULLIF(p_default_role, ''),
     0,
     0
   )
