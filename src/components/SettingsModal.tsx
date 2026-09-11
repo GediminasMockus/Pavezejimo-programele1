@@ -19,8 +19,7 @@ function loadPrefs(): NotificationPrefs {
 
 function loadLanguage(): Language {
   try {
-    const value = localStorage.getItem(LANGUAGE_KEY);
-    return value === 'en' ? 'en' : 'lt';
+    return localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'lt';
   } catch { return 'lt'; }
 }
 
@@ -39,17 +38,20 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
 
   useEffect(() => {
     let mounted = true;
-    supabase.rpc('get_my_profile').then(({ data, error }) => {
+    (async () => {
+      const { data, error } = await supabase.rpc('get_my_profile');
       if (!mounted) return;
-      const row = data?.[0] as UserProfile | undefined;
-      if (!error && row) {
+      if (!error && data?.[0]) {
+        const row = data[0] as UserProfile;
         setProfile(row);
         setDisplayName(row.display_name ?? '');
         setPhone(row.phone ?? '');
         setDefaultRole(row.default_role ?? '');
+      } else if (error) {
+        setSaveError(`Nepavyko įkelti profilio: ${error.message}`);
       }
       setLoading(false);
-    });
+    })();
     return () => { mounted = false; };
   }, [userId]);
 
@@ -65,28 +67,36 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   }
 
   async function handleSave() {
-    if (phone.trim() && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone.trim())) {
+    const normalizedPhone = phone.trim();
+    if (normalizedPhone && !/^\+?[0-9 ()-]{8,20}$/.test(normalizedPhone)) {
       setSaveError('Neteisingas telefono formatas.');
       return;
     }
+
     setSaving(true);
     setSaved(false);
     setSaveError('');
 
-    const { data, error } = await supabase.rpc('update_my_profile', {
+    const { error } = await supabase.rpc('update_my_profile', {
       p_display_name: displayName.trim() || 'Vartotojas',
-      p_phone: phone.trim() || null,
+      p_phone: normalizedPhone || null,
       p_default_role: defaultRole || null,
     });
 
-    setSaving(false);
     if (error) {
-      setSaveError(error.message || 'Nepavyko išsaugoti pakeitimų.');
+      setSaving(false);
+      setSaveError(`Nepavyko išsaugoti profilio: ${error.message}`);
       return;
     }
 
-    if (data) setProfile(Array.isArray(data) ? data[0] : data);
+    setSaving(false);
     setSaved(true);
+    setProfile(current => current ? {
+      ...current,
+      display_name: displayName.trim() || 'Vartotojas',
+      phone: normalizedPhone || null,
+      default_role: defaultRole || null,
+    } : current);
     window.setTimeout(() => setSaved(false), 2500);
   }
 
@@ -134,7 +144,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
               </div>
             </section>
 
-            {saveError && <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{saveError}</div>}
+            {saveError && <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 break-words">{saveError}</div>}
             <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saugoma…</> : saved ? <><Check className="w-4 h-4" /> Išsaugota</> : 'Išsaugoti pakeitimus'}</button>
             <div className="pt-2 border-t border-slate-100"><button onClick={onSignOut} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 flex items-center justify-center gap-2"><LogOut className="w-4 h-4" /> Atsijungti</button></div>
           </div>
