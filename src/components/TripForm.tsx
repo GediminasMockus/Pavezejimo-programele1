@@ -166,9 +166,12 @@ export function TripForm({
     setSubmitting(true);
     let error;
     if (editTrip) {
-      ({ error } = await supabase.from('trips').update(payload).eq('id', editTrip.id));
+      ({ error } = await supabase.rpc('update_my_trip', {
+        p_trip_id: editTrip.id,
+        p_trip: payload,
+      }));
     } else {
-      ({ error } = await supabase.from('trips').insert(payload));
+      ({ error } = await supabase.rpc('create_my_trip', { p_trip: payload }));
     }
     setSubmitting(false);
     if (error) {
@@ -374,7 +377,7 @@ export function TripForm({
             ) : editTrip ? (
               <span>Išsaugoti pakeitimus</span>
             ) : (
-              <span>Skelbti</span>
+              <span>Paskelbti skelbimą</span>
             )}
           </button>
         </form>
@@ -393,12 +396,12 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-        {icon && <span className="text-slate-400">{icon}</span>}
+    <div>
+      <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-2">
+        {icon}
         {label}
-      </span>
+      </label>
       {children}
-    </label>
+    </div>
   );
 }
