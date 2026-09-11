@@ -7,23 +7,27 @@ import {
   type NewMessage,
   type RideRequest,
 } from '@/lib/supabase';
+import type { Match } from '@/lib/matchTypes';
 import { formatDateTime, formatTime, formatPrice } from '@/lib/format';
 import { StarPicker } from '@/components/RatingStars';
 
 export function ChatDrawer({
   trip,
   request,
+  match,
   userId,
   onClose,
   onBothConfirmed,
 }: {
   trip: Trip;
   request?: RideRequest | null;
+  match?: Match | null;
   userId: string;
   onClose: () => void;
   onBothConfirmed?: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [activeMatch, setActiveMatch] = useState<Match | null>(match ?? null);
   const [loading, setLoading] = useState(true);
   const [authorName, setAuthorName] = useState('');
   const [body, setBody] = useState('');
@@ -44,21 +48,49 @@ export function ChatDrawer({
   const isDriverSide = request?.request_type === 'driver_offer' ? request.driver_id === clientId : trip.created_by === clientId;
   const canConfirm = !!request && (isPassengerSide || isDriverSide);
   const bothConfirmed = myConfirmed && otherConfirmed;
+  const matchId = activeMatch?.id ?? null;
 
-  async function loadMessages() {
+  async function resolveMatch() {
+    if (match) {
+      setActiveMatch(match);
+      return match;
+    }
+    if (!request) {
+      setActiveMatch(null);
+      return null;
+    }
+
+    const { data, error: matchError } = await supabase.rpc('get_my_matches');
+    if (matchError) {
+      setError('Nepavyko nustatyti kelionės atitikmens.');
+      setActiveMatch(null);
+      return null;
+    }
+
+    const resolved = ((data ?? []) as Match[]).find((item) => item.request_id === request.id) ?? null;
+    setActiveMatch(resolved);
+    return resolved;
+  }
+
+  async function loadMessages(resolvedMatch?: Match | null) {
     setLoading(true);
     if (!request) {
       setMessages([]);
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('trip_id', trip.id)
-      .eq('request_id', request.id)
-      .order('created_at', { ascending: true });
-    if (error) {
+
+    const currentMatch = resolvedMatch ?? activeMatch;
+    const query = supabase.from('messages').select('*');
+    const { data, error: messageError } = currentMatch
+      ? await query
+          .eq('match_id', currentMatch.id)
+          .order('created_at', { ascending: true })
+      : await query
+          .eq('request_id', request.id)
+          .order('created_at', { ascending: true });
+
+    if (messageError) {
       setError('Nepavyko įkelti žinučių.');
     } else {
       setMessages(data ?? []);
@@ -68,14 +100,13 @@ export function ChatDrawer({
 
   async function loadConfirmation() {
     if (!request) return;
-    
-    // Fetch fresh request data from database to get latest confirmation status
+
     const { data: freshRequest } = await supabase
       .from('ride_requests')
       .select('*')
       .eq('id', request.id)
       .single();
-    
+
     if (freshRequest) {
       if (isPassengerSide) {
         setMyConfirmed(freshRequest.passenger_confirmed);
@@ -88,29 +119,36 @@ export function ChatDrawer({
   }
 
   useEffect(() => {
-    loadMessages();
-    loadConfirmation();
-    supabase
-      .from('user_profiles')
-      .select('display_name')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => setAuthorName(data?.display_name ?? (isPassengerSide ? request?.passenger_name : trip.name) ?? ''));
+    let cancelled = false;
 
-    // Set up real-time subscription for new messages
+    async function initialize() {
+      const resolvedMatch = await resolveMatch();
+      if (cancelled) return;
+      await Promise.all([loadMessages(resolvedMatch), loadConfirmation()]);
+
+      const { data } = await supabase.rpc('get_my_profile');
+      if (!cancelled) {
+        const profile = data?.[0];
+        setAuthorName(profile?.display_name ?? (isPassengerSide ? request?.passenger_name : trip.name) ?? '');
+      }
+    }
+
+    initialize();
+
     if (request) {
       const channel = supabase
-        .channel(`messages-${request.id}`)
+        .channel(`match-chat-${request.id}`)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: `request_id=eq.${request.id}`,
+            filter: matchId ? `match_id=eq.${matchId}` : `request_id=eq.${request.id}`,
           },
           (payload) => {
-            setMessages((prev) => [...prev, payload.new as Message]);
+            const message = payload.new as Message;
+            setMessages((prev) => prev.some((item) => item.id === message.id) ? prev : [...prev, message]);
           }
         )
         .on(
@@ -135,10 +173,15 @@ export function ChatDrawer({
         .subscribe();
 
       return () => {
+        cancelled = true;
         supabase.removeChannel(channel);
       };
     }
-  }, [trip.id, request?.id, userId, isPassengerSide, isDriverSide]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trip.id, request?.id, userId, isPassengerSide, isDriverSide, match?.id]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -162,40 +205,39 @@ export function ChatDrawer({
     setSending(true);
     const payload: NewMessage = {
       trip_id: trip.id,
+      match_id: matchId,
       request_id: request.id,
       author_id: userId,
       author_name: authorName.trim(),
       body: body.trim(),
     };
-    const { data, error } = await supabase
+    const { data, error: sendError } = await supabase
       .from('messages')
       .insert(payload)
       .select('*')
       .single();
     setSending(false);
-    if (error || !data) {
+    if (sendError || !data) {
       setError('Nepavyko išsiųsti žinutės.');
       return;
     }
-    setMessages((prev) => [...prev, data]);
+    setMessages((prev) => prev.some((item) => item.id === data.id) ? prev : [...prev, data]);
     setBody('');
   }
 
   async function handleConfirm() {
     if (!request) return;
-    
-    // Check if already confirmed to avoid unnecessary RPC call
     if (myConfirmed) {
       setError(null);
       return;
     }
-    
+
     setConfirming(true);
     setError(null);
-    const { data, error } = await supabase.rpc('confirm_ride', { p_request_id: request.id });
+    const { data, error: confirmError } = await supabase.rpc('confirm_ride', { p_request_id: request.id });
     setConfirming(false);
-    if (error || !data) {
-      setError(error?.message === 'ride is not accepted' ? 'Ši kelionė dar nepatvirtinta vairuotojo.' : 'Nepavyko patvirtinti kelionės.');
+    if (confirmError || !data) {
+      setError(confirmError?.message === 'ride is not accepted' ? 'Ši kelionė dar nepatvirtinta vairuotojo.' : 'Nepavyko patvirtinti kelionės.');
       return;
     }
 
@@ -209,16 +251,17 @@ export function ChatDrawer({
     const ratedId = isPassengerSide ? (request.request_type === 'driver_offer' ? request.driver_id : trip.created_by) : request.passenger_id;
     const role = isPassengerSide ? 'driver' : 'passenger';
     const ratingTripId = isPassengerSide && request.request_type === 'driver_offer' && request.driver_trip_id ? request.driver_trip_id : trip.id;
-    const { error } = await supabase.rpc('submit_rating', {
+    const { error: ratingError } = await supabase.rpc('submit_rating', {
       p_trip_id: ratingTripId,
       p_rated_id: ratedId,
       p_role: role,
       p_score: rateScore,
       p_comment: rateComment.trim() || null,
+      p_request_id: request.id,
     });
     setRateSubmitting(false);
-    if (error) {
-      setError(error.message.includes('already submitted') ? 'Šią kelionę jau įvertinote.' : 'Nepavyko pateikti vertinimo.');
+    if (ratingError) {
+      setError(ratingError.message.includes('already submitted') ? 'Šią kelionę jau įvertinote.' : 'Nepavyko pateikti vertinimo.');
       return;
     }
     setRatingSubmitted(true);
@@ -229,71 +272,26 @@ export function ChatDrawer({
 
   function openGoogleMapsNavigation() {
     let url;
-    
-    // Log data for debugging
-    console.log('Google Maps Navigation Data:', {
-      trip: {
-        from_location: trip.from_location,
-        from_lat: trip.from_lat,
-        from_lng: trip.from_lng,
-        to_location: trip.to_location,
-        to_lat: trip.to_lat,
-        to_lng: trip.to_lng,
-      },
-      request: request ? {
-        pickup_location: request.pickup_location,
-        pickup_lat: request.pickup_lat,
-        pickup_lng: request.pickup_lng,
-        dropoff_location: request.dropoff_location,
-        dropoff_lat: request.dropoff_lat,
-        dropoff_lng: request.dropoff_lng,
-      } : null,
-    });
-    
-    // If there's a passenger request with pickup/dropoff, show multi-stop route
+
     if (request && request.pickup_location && request.dropoff_location) {
-      // Only use multi-stop route if ALL coordinates are available
-      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng && 
+      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng &&
           request.pickup_lat && request.pickup_lng && request.dropoff_lat && request.dropoff_lng) {
         const origin = `${trip.from_lat},${trip.from_lng}`;
         const pickup = `${request.pickup_lat},${request.pickup_lng}`;
         const dropoff = `${request.dropoff_lat},${request.dropoff_lng}`;
         const destination = `${trip.to_lat},${trip.to_lng}`;
-        
-        console.log('Using multi-stop route with coordinates:', { origin, pickup, dropoff, destination });
-        
-        // Use dir format with coordinates only - no encoding needed for coordinates
         url = `https://www.google.com/maps/dir/${origin}/${pickup}/${dropoff}/${destination}/`;
       } else {
-        // Fallback to simple route if coordinates are missing
-        const origin = trip.from_lat && trip.from_lng 
-          ? `${trip.from_lat},${trip.from_lng}` 
-          : trip.from_location;
-        
-        const destination = trip.to_lat && trip.to_lng 
-          ? `${trip.to_lat},${trip.to_lng}` 
-          : trip.to_location;
-        
-        console.log('Coordinates missing, using simple route:', { origin, destination });
-        
+        const origin = trip.from_lat && trip.from_lng ? `${trip.from_lat},${trip.from_lng}` : trip.from_location;
+        const destination = trip.to_lat && trip.to_lng ? `${trip.to_lat},${trip.to_lng}` : trip.to_location;
         url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
       }
     } else {
-      // Driver alone - show simple route
-      const origin = trip.from_lat && trip.from_lng 
-        ? `${trip.from_lat},${trip.from_lng}` 
-        : trip.from_location;
-      
-      const destination = trip.to_lat && trip.to_lng 
-        ? `${trip.to_lat},${trip.to_lng}` 
-        : trip.to_location;
-      
-      console.log('No passenger request, using simple route:', { origin, destination });
-      
+      const origin = trip.from_lat && trip.from_lng ? `${trip.from_lat},${trip.from_lng}` : trip.from_location;
+      const destination = trip.to_lat && trip.to_lng ? `${trip.to_lat},${trip.to_lng}` : trip.to_location;
       url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
     }
-    
-    console.log('Final URL:', url);
+
     window.open(url, '_blank');
   }
 
