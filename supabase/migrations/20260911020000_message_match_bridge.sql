@@ -5,11 +5,11 @@
 */
 
 UPDATE public.messages m
-SET match_id = r.match_id
-FROM public.ride_requests rr
-JOIN public.matches r ON r.request_id = rr.id
-WHERE m.request_id = rr.id
-  AND m.match_id IS NULL;
+SET match_id = mt.id
+FROM public.matches mt
+WHERE m.request_id = mt.request_id
+  AND m.match_id IS NULL
+  AND m.request_id IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION public.sync_message_match_id()
 RETURNS trigger
