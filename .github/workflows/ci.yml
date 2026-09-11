@@ -6,12 +6,8 @@ on:
   pull_request:
     branches: ['master']
 
-permissions:
-  contents: write
-
 jobs:
   quality:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,13 +19,3 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
-      - name: Apply pending UI patch on master
-        if: github.ref == 'refs/heads/master'
-        run: |
-          python3 scripts/patch-home-ui.py
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/App.tsx
-          git diff --cached --quiet && exit 0
-          git commit -m 'ui: redesign home screen'
-          git push origin master
