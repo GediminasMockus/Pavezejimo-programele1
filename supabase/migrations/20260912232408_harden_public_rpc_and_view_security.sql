@@ -1,5 +1,7 @@
 -- Keep public API access explicit and prevent anonymous execution of owner-scoped RPCs.
-ALTER VIEW public.public_trips SET (security_invoker = true);
+-- public_trips intentionally remains a definer view: the base trips table is private,
+-- while this view exposes only the sanitized discovery projection to authenticated users.
+ALTER VIEW public.public_trips SET (security_invoker = false);
 
 REVOKE ALL ON FUNCTION public.create_my_trip(jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_accessible_trips() FROM PUBLIC;
