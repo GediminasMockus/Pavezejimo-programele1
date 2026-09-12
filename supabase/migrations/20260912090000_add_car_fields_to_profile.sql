@@ -21,8 +21,12 @@ END; $$;
 
 REVOKE ALL ON FUNCTION private.require_active_user() FROM PUBLIC;
 
+-- The return shape changes in this migration, so PostgreSQL requires the old
+-- zero-argument function to be dropped before it can be recreated.
+DROP FUNCTION IF EXISTS public.get_my_profile();
+
 -- Update get_my_profile to include car fields
-CREATE OR REPLACE FUNCTION public.get_my_profile()
+CREATE FUNCTION public.get_my_profile()
 RETURNS TABLE (
   id text,
   display_name text,
@@ -58,6 +62,9 @@ AS $$
   FROM public.user_profiles p
   WHERE p.id = auth.uid()::text;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_my_profile() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_my_profile() TO authenticated;
 
 -- Update update_my_profile to handle car fields
 CREATE OR REPLACE FUNCTION public.update_my_profile(
