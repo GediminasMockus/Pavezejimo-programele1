@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Bell, X, Check, Clock } from 'lucide-react';
 import { supabase, type Notification } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
@@ -11,6 +11,18 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadNotifications = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (data) setNotifications(data);
+    setLoading(false);
+  }, [userId]);
 
   useEffect(() => {
     loadNotifications();
@@ -31,26 +43,17 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, loadNotifications]);
 
-  async function loadNotifications() {
-    setLoading(true);
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (data) setNotifications(data);
-    setLoading(false);
-  }
 
   async function markAsRead(id: string) {
-    await supabase.rpc('mark_notification_read', { p_notification_id: id });
+    const { error } = await supabase.rpc('mark_notification_read', { p_notification_id: id });
+    if (!error) setNotifications(items => items.map(item => item.id === id ? { ...item, read: true } : item));
   }
 
   async function markAllAsRead() {
-    await supabase.rpc('mark_all_notifications_read');
+    const { error } = await supabase.rpc('mark_all_notifications_read');
+    if (!error) setNotifications(items => items.map(item => ({ ...item, read: true })));
   }
 
   const unreadCount = notifications.filter(n => !n.read).length;

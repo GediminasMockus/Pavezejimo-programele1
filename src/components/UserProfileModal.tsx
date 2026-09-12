@@ -40,10 +40,10 @@ export function UserProfileModal({
 
     async function load() {
       const [pRes, rRes, tRes] = await Promise.all([
-        supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('user_profiles').select('id,display_name,total_ratings,avg_rating,default_role,created_at').eq('id', userId).maybeSingle(),
         supabase.from('ratings').select('*').eq('rated_id', userId).order('created_at', { ascending: false }).limit(10),
         supabase
-          .from('trips')
+          .from('public_trips')
           .select('*')
           .eq('created_by', userId)
           .is('deleted_at', null)

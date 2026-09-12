@@ -16,6 +16,9 @@ export type TripStatus = 'active' | 'completed';
 export type NotificationType = 'request_accepted' | 'request_rejected' | 'trip_reminder' | 'new_message';
 
 export interface Trip {
+  from_area?: string | null;
+  to_area?: string | null;
+  available_seats?: number;
   id: string;
   role: TripRole;
   from_location: string;
@@ -45,6 +48,8 @@ export interface Trip {
 }
 
 export interface NewTrip {
+  from_area?: string;
+  to_area?: string;
   role: TripRole;
   from_location: string;
   to_location: string;

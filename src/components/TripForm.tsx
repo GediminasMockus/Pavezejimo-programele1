@@ -26,32 +26,36 @@ export function TripForm({
   role,
   userId,
   editTrip,
+  initialSearch,
   onClose,
   onSubmitted,
 }: {
   role: TripRole;
   userId: string;
   editTrip?: Trip | null;
+  initialSearch?: { fromLocation: string; toLocation: string; date: string };
   onClose: () => void;
   onSubmitted: () => void;
 }) {
   const isDriver = role === 'driver';
 
   const [fromAddr, setFromAddr] = useState<AddressValue>({
-    display_name: editTrip?.from_location ?? '',
+    display_name: editTrip?.from_location ?? initialSearch?.fromLocation ?? '',
     lat: editTrip?.from_lat ?? null,
     lng: editTrip?.from_lng ?? null,
   });
   const [toAddr, setToAddr] = useState<AddressValue>({
-    display_name: editTrip?.to_location ?? '',
+    display_name: editTrip?.to_location ?? initialSearch?.toLocation ?? '',
     lat: editTrip?.to_lat ?? null,
     lng: editTrip?.to_lng ?? null,
   });
   const [departureTime, setDepartureTime] = useState(
     editTrip
       ? toLocalInput(new Date(editTrip.departure_time))
-      : toLocalInput(new Date(Date.now() + 3600_000)),
+      : initialSearch?.date ? initialSearch.date + 'T12:00' : toLocalInput(new Date(Date.now() + 3600_000)),
   );
+  const [fromArea, setFromArea] = useState(editTrip?.from_area ?? initialSearch?.fromLocation ?? '');
+  const [toArea, setToArea] = useState(editTrip?.to_area ?? initialSearch?.toLocation ?? '');
   const [name, setName] = useState(editTrip?.name ?? '');
   const [phone, setPhone] = useState(editTrip?.phone ?? '');
   const [seats, setSeats] = useState(editTrip?.seats ?? 1);
@@ -74,22 +78,13 @@ export function TripForm({
       const profileData = data?.[0];
       if (profileData?.display_name) setName(profileData.display_name);
       if (profileData?.phone) setPhone(profileData.phone);
+      // Load car fields from profile for drivers
+      if (isDriver) {
+        if (profileData?.car_make) setCarMake(profileData.car_make);
+        if (profileData?.car_color) setCarColor(profileData.car_color);
+        if (profileData?.car_plate) setCarPlate(profileData.car_plate);
+      }
     });
-
-    // Load last own driver trip through the private owner RPC.
-    if (isDriver) {
-      supabase.rpc('get_my_trips').then(({ data }) => {
-        const ownTrips = (data ?? []) as Trip[];
-        const lastDriverTrip = ownTrips
-          .filter((trip) => trip.role === 'driver')
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-        if (lastDriverTrip) {
-          if (lastDriverTrip.car_make) setCarMake(lastDriverTrip.car_make);
-          if (lastDriverTrip.car_color) setCarColor(lastDriverTrip.car_color);
-          if (lastDriverTrip.car_plate) setCarPlate(lastDriverTrip.car_plate);
-        }
-      });
-    }
   }, [userId, editTrip, isDriver]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -137,7 +132,9 @@ export function TripForm({
       return;
     }
 
+    if (!fromArea.trim() || !toArea.trim()) { setFormError("Nurodykite viešai rodomus miestus arba vietoves."); return; }
     const payload: NewTrip = {
+      from_area: fromArea.trim(), to_area: toArea.trim(),
       role,
       from_location: fromAddr.display_name.trim(),
       to_location: toAddr.display_name.trim(),
@@ -153,8 +150,8 @@ export function TripForm({
       created_by: userId,
       is_recurring: isRecurring,
     };
-    if (phone.trim()) payload.phone = phone.trim();
-    if (notes.trim()) payload.notes = notes.trim();
+    payload.phone = phone.trim();
+    payload.notes = notes.trim();
     if (isDriver) {
       payload.car_color = carColor.trim();
       payload.car_make = carMake.trim();
@@ -175,7 +172,7 @@ export function TripForm({
     }
     setSubmitting(false);
     if (error) {
-      setFormError('Nepavyko išsaugoti skelbimo. Bandykite dar kartą.');
+      setFormError(error.message.includes('active requests') ? 'Skelbimas turi aktyvių užklausų. Prieš redaguodami jas užbaikite arba atšaukite.' : 'Nepavyko išsaugoti skelbimo. Patikrinkite laukus ir bandykite dar kartą.');
       return;
     }
     onSubmitted();
@@ -206,14 +203,32 @@ export function TripForm({
             <Field label="Iš kur" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
                 value={fromAddr}
-                onChange={setFromAddr}
+                onChange={value => {
+                  setFromAddr(value);
+                  if (value.area) {
+                    setFromArea(value.area);
+                  } else {
+                    // Extract city from manual input
+                    const cityMatch = value.display_name.match(/^([^,]+)/);
+                    if (cityMatch) setFromArea(cityMatch[1].trim());
+                  }
+                }}
                 placeholder="pvz. Vilnius, Centras"
               />
             </Field>
             <Field label="Į kur" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
                 value={toAddr}
-                onChange={setToAddr}
+                onChange={value => {
+                  setToAddr(value);
+                  if (value.area) {
+                    setToArea(value.area);
+                  } else {
+                    // Extract city from manual input
+                    const cityMatch = value.display_name.match(/^([^,]+)/);
+                    if (cityMatch) setToArea(cityMatch[1].trim());
+                  }
+                }}
                 placeholder="pvz. Trakai"
               />
             </Field>
@@ -360,6 +375,8 @@ export function TripForm({
             </span>
           </label>
 
+          <div className="grid grid-cols-2 gap-3"><label className="text-sm">Išvykimo miestas (viešas)<input className="form-input" value={fromArea} onChange={e => setFromArea(e.target.value)} maxLength={100} /></label><label className="text-sm">Atvykimo miestas (viešas)<input className="form-input" value={toArea} onChange={e => setToArea(e.target.value)} maxLength={100} /></label></div>
+          <p className="text-xs text-slate-500">Viešai rodomos tik šios vietovės ir apytikslė vieta. Tikslius adresus bei kontaktus matys patvirtintos kelionės dalyviai.</p>
           {formError && (
             <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>
           )}

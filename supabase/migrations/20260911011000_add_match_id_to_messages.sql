@@ -1,3 +1,5 @@
+-- Participant columns must exist before policies reference them.
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS driver_id text, ADD COLUMN IF NOT EXISTS passenger_id text;
 /*
   Give chat messages a canonical booking identity while keeping request_id
   during the migration period for backwards compatibility.

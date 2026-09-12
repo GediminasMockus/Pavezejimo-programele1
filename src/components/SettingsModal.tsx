@@ -28,8 +28,11 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [defaultRole, setDefaultRole] = useState<TripRole | ''>('');
-  const [prefs, setPrefs] = useState<NotificationPrefs>(loadPrefs);
-  const [language, setLanguage] = useState<Language>(loadLanguage);
+  const [carMake, setCarMake] = useState('');
+  const [carColor, setCarColor] = useState('');
+  const [carPlate, setCarPlate] = useState('');
+  const [prefs, setPrefs] = useState<NotificationPrefs>(loadPrefs());
+  const [language, setLanguage] = useState<Language>(loadLanguage());
   const { isDark, toggle: toggleDarkMode } = useDarkMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,11 +45,14 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
       const { data, error } = await supabase.rpc('get_my_profile');
       if (!mounted) return;
       if (!error && data?.[0]) {
-        const row = data[0] as UserProfile;
+        const row = data[0] as any;
         setProfile(row);
         setDisplayName(row.display_name ?? '');
         setPhone(row.phone ?? '');
         setDefaultRole(row.default_role ?? '');
+        setCarMake(row.car_make ?? '');
+        setCarColor(row.car_color ?? '');
+        setCarPlate(row.car_plate ?? '');
       } else if (error) {
         setSaveError(`Nepavyko įkelti profilio: ${error.message}`);
       }
@@ -81,6 +87,9 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
       p_display_name: displayName.trim() || 'Vartotojas',
       p_phone: normalizedPhone || null,
       p_default_role: defaultRole || null,
+      p_car_make: carMake.trim() || null,
+      p_car_color: carColor.trim() || null,
+      p_car_plate: carPlate.trim() || null,
     });
 
     if (error) {
@@ -116,6 +125,15 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
                 <label className="block"><span className="field-label">Vardas</span><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Jūsų vardas" className="form-input" /></label>
                 <label className="block"><span className="field-label">Telefonas</span><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+370 6XX XXXXX" className="form-input pl-10" /></div></label>
                 {profile?.email && <label className="block"><span className="field-label">El. paštas</span><input value={profile.email} disabled className="form-input bg-slate-50 text-slate-400" /></label>}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="section-title"><Car className="w-3.5 h-3.5" /> Automobilio informacija (užpildykite, jei vairuotojas)</h3>
+              <div className="space-y-3">
+                <label className="block"><span className="field-label">Markė</span><input value={carMake} onChange={e => setCarMake(e.target.value)} placeholder="pvz. VW Golf" className="form-input" /></label>
+                <label className="block"><span className="field-label">Spalva</span><input value={carColor} onChange={e => setCarColor(e.target.value)} placeholder="pvz. raudona" className="form-input" /></label>
+                <label className="block"><span className="field-label">Valst. numeris</span><input value={carPlate} onChange={e => setCarPlate(e.target.value)} placeholder="pvz. ABC123" className="form-input" /></label>
               </div>
             </section>
 

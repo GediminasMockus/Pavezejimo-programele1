@@ -8,6 +8,7 @@ export function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export function AuthScreen() {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: { data: { display_name: name.trim() || email.split('@')[0] } },
       });
       if (error) {
         setError(error.message === 'User already registered'
@@ -38,19 +40,7 @@ export function AuthScreen() {
         setLoading(false);
         return;
       }
-      if (data.user) {
-        const { error: profileError } = await supabase.from('user_profiles').upsert({
-          id: data.user.id,
-          display_name: name.trim() || email.split('@')[0],
-          email: email.trim(),
-        });
-        if (profileError) {
-          // Profile might already exist, try update
-          await supabase.from('user_profiles')
-            .update({ display_name: name.trim() || email.split('@')[0], email: email.trim() })
-            .eq('id', data.user.id);
-        }
-      }
+      if (!data.session) setNotice('Patikrinkite el. paštą ir patvirtinkite registraciją. Tada prisijunkite.');
       setLoading(false);
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -84,6 +74,7 @@ export function AuthScreen() {
       </div>
 
       <div className="w-full max-w-sm">
+        {notice && <p role="status" className="p-3 mb-3 bg-blue-50 text-blue-700 rounded-xl">{notice}</p>}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <div className="flex rounded-full bg-slate-100 p-1 mb-6">
             <button

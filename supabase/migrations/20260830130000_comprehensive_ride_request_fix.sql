@@ -28,6 +28,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_driver_offer_passenger_trip_active
 DROP POLICY IF EXISTS "insert_ride_requests_auth" ON public.ride_requests;
 
 -- Step 5: Create the comprehensive insert policy with business logic validation
+DROP POLICY IF EXISTS "insert_ride_requests_v3" ON public.ride_requests;
 CREATE POLICY "insert_ride_requests_v3" ON public.ride_requests
 FOR INSERT TO authenticated
 WITH CHECK (

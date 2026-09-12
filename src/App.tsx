@@ -1,19 +1,17 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useUnreadCount } from '@/lib/useUnreadCount';
+import { useRoadMatches } from '@/lib/useRoadMatches';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { withRetry } from '@/lib/retry';
 import {
   Car,
-  Users,
   ArrowLeft,
   Plus,
-  Route,
   Loader2,
   Map as MapIcon,
   List,
   Grid,
   Bell,
   Inbox,
-  Shield,
-  LogOut,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import {
@@ -30,14 +28,18 @@ import { TripForm } from '@/components/TripForm';
 import { TripCard } from '@/components/TripCard';
 import { ChatDrawer } from '@/components/ChatDrawer';
 import { DeleteReasonModal } from '@/components/DeleteReasonModal';
-import { MapView, useGeolocation, type MapMarker } from '@/components/MapView';
+import { MapView, type MapMarker } from '@/components/MapView';
+import { useGeolocation } from '@/lib/useGeolocation';
 import { RequestModal } from '@/components/RequestModal';
 import { RequestCard } from '@/components/RequestCard';
 import { OfferModal } from '@/components/OfferModal';
-import { FilterBar, applyFilters, emptyFilters, findBestMatches, type FilterState } from '@/components/FilterBar';
+import { FilterBar } from '@/components/FilterBar';
+import { applyFilters, emptyFilters, findBestMatches, type FilterState } from '@/lib/tripFilters';
+import { fetchAllRows } from '@/lib/pagination';
+import { navigationUrl } from '@/lib/navigation';
 import { RoutePreviewModal } from '@/components/RoutePreviewModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
-import { AdminLogs } from '@/components/AdminLogs';
+import { HomeScreen } from '@/components/HomeScreen';
 import { AuthScreen } from '@/components/AuthScreen';
 import { Background } from '@/components/Background';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -46,6 +48,8 @@ import { NotificationDrawer } from '@/components/NotificationDrawer';
 type Screen = 'home' | 'list';
 
 export default function App() {
+  const [search, setSearch] = useState<FilterState>(emptyFilters);
+  const [startForm, setStartForm] = useState(false);
   const [screen, setScreen] = useState<Screen>('home');
   const [activeRole, setActiveRole] = useState<TripRole | null>(null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
@@ -85,7 +89,9 @@ export default function App() {
       {screen === 'home' && (
         <HomeScreen
           userId={userId}
-          onPick={(role) => {
+          onPick={(role, searchFilters, create = false) => {
+            setSearch(searchFilters ?? emptyFilters);
+            setStartForm(create);
             setActiveRole(role);
             setScreen('list');
           }}
@@ -94,7 +100,10 @@ export default function App() {
       )}
       {screen === 'list' && activeRole && (
         <ListScreen
+          key={userId}
           role={activeRole}
+          initialFilters={search}
+          initialForm={startForm}
           userId={userId}
           onBack={() => {
             setScreen('home');
@@ -107,102 +116,20 @@ export default function App() {
   );
 }
 
-function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (role: TripRole) => void; onSignOut: () => void }) {
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [mode, setMode] = useState<TripRole>('passenger');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [date, setDate] = useState('');
-
-  useEffect(() => {
-    supabase.rpc('get_my_profile_flags')
-      .then(({ data }) => setIsAdmin(data?.[0]?.is_admin === true));
-  }, [userId]);
-
-  useEffect(() => {
-    const loadUnreadCount = async () => {
-      const { data } = await supabase.from('notifications').select('id').eq('user_id', userId).eq('read', false);
-      setUnreadCount(data?.length || 0);
-    };
-    loadUnreadCount();
-    const channel = supabase.channel('notifications-count')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-        if (payload.new.user_id === userId && !payload.new.read) setUnreadCount(prev => prev + 1);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
-        if (payload.new.user_id === userId) {
-          if (payload.new.read && !payload.old.read) setUnreadCount(prev => Math.max(0, prev - 1));
-          else if (!payload.new.read && payload.old.read) setUnreadCount(prev => prev + 1);
-        }
-      }).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [userId]);
-
-  return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-1">
-        <button onClick={() => setShowNotifications(true)} className="relative w-10 h-10 rounded-xl bg-white/80 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition" aria-label="Pranešimai"><Bell className="w-4 h-4" />{unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}</button>
-        <button onClick={() => setShowSettings(true)} className="w-10 h-10 rounded-xl bg-white/80 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition" aria-label="Parametrai"><SettingsIcon className="w-4 h-4" /></button>
-        {isAdmin && <button onClick={() => setShowAdmin(true)} className="w-10 h-10 rounded-xl bg-white/80 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition" aria-label="Administracija"><Shield className="w-4 h-4" /></button>}
-        <button onClick={onSignOut} className="w-10 h-10 rounded-xl bg-white/80 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition" aria-label="Atsijungti"><LogOut className="w-4 h-4" /></button>
-      </div>
-      {showSettings && <SettingsModal userId={userId} onClose={() => setShowSettings(false)} onSignOut={onSignOut} />}
-      {showAdmin && <AdminLogs onClose={() => setShowAdmin(false)} />}
-      {showNotifications && <NotificationDrawer userId={userId} onClose={() => setShowNotifications(false)} />}
-
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-12">
-        <div className="grid lg:grid-cols-[1fr_1.15fr] gap-8 lg:gap-12 items-center min-h-[calc(100vh-8rem)]">
-          <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-slate-200 px-3 py-1.5 shadow-sm mb-5"><span className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Pavežėjimai tarp miestų</span></div>
-            <div className="flex justify-center lg:justify-start mb-5"><div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 flex items-center justify-center"><Route className="w-7 h-7 text-white" strokeWidth={2.2} /></div></div>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 leading-[1.05]">Rask žmogų,<span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">važiuojantį tavo kryptimi.</span></h1>
-            <p className="mt-5 text-base sm:text-lg text-slate-500 max-w-xl mx-auto lg:mx-0 leading-relaxed">Ne katalogas. Įvesk maršrutą, pasirink laiką ir rask tinkamiausią pavežėjimą arba keleivį.</p>
-            <div className="mt-7 flex flex-wrap justify-center lg:justify-start gap-2 text-xs font-semibold text-slate-500"><span className="px-3 py-2 rounded-full bg-white/70 border border-slate-200">✓ Tikri profiliai</span><span className="px-3 py-2 rounded-full bg-white/70 border border-slate-200">✓ Įvertinimai</span><span className="px-3 py-2 rounded-full bg-white/70 border border-slate-200">✓ Susitarimas programėlėje</span></div>
-          </div>
-
-          <div className="w-full max-w-xl lg:ml-auto">
-            <div className="bg-white/95 backdrop-blur rounded-[28px] border border-slate-200 shadow-2xl shadow-slate-900/10 overflow-hidden">
-              <div className="p-5 sm:p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between gap-3 mb-4"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Ko tau reikia?</p><h2 className="text-xl font-extrabold text-slate-900 mt-1">Pradėk nuo maršruto</h2></div><div className="flex rounded-xl bg-slate-100 p-1"><button onClick={() => setMode('passenger')} className={`px-3 py-2 rounded-lg text-xs font-bold transition ${mode === 'passenger' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Ieškau</button><button onClick={() => setMode('driver')} className={`px-3 py-2 rounded-lg text-xs font-bold transition ${mode === 'driver' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>Vežu</button></div></div>
-                <div className="space-y-3">
-                  <label className="block rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition"><span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Iš</span><input value={from} onChange={e => setFrom(e.target.value)} placeholder="Vilnius" className="w-full bg-transparent outline-none text-base font-semibold text-slate-900 placeholder:text-slate-300" /></label>
-                  <label className="block rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition"><span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Į</span><input value={to} onChange={e => setTo(e.target.value)} placeholder="Kaunas" className="w-full bg-transparent outline-none text-base font-semibold text-slate-900 placeholder:text-slate-300" /></label>
-                  <label className="block rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition"><span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Kada</span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-transparent outline-none text-base font-semibold text-slate-900" /></label>
-                </div>
-                <button onClick={() => onPick(mode)} className="mt-4 w-full rounded-2xl bg-slate-900 hover:bg-blue-600 text-white py-4 px-5 font-extrabold text-base shadow-lg shadow-slate-900/15 hover:shadow-blue-500/20 transition-all active:scale-[0.99]">{mode === 'passenger' ? 'Rasti kelionę' : 'Paskelbti kelionę'}<span className="ml-2">→</span></button>
-                <p className="text-center text-[11px] text-slate-400 mt-3">Maršrutas ir laikas padės parodyti tinkamiausius atitikmenis.</p>
-              </div>
-              <div className="grid grid-cols-2 divide-x divide-slate-100 bg-slate-50/70">
-                <button onClick={() => onPick('driver')} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><Car className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Vežu</p><p className="text-[11px] text-slate-400">Sukurti pasiūlymą</p></div></div></button>
-                <button onClick={() => onPick('passenger')} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-emerald-600">Ieškau</p><p className="text-[11px] text-slate-400">Rasti pasiūlymus</p></div></div></button>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-3"><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">1</p><p className="text-[10px] font-semibold text-slate-400">maršrutas</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">2</p><p className="text-[10px] font-semibold text-slate-400">žingsniai iki susitarimo</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">0</p><p className="text-[10px] font-semibold text-slate-400">nereikalingų ekranų</p></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: string; onBack: () => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }: { initialFilters: FilterState; initialForm: boolean; role: TripRole; userId: string; onBack: () => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(initialForm);
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
   const [chatTrip, setChatTrip] = useState<Trip | null>(null);
   const [chatRequest, setChatRequest] = useState<RideRequest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCount(userId);
   const [requestTarget, setRequestTarget] = useState<Trip | null>(null);
   const [offerTarget, setOfferTarget] = useState<Trip | null>(null);
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
@@ -212,7 +139,12 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     const saved = localStorage.getItem('viewMode');
     return (saved === 'list' || saved === 'map' || saved === 'grid') ? saved : 'list';
   });
+  const loadVersion = useRef(0);
+  const loadedOnce = useRef(false);
+  const [publicLimit, setPublicLimit] = useState(100);
+  const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [filters, setFilters] = useState<FilterState>(() => {
+    if (initialFilters.fromLocation || initialFilters.toLocation || initialFilters.date) return initialFilters;
     try {
       const saved = localStorage.getItem('pavezejimai_filters');
       if (saved) {
@@ -225,6 +157,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     }
     return emptyFilters;
   });
+  useEffect(() => { setPublicLimit(100); }, [filters]);
   const [, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { position: userPos, status: gpsStatus } = useGeolocation();
@@ -247,85 +180,55 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   }, [filters]);
 
   // Load unread notifications count
-  useEffect(() => {
-    const loadUnreadCount = async () => {
-      const { data } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('read', false);
-      setUnreadCount(data?.length || 0);
-    };
-    loadUnreadCount();
 
-    const channel = supabase
-      .channel('notifications-count-list')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-        if (payload.new.user_id === userId && !payload.new.read) {
-          setUnreadCount(prev => prev + 1);
-        }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
-        if (payload.new.user_id === userId) {
-          if (payload.new.read && !payload.old.read) {
-            setUnreadCount(prev => Math.max(0, prev - 1));
-          } else if (!payload.new.read && payload.old.read) {
-            setUnreadCount(prev => prev + 1);
-          }
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
 
   const clientId = userId;
 
   const loadTrips = useCallback(async () => {
-    setLoading(true);
+    const version = ++loadVersion.current;
+    if (!loadedOnce.current) setLoading(true);
     setError(null);
     try {
-      const [publicResult, ownResult] = await Promise.all([
+      const [publicResult, privateTrips] = await Promise.all([
         withRetry(
-          () => supabase
-            .from('public_trips')
-            .select('*')
-            .order('departure_time', { ascending: true }),
+          () => {
+            const dateFrom = filters.date ? new Date(filters.date + 'T00:00:00') : null;
+            const dateTo = dateFrom ? new Date(dateFrom) : null;
+            dateTo?.setDate(dateTo.getDate() + 1);
+            const price = filters.maxPrice.replace(',', '.');
+            return supabase.rpc('search_trips', { p_role: role === 'driver' ? 'passenger' : 'driver',
+              p_filters: { ...filters, maxPrice: price && Number.isFinite(Number(price)) ? price : null, dateFrom: dateFrom?.toISOString(), dateTo: dateTo?.toISOString() },
+              p_lat: userPos?.lat ?? null, p_lng: userPos?.lng ?? null })
+            .order('departure_time', { ascending: true }).order('id')
+            .range(0, publicLimit);
+          },
           { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for public trips:`, err.message) }
         ),
-        withRetry(
-          () => supabase.rpc('get_my_trips'),
-          { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for own trips:`, err.message) }
-        ),
+        fetchAllRows<Trip>((from, to) => supabase.rpc('get_accessible_trips').order('id').range(from, to)),
       ]);
-      if (publicResult.error || ownResult.error) {
+      if (version !== loadVersion.current) return;
+      if (publicResult.error) {
         setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
       } else {
         const merged = new Map<string, Trip>();
-        for (const trip of publicResult.data ?? []) merged.set(trip.id, trip as Trip);
-        for (const trip of ownResult.data ?? []) merged.set(trip.id, trip as Trip);
+        setHasMoreTrips((publicResult.data?.length ?? 0) > publicLimit);
+        for (const trip of (publicResult.data ?? []).slice(0, publicLimit)) merged.set(trip.id, trip as Trip);
+        for (const trip of privateTrips) merged.set(trip.id, { ...merged.get(trip.id), ...trip });
         setTrips([...merged.values()].sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()));
       }
     } catch {
       setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
     }
-    setLoading(false);
-  }, []);
+    if (version === loadVersion.current) { loadedOnce.current = true; setLoading(false); }
+  }, [role, publicLimit, filters, userPos]);
 
   const loadRequests = useCallback(async () => {
     try {
-      const { data } = await withRetry(
-        () => supabase
-          .from('ride_requests')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for loadRequests:`, err.message) }
-      );
-      if (data) setAllRequests(data);
+      const data = await fetchAllRows<RideRequest>((from, to) => withRetry(() => supabase.from('ride_requests').select('*').order('created_at', { ascending: false }).order('id').range(from, to)));
+      setAllRequests(data);
     } catch (err) {
       console.error('Failed to load requests:', err);
+      setError('Nepavyko įkelti užklausų. Bandykite dar kartą.');
     }
   }, []);
 
@@ -345,8 +248,8 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   }, []);
 
   useEffect(() => {
-    loadTrips();
-    loadRequests();
+    const initial = window.setTimeout(() => { void loadTrips(); void loadRequests(); }, 250);
+    const refresh = window.setInterval(() => { void loadTrips(); }, 30_000);
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRefresh = () => {
@@ -360,6 +263,8 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
       .subscribe();
 
     return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(refresh);
       if (refreshTimer) clearTimeout(refreshTimer);
       supabase.removeChannel(tripChannel);
     };
@@ -386,21 +291,16 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     [trips, clientId, now],
   );
 
-  const ownTrips = visibleTrips.filter((t) => t.role === role && t.created_by === clientId);
-  const otherTrips = visibleTrips.filter((t) => t.role === othersRole);
+  const ownTrips = useMemo(() => visibleTrips.filter((t) => t.role === role && t.created_by === clientId).map(t => ({ ...t, available_seats: t.seats - allRequests.filter(r => (r.driver_trip_id ?? r.trip_id) === t.id && r.status === "accepted").reduce((sum, r) => sum + r.seats_needed, 0) })), [visibleTrips, role, clientId, allRequests]);
+  const otherTrips = useMemo(() => visibleTrips.filter((t) => t.role === othersRole && t.created_by !== clientId && t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > now), [visibleTrips, othersRole, clientId, now]);
   const filteredOtherTrips = useMemo(
     () => applyFilters(otherTrips, filters, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
     [otherTrips, filters, userPos],
   );
 
-  const bestMatches = useMemo(() => {
-    if (ownTrips.length === 0) return [];
-    const nextOwnTrip = [...ownTrips]
-      .filter((t) => t.status === 'active' && new Date(t.departure_time).getTime() >= now)
-      .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime())[0];
-    if (!nextOwnTrip) return [];
-    return findBestMatches(nextOwnTrip, otherTrips, 3);
-  }, [ownTrips, otherTrips]);
+  const nextOwnTrip = useMemo(() => ownTrips.filter(t => t.status === 'active' && new Date(t.departure_time).getTime() >= now).sort((a,b) => new Date(a.departure_time).getTime()-new Date(b.departure_time).getTime())[0], [ownTrips, now]);
+  const preliminaryMatches = useMemo(() => nextOwnTrip ? findBestMatches({ ...nextOwnTrip, seats: nextOwnTrip.available_seats }, otherTrips, 3) : [], [nextOwnTrip, otherTrips]);
+  const bestMatches = useRoadMatches(nextOwnTrip, preliminaryMatches);
 
   const requestsByTrip = useMemo(() => {
     const map = new Map<string, RideRequest[]>();
@@ -476,6 +376,11 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
     }
   }
 
+  const refreshAfterCompletion = useCallback(() => {
+    void loadTrips();
+    void loadRequests();
+  }, [loadTrips, loadRequests]);
+
   function findTripById(id: string): Trip | undefined {
     return trips.find((t) => t.id === id);
   }
@@ -486,36 +391,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
   }
 
   function openGoogleMapsNavigation(trip: Trip, request?: RideRequest | null) {
-    let url;
-    
-    if (request && request.pickup_location && request.dropoff_location) {
-      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng && 
-          request.pickup_lat && request.pickup_lng && request.dropoff_lat && request.dropoff_lng) {
-        const origin = `${trip.from_lat},${trip.from_lng}`;
-        const pickup = `${request.pickup_lat},${request.pickup_lng}`;
-        const dropoff = `${request.dropoff_lat},${request.dropoff_lng}`;
-        const destination = `${trip.to_lat},${trip.to_lng}`;
-        url = `https://www.google.com/maps/dir/${origin}/${pickup}/${dropoff}/${destination}/`;
-      } else {
-        const origin = trip.from_lat && trip.from_lng 
-          ? `${trip.from_lat},${trip.from_lng}` 
-          : trip.from_location;
-        const destination = trip.to_lat && trip.to_lng 
-          ? `${trip.to_lat},${trip.to_lng}` 
-          : trip.to_location;
-        url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
-      }
-    } else {
-      const origin = trip.from_lat && trip.from_lng 
-        ? `${trip.from_lat},${trip.from_lng}` 
-        : trip.from_location;
-      const destination = trip.to_lat && trip.to_lng 
-        ? `${trip.to_lat},${trip.to_lng}` 
-        : trip.to_location;
-      url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
-    }
-    
-    window.open(url, '_blank');
+    window.open(navigationUrl(trip, request), '_blank', 'noopener,noreferrer');
   }
 
   function getUserRating(userId: string): { avg: number; total: number } | null {
@@ -604,6 +480,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
         {showForm && (
           <TripForm
             role={role}
+            initialSearch={initialFilters}
             userId={userId}
             onClose={() => setShowForm(false)}
             onSubmitted={() => {
@@ -637,10 +514,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
               setChatTrip(null);
               setChatRequest(null);
             }}
-            onBothConfirmed={() => {
-              loadTrips();
-              loadRequests();
-            }}
+            onBothConfirmed={refreshAfterCompletion}
           />
         )}
 
@@ -729,9 +603,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
             onClose={() => setDeleteTarget(null)}
             onConfirm={async (reason) => {
               const { error } = await supabase
-                .from('trips')
-                .update({ deleted_at: new Date().toISOString(), deletion_reason: reason })
-                .eq('id', deleteTarget.id);
+                .rpc('delete_my_trip', { p_trip_id: deleteTarget.id, p_reason: reason });
               if (error) throw new Error('Failed to delete');
               setDeleteTarget(null);
               loadTrips();
@@ -785,7 +657,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 {pendingDriverRequests.length > 0 && (
                   <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4 mb-4' : 'flex flex-col gap-3 mb-4'}>
                     {pendingDriverRequests.map((r) => {
-                      const t = findTripById(r.trip_id);
+                      const t = findTripById(r.driver_trip_id ?? r.trip_id);
                       if (!t) return null;
                       return (
                         <RequestCard
@@ -809,7 +681,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                   <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4 mb-4' : 'flex flex-col gap-3 mb-4'}>
                     <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-emerald-600 uppercase tracking-wide' : 'text-xs font-semibold text-emerald-600 uppercase tracking-wide'}>Patvirtintos</p>
                     {acceptedDriverRequests.map((r) => {
-                      const t = findTripById(r.trip_id);
+                      const t = findTripById(r.driver_trip_id ?? r.trip_id);
                       if (!t) return null;
                       return (
                         <RequestCard
@@ -817,6 +689,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                           request={r}
                           trip={t}
                           isDriverView
+                          onCancel={() => updateRequestStatus(r.id, "cancelled")}
                           onChat={() => openChat(t, r)}
                           onNavigation={() => openGoogleMapsNavigation(t, r)}
                           onPreviewRoute={() => {
@@ -833,7 +706,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                   <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                     <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-red-500 uppercase tracking-wide' : 'text-xs font-semibold text-red-500 uppercase tracking-wide'}>Atmestos</p>
                     {rejectedDriverRequests.map((r) => {
-                      const t = findTripById(r.trip_id);
+                      const t = findTripById(r.driver_trip_id ?? r.trip_id);
                       if (!t) return null;
                       return <RequestCard key={r.id} request={r} trip={t} isDriverView />;
                     })}
@@ -847,7 +720,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
               <section className="mb-8">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Mano pasiūlymai keleiviams ({mySentOffers.length})</h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {mySentOffers.map((r) => { const t = findTripById(r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
+                  {mySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
                 </div>
               </section>
             )}
@@ -860,7 +733,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {myReceivedOffers.map((r) => {
-                    const t = findTripById(r.trip_id);
+                    const t = findTripById(r.driver_trip_id ?? r.trip_id);
                     if (!t) return null;
                     return <RequestCard key={r.id} request={r} trip={t} isDriverView={false} isOffer
                       onAccept={() => updateRequestStatus(r.id, 'accepted')}
@@ -882,7 +755,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {mySentRequests.map((r) => {
-                    const t = findTripById(r.trip_id);
+                    const t = findTripById(r.driver_trip_id ?? r.trip_id);
                     if (!t) return null;
                     return (
                       <RequestCard
@@ -987,6 +860,7 @@ function ListScreen({ role, userId, onBack, toast }: { role: TripRole; userId: s
               </section>
             )}
 
+            {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
             <section>
               <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">

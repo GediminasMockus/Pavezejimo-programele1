@@ -133,7 +133,7 @@ export function RequestCard({
         }`}>
           <div className="flex items-center gap-1.5 font-semibold mb-1">
             <Route className="w-4 h-4" />
-            Nuokrypis nuo maršruto
+            Preliminarus nuokrypis tiesia linija
           </div>
           <p>
             Jūsų maršrutas: {formatDistance(detour.originalDistance)} →{' '}
@@ -220,6 +220,7 @@ export function RequestCard({
         </button>
       )}
 
+      {request.status === 'accepted' && !request.completed_at && onCancel && <button onClick={onCancel} className="mt-3 w-full py-2 text-sm text-red-600">Atšaukti kelionę</button>}
       {request.status === 'accepted' && (
         <div className="mt-3 flex gap-2">
           {onChat && (

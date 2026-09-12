@@ -12,6 +12,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [tab, setTab] = useState<AdminTab>('completed');
@@ -32,8 +33,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
           .order('completed_at', { ascending: false })
           .limit(100),
         supabase
-          .from('user_profiles')
-          .select('*')
+          .rpc('admin_list_profiles')
           .order('created_at', { ascending: false }),
         supabase
           .from('ratings')
@@ -51,6 +51,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
           .order('created_at', { ascending: false })
           .limit(100),
       ]);
+      if ([tRes,rRes,pRes,ratRes,allTRes,allRRes].some(result => result.error)) setLoadError("Nepavyko įkelti dalies administravimo duomenų.");
       if (tRes.data) setCompletedTrips(tRes.data);
       if (rRes.data) setCompletedRequests(rRes.data);
       if (pRes.data) setProfiles(pRes.data);
@@ -65,7 +66,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   async function handleDeleteTrip(tripId: string) {
     if (!confirm('Ar tikrai norite ištrinti šį skelbimą?')) return;
     setActionLoading(tripId);
-    const { error } = await supabase.from('trips').delete().eq('id', tripId);
+    const { error } = await supabase.rpc('admin_delete_record', { p_kind: 'trip', p_id: tripId });
     setActionLoading(null);
     if (error) {
       alert('Nepavyko ištrinti: ' + error.message);
@@ -78,7 +79,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   async function handleDeleteRequest(requestId: string) {
     if (!confirm('Ar tikrai norite ištrinti šią užklausą?')) return;
     setActionLoading(requestId);
-    const { error } = await supabase.from('ride_requests').delete().eq('id', requestId);
+    const { error } = await supabase.rpc('admin_delete_record', { p_kind: 'request', p_id: requestId });
     setActionLoading(null);
     if (error) {
       alert('Nepavyko ištrinti: ' + error.message);
@@ -92,9 +93,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
     if (currentAdmin && !confirm('Ar tikrai norite atimti administratoriaus teises?')) return;
     setActionLoading(userId);
     const { error } = await supabase
-      .from('user_profiles')
-      .update({ is_admin: !currentAdmin })
-      .eq('id', userId);
+      .rpc('admin_set_role', { p_user_id: userId, p_is_admin: !currentAdmin });
     setActionLoading(null);
     if (error) {
       alert('Nepavyko atnaujinti: ' + error.message);
@@ -108,7 +107,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   async function handleDeleteUser(userId: string) {
     if (!confirm('Ar tikrai norite ištrinti šį vartotoją? Visi jo duomenys bus pašalinti.')) return;
     setActionLoading(userId);
-    const { error } = await supabase.from('user_profiles').delete().eq('id', userId);
+    const { error } = await supabase.functions.invoke('admin-users', { body: { userId } });
     setActionLoading(null);
     if (error) {
       alert('Nepavyko ištrinti: ' + error.message);
@@ -121,6 +120,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
+      {loadError && <p role="alert" className="p-3 text-red-600">{loadError}</p>}
       <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
         <div className="sticky top-0 bg-white/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">

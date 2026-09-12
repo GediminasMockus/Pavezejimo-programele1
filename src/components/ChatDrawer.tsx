@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { navigationUrl } from '@/lib/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare, Send, X, Loader2, Check, CheckCheck, Star, Navigation } from 'lucide-react';
 import {
   supabase,
@@ -26,6 +27,9 @@ export function ChatDrawer({
   onClose: () => void;
   onBothConfirmed?: () => void;
 }) {
+  const [messageLimit, setMessageLimit] = useState(50);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const completionNotified = useRef(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeMatch, setActiveMatch] = useState<Match | null>(match ?? null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +54,7 @@ export function ChatDrawer({
   const bothConfirmed = myConfirmed && otherConfirmed;
   const matchId = activeMatch?.id ?? null;
 
-  async function resolveMatch() {
+  const resolveMatch = useCallback(async () => {
     if (match) {
       setActiveMatch(match);
       return match;
@@ -70,9 +74,9 @@ export function ChatDrawer({
     const resolved = ((data ?? []) as Match[]).find((item) => item.request_id === request.id) ?? null;
     setActiveMatch(resolved);
     return resolved;
-  }
+  }, [match, request]);
 
-  async function loadMessages(resolvedMatch?: Match | null) {
+  const loadMessages = useCallback(async (resolvedMatch?: Match | null) => {
     setLoading(true);
     if (!request) {
       setMessages([]);
@@ -80,25 +84,26 @@ export function ChatDrawer({
       return;
     }
 
-    const currentMatch = resolvedMatch ?? activeMatch;
+    const currentMatch = resolvedMatch;
     const query = supabase.from('messages').select('*');
     const { data, error: messageError } = currentMatch
       ? await query
           .eq('match_id', currentMatch.id)
-          .order('created_at', { ascending: true })
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(messageLimit + 1)
       : await query
           .eq('request_id', request.id)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(messageLimit + 1);
 
     if (messageError) {
       setError('Nepavyko įkelti žinučių.');
     } else {
-      setMessages(data ?? []);
+      setHasOlderMessages((data?.length ?? 0) > messageLimit);
+      setMessages((data ?? []).slice(0, messageLimit).reverse());
     }
     setLoading(false);
-  }
+  }, [request, messageLimit]);
 
-  async function loadConfirmation() {
+  const loadConfirmation = useCallback(async () => {
     if (!request) return;
 
     const { data: freshRequest } = await supabase
@@ -116,7 +121,13 @@ export function ChatDrawer({
         setOtherConfirmed(freshRequest.passenger_confirmed);
       }
     }
-  }
+  }, [request, isPassengerSide, isDriverSide]);
+
+  useEffect(() => {
+    completionNotified.current = false;
+    setMessageLimit(50);
+    setMyConfirmed(false); setOtherConfirmed(false); setRatingSubmitted(false);
+  }, [request?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +155,7 @@ export function ChatDrawer({
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: matchId ? `match_id=eq.${matchId}` : `request_id=eq.${request.id}`,
+            filter: `request_id=eq.${request.id}`,
           },
           (payload) => {
             const message = payload.new as Message;
@@ -181,7 +192,7 @@ export function ChatDrawer({
     return () => {
       cancelled = true;
     };
-  }, [trip.id, request?.id, userId, isPassengerSide, isDriverSide, match?.id]);
+  }, [trip.id, trip.name, request, userId, isPassengerSide, isDriverSide, resolveMatch, loadMessages, loadConfirmation]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -190,7 +201,8 @@ export function ChatDrawer({
   }, [messages]);
 
   useEffect(() => {
-    if (bothConfirmed) {
+    if (bothConfirmed && !completionNotified.current) {
+      completionNotified.current = true;
       setError(null);
       if (onBothConfirmed) {
         onBothConfirmed();
@@ -271,28 +283,7 @@ export function ChatDrawer({
   const priceStr = formatPrice(trip);
 
   function openGoogleMapsNavigation() {
-    let url;
-
-    if (request && request.pickup_location && request.dropoff_location) {
-      if (trip.from_lat && trip.from_lng && trip.to_lat && trip.to_lng &&
-          request.pickup_lat && request.pickup_lng && request.dropoff_lat && request.dropoff_lng) {
-        const origin = `${trip.from_lat},${trip.from_lng}`;
-        const pickup = `${request.pickup_lat},${request.pickup_lng}`;
-        const dropoff = `${request.dropoff_lat},${request.dropoff_lng}`;
-        const destination = `${trip.to_lat},${trip.to_lng}`;
-        url = `https://www.google.com/maps/dir/${origin}/${pickup}/${dropoff}/${destination}/`;
-      } else {
-        const origin = trip.from_lat && trip.from_lng ? `${trip.from_lat},${trip.from_lng}` : trip.from_location;
-        const destination = trip.to_lat && trip.to_lng ? `${trip.to_lat},${trip.to_lng}` : trip.to_location;
-        url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
-      }
-    } else {
-      const origin = trip.from_lat && trip.from_lng ? `${trip.from_lat},${trip.from_lng}` : trip.from_location;
-      const destination = trip.to_lat && trip.to_lng ? `${trip.to_lat},${trip.to_lng}` : trip.to_location;
-      url = `https://www.google.com/maps/dir/${origin}/${destination}/`;
-    }
-
-    window.open(url, '_blank');
+    window.open(navigationUrl(trip, request), '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -328,6 +319,7 @@ export function ChatDrawer({
           </div>
         </div>
 
+        {hasOlderMessages && <button className="p-2 text-blue-600 text-sm" disabled={loading} onClick={() => setMessageLimit(limit => limit + 50)}>Įkelti ankstesnes žinutes</button>}
         {canConfirm && (
           <div className="flex-shrink-0 px-4 sm:px-5 py-3 bg-slate-50 border-b border-slate-100">
             {bothConfirmed ? (
@@ -374,7 +366,7 @@ export function ChatDrawer({
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
-                {request?.status === 'accepted' ? (
+                {request?.status !== 'accepted' ? (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                       <CheckCheck className="w-4 h-4" />
@@ -404,7 +396,7 @@ export function ChatDrawer({
                         className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60"
                       >
                         {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Patvirtinti
+                        Kelionė įvyko
                       </button>
                     )}
                   </>

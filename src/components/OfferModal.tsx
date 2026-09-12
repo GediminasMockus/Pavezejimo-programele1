@@ -17,9 +17,9 @@ export function OfferModal({
   onSubmitted: () => void;
 }) {
   const eligibleTrips = useMemo(() => driverTrips.filter((t) =>
-    t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > Date.now() &&
-    Math.abs(new Date(t.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) <= 5 * 60_000
-  ), [driverTrips, passengerTrip.departure_time]);
+    (t.available_seats ?? t.seats) >= passengerTrip.seats && t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > Date.now() &&
+    Math.abs(new Date(t.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) <= 60 * 60_000
+  ), [driverTrips, passengerTrip.departure_time, passengerTrip.seats]);
   const [selectedId, setSelectedId] = useState(eligibleTrips[0]?.id ?? '');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,8 +33,8 @@ export function OfferModal({
       setError('Pasirinkite savo vairuotojo kelionę.');
       return;
     }
-    if (Math.abs(new Date(selectedTrip.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) > 5 * 60_000) {
-      setError('Pasiūlymo laikas turi sutapti su keleivio skelbimo laiku (leisti skirtumas iki 5 minučių).');
+    if (Math.abs(new Date(selectedTrip.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) > 60 * 60_000) {
+      setError('Pasiūlymo laikas turi sutapti su keleivio skelbimo laiku (leisti skirtumas iki 60 minučių).');
       return;
     }
     if (!passengerTrip.created_by) {
@@ -52,7 +52,7 @@ export function OfferModal({
       dropoff_location: passengerTrip.to_location,
       dropoff_lat: passengerTrip.to_lat,
       dropoff_lng: passengerTrip.to_lng,
-      seats_needed: 1,
+      seats_needed: passengerTrip.seats,
       notes: message.trim() || undefined,
       driver_id: userId,
       driver_name: selectedTrip.name,
@@ -89,7 +89,7 @@ export function OfferModal({
           <div>
             <label className="text-sm font-semibold text-slate-700 mb-2 block">Jūsų kelionė</label>
             {eligibleTrips.length === 0 ? <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">Neturite aktyvios vairuotojo kelionės tuo pačiu metu. Pirmiausia ją sukurkite.</div> : <div className="flex flex-col gap-2">{eligibleTrips.map((t) => {
-              const sameTime = Math.abs(new Date(t.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) <= 5 * 60_000;
+              const sameTime = Math.abs(new Date(t.departure_time).getTime() - new Date(passengerTrip.departure_time).getTime()) <= 60 * 60_000;
               return <button type="button" key={t.id} onClick={() => setSelectedId(t.id)} className={`text-left rounded-xl border p-3 transition-all ${selectedId === t.id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-slate-300'} ${!sameTime ? 'opacity-60' : ''}`}>
                 <div className="flex items-center justify-between gap-2"><span className="font-semibold text-sm text-slate-800 inline-flex items-center gap-1.5"><Car className="w-4 h-4 text-blue-500" />{t.from_location} → {t.to_location}</span>{selectedId === t.id && <Check className="w-4 h-4 text-blue-600" />}</div>
                 <div className="text-xs text-slate-500 mt-1">{formatDateTime(t.departure_time)}{formatPrice(t) ? ` · ${formatPrice(t)}` : ''}</div>

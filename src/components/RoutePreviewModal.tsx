@@ -1,3 +1,4 @@
+import { mapPopup } from '@/lib/mapPopup';
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { X, MapPin, Route as RouteIcon, Loader2 } from 'lucide-react';
@@ -15,10 +16,11 @@ async function fetchRoute(
   fromLng: number,
   toLat: number,
   toLng: number,
+  signal?: AbortSignal,
 ): Promise<RouteData | null> {
   try {
     const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`,
+      `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`, { signal },
     );
     if (!res.ok) return null;
     const json = await res.json();
@@ -80,6 +82,7 @@ export function RoutePreviewModal({
   useEffect(() => {
     if (!mapInstance.current) return;
     const map = mapInstance.current;
+    const controller = new AbortController();
 
     // Clear previous layers
     map.eachLayer((layer) => {
@@ -97,12 +100,13 @@ export function RoutePreviewModal({
       if (hasDriverCoords) {
         L.marker([trip.from_lat!, trip.from_lng!], { icon: bluePin('Iš') })
           .addTo(map)
-          .bindPopup(`<b>Išvykimas</b><br/>${trip.from_location}`);
+          .bindPopup(mapPopup("Išvykimas", trip.from_location));
         L.marker([trip.to_lat!, trip.to_lng!], { icon: bluePin('Į') })
           .addTo(map)
-          .bindPopup(`<b>Atvykimas</b><br/>${trip.to_location}`);
+          .bindPopup(mapPopup("Atvykimas", trip.to_location));
 
-        driverRouteData = await fetchRoute(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!);
+        driverRouteData = await fetchRoute(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!, controller.signal);
+        if (controller.signal.aborted) return;
         if (driverRouteData) {
           L.polyline(driverRouteData.coordinates, {
             color: '#2563eb',
@@ -127,18 +131,19 @@ export function RoutePreviewModal({
       if (hasDriverCoords && hasRequestCoords) {
         L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
           .addTo(map)
-          .bindPopup(`<b>Keleivio paėmimas</b><br/>${request!.pickup_location}`);
+          .bindPopup(mapPopup("Keleivio paėmimas", request!.pickup_location));
         L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: greenPin('B') })
           .addTo(map)
-          .bindPopup(`<b>Keleivio išlaipinimas</b><br/>${request!.dropoff_location}`);
+          .bindPopup(mapPopup("Keleivio išlaipinimas", request!.dropoff_location));
 
         // Fetch all three legs of the route
         const [leg1, leg2, leg3] = await Promise.all([
-          fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat!, request!.pickup_lng!),
-          fetchRoute(request!.pickup_lat!, request!.pickup_lng!, request!.dropoff_lat!, request!.dropoff_lng!),
-          fetchRoute(request!.dropoff_lat!, request!.dropoff_lng!, trip.to_lat!, trip.to_lng!),
+          fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat!, request!.pickup_lng!, controller.signal),
+          fetchRoute(request!.pickup_lat!, request!.pickup_lng!, request!.dropoff_lat!, request!.dropoff_lng!, controller.signal),
+          fetchRoute(request!.dropoff_lat!, request!.dropoff_lng!, trip.to_lat!, trip.to_lng!, controller.signal),
         ]);
 
+        if (controller.signal.aborted) return;
         const allCoords: [number, number][] = [];
         let totalDist = 0;
         for (const leg of [leg1, leg2, leg3]) {
@@ -187,8 +192,9 @@ export function RoutePreviewModal({
       setLoading(false);
     }
 
-    buildRoute();
-  }, [trip, request]);
+    void buildRoute();
+    return () => controller.abort();
+  }, [trip, request, hasDriverCoords, hasRequestCoords]);
 
   const driverDist = routeInfo.driverRoute?.distance ?? (hasDriverCoords ? haversineDistance(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!) : null);
   const fullDist = routeInfo.fullRoute?.distance ?? null;
