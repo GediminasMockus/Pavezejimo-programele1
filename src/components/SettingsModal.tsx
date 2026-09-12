@@ -5,6 +5,11 @@ import { useDarkMode } from '@/lib/useDarkMode';
 
 type NotificationPrefs = { newRequests: boolean; newMessages: boolean; tripReminders: boolean };
 type Language = 'lt' | 'en';
+type ProfileWithCar = UserProfile & {
+  car_make?: string | null;
+  car_color?: string | null;
+  car_plate?: string | null;
+};
 
 const STORAGE_KEY = 'pavezejimai_settings';
 const LANGUAGE_KEY = 'pavezejimai_language';
@@ -45,7 +50,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
       const { data, error } = await supabase.rpc('get_my_profile');
       if (!mounted) return;
       if (!error && data?.[0]) {
-        const row = data[0] as any;
+        const row = data[0] as ProfileWithCar;
         setProfile(row);
         setDisplayName(row.display_name ?? '');
         setPhone(row.phone ?? '');
