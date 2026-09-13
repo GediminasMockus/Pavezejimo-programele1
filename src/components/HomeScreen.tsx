@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, Users, Route, Bell, Shield, LogOut, Settings as SettingsIcon, ArrowRight, Search } from 'lucide-react';
+import { Car, Users, Route, Bell, Shield, LogOut, Settings as SettingsIcon, ArrowRight, Search, AlertCircle } from 'lucide-react';
 import { supabase, type TripRole } from '@/lib/supabase';
 import { emptyFilters, type FilterState } from '@/lib/tripFilters';
 import { useUnreadCount } from '@/lib/useUnreadCount';
@@ -18,12 +18,13 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [date, setDate] = useState('');
+  const [searchError, setSearchError] = useState('');
   const { isEnglish } = useLanguage();
 
   const text = isEnglish ? {
-    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', createOffer: 'Publish a driver ride', findOffers: 'Browse available rides', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional',
+    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', createOffer: 'Publish a driver ride', findOffers: 'Browse available rides', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
   } : {
-    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', createOffer: 'Paskelbti vairuotojo kelionę', findOffers: 'Peržiūrėti esamas keliones', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina',
+    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', createOffer: 'Paskelbti vairuotojo kelionę', findOffers: 'Peržiūrėti esamas keliones', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
   };
 
   useEffect(() => {
@@ -37,7 +38,16 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    pick(mode, { ...emptyFilters, fromLocation: from.trim(), toLocation: to.trim(), date }, mode === 'driver');
+    const normalizedFrom = from.trim();
+    const normalizedTo = to.trim();
+
+    if (!normalizedFrom || !normalizedTo) {
+      setSearchError(text.routeRequired);
+      return;
+    }
+
+    setSearchError('');
+    pick(mode, { ...emptyFilters, fromLocation: normalizedFrom, toLocation: normalizedTo, date }, mode === 'driver');
   };
 
   return (
@@ -68,15 +78,17 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
                 <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">{text.start}</h2>
 
                 <div className="grid grid-cols-2 gap-2 mt-4" role="group" aria-label={text.need}>
-                  <button type="button" aria-pressed={mode === 'passenger'} onClick={() => setMode('passenger')} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'passenger' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Users className="w-4 h-4 inline mr-1.5" />{text.looking}</button>
-                  <button type="button" aria-pressed={mode === 'driver'} onClick={() => setMode('driver')} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'driver' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Car className="w-4 h-4 inline mr-1.5" />{text.driving}</button>
+                  <button type="button" aria-pressed={mode === 'passenger'} onClick={() => { setMode('passenger'); setSearchError(''); }} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'passenger' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Users className="w-4 h-4 inline mr-1.5" />{text.looking}</button>
+                  <button type="button" aria-pressed={mode === 'driver'} onClick={() => { setMode('driver'); setSearchError(''); }} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'driver' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Car className="w-4 h-4 inline mr-1.5" />{text.driving}</button>
                 </div>
 
                 <div className="space-y-3 mt-5">
-                  <label className="block"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.from}</span><input autoComplete="address-level2" value={from} onChange={e => setFrom(e.target.value)} placeholder={text.fromPlaceholder} className="form-input min-h-12 text-base" /></label>
-                  <label className="block"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.to}</span><input autoComplete="address-level2" value={to} onChange={e => setTo(e.target.value)} placeholder={text.toPlaceholder} className="form-input min-h-12 text-base" /></label>
+                  <label className="block"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.from}</span><input autoComplete="address-level2" value={from} onChange={e => { setFrom(e.target.value); if (searchError) setSearchError(''); }} aria-invalid={Boolean(searchError && !from.trim())} placeholder={text.fromPlaceholder} className={`form-input min-h-12 text-base ${searchError && !from.trim() ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''}`} /></label>
+                  <label className="block"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.to}</span><input autoComplete="address-level2" value={to} onChange={e => { setTo(e.target.value); if (searchError) setSearchError(''); }} aria-invalid={Boolean(searchError && !to.trim())} placeholder={text.toPlaceholder} className={`form-input min-h-12 text-base ${searchError && !to.trim() ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''}`} /></label>
                   <label className="block"><span className="flex items-center justify-between text-sm font-semibold text-slate-700 mb-1.5"><span>{text.when}</span><span className="text-xs font-normal text-slate-500">{text.optional}</span></span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="form-input min-h-12 text-base" /></label>
                 </div>
+
+                {searchError && <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{searchError}</span></div>}
 
                 <button type="submit" className="mt-5 w-full min-h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-5 font-extrabold text-base shadow-lg shadow-blue-500/20 transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 flex items-center justify-center gap-2">{mode === 'passenger' ? <Search className="w-5 h-5" /> : <Car className="w-5 h-5" />}{mode === 'passenger' ? text.findRide : text.publishRide}<ArrowRight className="w-5 h-5" /></button>
                 <p className="text-center text-xs text-slate-500 mt-2.5">{text.hint}</p>
