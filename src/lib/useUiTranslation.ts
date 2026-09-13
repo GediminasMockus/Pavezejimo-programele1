@@ -46,14 +46,48 @@ const EN: Record<string, string> = {
   'Tamsusis režimas': 'Dark mode', 'Eksperimentinis': 'Experimental', 'Kalba': 'Language', 'Pasirinkite programos kalbą': 'Choose app language', 'Atsijungti': 'Sign out',
   'Vardas': 'Name', 'El. paštas': 'Email', 'Markė': 'Make', 'Spalva': 'Color', 'Valst. numeris': 'License plate',
   'Neteisingas telefono formatas.': 'Invalid phone format.', 'Nepavyko pateikti vertinimo.': 'Could not submit rating.', 'Šią kelionę jau įvertinote.': 'You have already rated this trip.',
-  'Skelbimo galiojimas': 'Listing validity', 'Kelionės laikas praėjo. Šis skelbimas dar bus rodomas 24 valandas, o tada bus automatiškai pašalintas.': 'The trip time has passed. This listing will remain visible for 24 hours and will then be removed automatically.'
+  'Skelbimo galiojimas': 'Listing validity', 'Kelionės laikas praėjo. Šis skelbimas dar bus rodomas 24 valandas, o tada bus automatiškai pašalintas.': 'The trip time has passed. This listing will remain visible for 24 hours and will then be removed automatically.',
+
+  // Trip form and validation
+  'Užpildykite iš, į kur ir vardą.': 'Fill in the origin, destination and name.', 'Pasirinkite teisingą išvykimo laiką.': 'Choose a valid departure time.',
+  'Išvykimo laikas turi būti bent po 5 minučių.': 'Departure time must be at least 5 minutes from now.', 'Vietų skaičius turi būti nuo 1 iki 8.': 'Number of seats must be between 1 and 8.',
+  'Užpildykite automobilio markę, spalvą ir valst. numerį.': 'Enter the car make, color and license plate.', 'Įveskite teisingą kainą.': 'Enter a valid price.',
+  'Nurodykite viešai rodomus miestus arba vietoves.': 'Specify the publicly shown cities or areas.',
+  'Skelbimas turi aktyvių užklausų. Prieš redaguodami jas užbaikite arba atšaukite.': 'This listing has active requests. Complete or cancel them before editing.',
+  'Nepavyko išsaugoti skelbimo. Patikrinkite laukus ir bandykite dar kartą.': 'Could not save the listing. Check the fields and try again.',
+  'Preliminari kaina, € (nebūtina)': 'Estimated price, € (optional)', 'Automobilio informacija (privaloma)': 'Car information (required)',
+  'Pastabos (nebūtina)': 'Notes (optional)', 'Pasikartojantis skelbimas': 'Recurring listing', '/ asm.': '/ person', '/ viso': '/ total',
+  'pvz. Vilnius, Centras': 'e.g. Vilnius, Center', 'pvz. Trakai': 'e.g. Trakai', 'pvz. Jonas': 'e.g. John', 'pvz. 5': 'e.g. 5',
+  'Markė (pvz. VW Golf)': 'Make (e.g. VW Golf)', 'Spalva (pvz. raudona)': 'Color (e.g. red)', 'Valst. nr. (pvz. ABC123)': 'Plate (e.g. ABC123)',
+  'pvz. bagažinė laisva, kaina derinama': 'e.g. trunk space available, price negotiable', 'pvz. važiuoju su vaikų kėdute, kaina derinama': 'e.g. travelling with a child seat, price negotiable',
+  'pvz. važiuoju su vaikų kėdute': 'e.g. travelling with a child seat', 'pvz. Vilnius, stotis': 'e.g. Vilnius, station', 'pvz. Trakai, pilis': 'e.g. Trakai, castle',
+
+  // Filters and list sections
+  'Filtruoti': 'Filter', 'Filtravimo kriterijai': 'Filter criteria', 'Uždaryti filtrus': 'Close filters', 'Min. vietų': 'Min seats', 'Bet kiek': 'Any',
+  'Max kaina, €': 'Max price, €', 'Spindulys, km': 'Radius, km', 'Neribotas': 'Unlimited', 'Tik pasikartojantys': 'Recurring only', 'skelbimų': 'listings',
+  'Mano pasiūlymai keleiviams': 'My offers to passengers', 'Mano skelbimai': 'My listings', 'Geriausi atitikimai': 'Best matches', 'taškų': 'points',
+  'Įkelti daugiau skelbimų': 'Load more listings', 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!': 'There are no listings yet. Be the first to add one!',
+  'Pagal nurodytus kriterijus skelbimų nerasta. Pakeiskite filtravimą.': 'No listings match the selected criteria. Adjust the filters.',
+
+  // Notifications
+  'Pažymėti visus': 'Mark all as read', 'Nėra pranešimų': 'No notifications',
+
+  // Common fragmented section labels rendered around dynamic counts
+  'Gautos užklausos (': 'Received requests (', 'Mano pasiūlymai keleiviams (': 'My offers to passengers (', 'Vairuotojų pasiūlymai (': 'Driver offers (',
+  'Mano užklausos (': 'My requests (', 'Mano skelbimai (': 'My listings (', 'Geriausi atitikimai (': 'Best matches ('
 };
 
 const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+) vietos$/, m => `${m[1]} seats`],
   [/^(\d+) keleiviai$/, m => `${m[1]} passengers`],
   [/^(\d+) keleivis$/, m => `${m[1]} passenger`],
+  [/^(\d+) skelbimų$/, m => `${m[1]} listings`],
   [/^Gautos užklausos \((\d+)\)$/, m => `Received requests (${m[1]})`],
+  [/^Mano pasiūlymai keleiviams \((\d+)\)$/, m => `My offers to passengers (${m[1]})`],
+  [/^Vairuotojų pasiūlymai \((\d+)\)$/, m => `Driver offers (${m[1]})`],
+  [/^Mano užklausos \((\d+)\)$/, m => `My requests (${m[1]})`],
+  [/^Mano skelbimai \((\d+)\)$/, m => `My listings (${m[1]})`],
+  [/^Geriausi atitikimai \((\d+)\)$/, m => `Best matches (${m[1]})`],
   [/^(\d+) laukianti užklausa$/, m => `${m[1]} pending request`],
   [/^(\d+) laukiančios užklausos$/, m => `${m[1]} pending requests`],
   [/^Redaguoti skelbimą: (.*)$/, m => `Edit listing: ${m[1]}`],
@@ -64,7 +98,10 @@ const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^Vairuotojas siūlo tik (\d+) vietas\.$/, m => `The driver offers only ${m[1]} seats.`],
   [/^Keleivis ieško: (.*)$/, m => `Passenger is looking for: ${m[1]}`],
   [/^Iš: (.*)$/, m => `From: ${m[1]}`],
-  [/^Į: (.*)$/, m => `To: ${m[1]}`]
+  [/^Į: (.*)$/, m => `To: ${m[1]}`],
+  [/^prieš (\d+) min\.$/, m => `${m[1]} min ago`],
+  [/^prieš (\d+) val\.$/, m => `${m[1]} hr ago`],
+  [/^prieš (\d+) d\.$/, m => `${m[1]} d ago`]
 ];
 
 const originalText = new WeakMap<Text, string>();
