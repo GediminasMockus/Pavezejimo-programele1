@@ -124,6 +124,12 @@ USING (user_id = (SELECT auth.uid())::text)
 WITH CHECK (user_id = (SELECT auth.uid())::text);
 
 -- These functions operate on rows already protected by RLS and do not require elevated privileges.
+-- The fresh-replay schema uses private helpers from these invoker RPCs, so grant only those helpers
+-- explicitly instead of opening the private schema broadly.
+GRANT USAGE ON SCHEMA private TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.require_active_user() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.validate_trip(public.trips) TO authenticated, service_role;
+
 ALTER FUNCTION public.get_my_profile() SECURITY INVOKER;
 ALTER FUNCTION public.get_my_profile_flags() SECURITY INVOKER;
 ALTER FUNCTION public.get_my_matches() SECURITY INVOKER;
