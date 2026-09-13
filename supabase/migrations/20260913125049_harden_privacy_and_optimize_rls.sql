@@ -123,6 +123,11 @@ FOR UPDATE TO authenticated
 USING (user_id = (SELECT auth.uid())::text)
 WITH CHECK (user_id = (SELECT auth.uid())::text);
 
+-- Invoker RPCs need the underlying table privileges; RLS remains the authorization boundary.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.trips TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.user_profiles TO authenticated;
+GRANT SELECT, UPDATE ON public.notifications TO authenticated;
+
 -- These functions operate on rows already protected by RLS and do not require elevated privileges.
 -- The fresh-replay schema uses private helpers from these invoker RPCs, so grant only those helpers
 -- explicitly instead of opening the private schema broadly.
