@@ -1,4 +1,13 @@
-create extension if not exists pg_cron with schema pg_catalog;
+-- pg_cron is available in Supabase Postgres but not in the lightweight PGlite
+-- database used by repository migration tests. Install/schedule only when the
+-- extension exists; the cleanup function itself is portable and always created.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_cron') THEN
+    EXECUTE 'create extension if not exists pg_cron with schema pg_catalog';
+  END IF;
+END;
+$$;
 
 create or replace function public.cleanup_expired_nonrecurring_trips()
 returns integer
@@ -71,12 +80,21 @@ as $$
  order by t.departure_time,t.id;
 $$;
 
-select cron.unschedule(jobid)
-from cron.job
-where jobname = 'cleanup-expired-nonrecurring-trips';
+DO $$
+DECLARE
+  v_job_id bigint;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    FOR v_job_id IN EXECUTE 'select jobid from cron.job where jobname = ''cleanup-expired-nonrecurring-trips'''
+    LOOP
+      EXECUTE format('select cron.unschedule(%s)', v_job_id);
+    END LOOP;
 
-select cron.schedule(
-  'cleanup-expired-nonrecurring-trips',
-  '15 * * * *',
-  'select public.cleanup_expired_nonrecurring_trips();'
-);
+    EXECUTE $$select cron.schedule(
+      'cleanup-expired-nonrecurring-trips',
+      '15 * * * *',
+      'select public.cleanup_expired_nonrecurring_trips();'
+    )$$;
+  END IF;
+END;
+$$;
