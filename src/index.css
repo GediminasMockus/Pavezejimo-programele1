@@ -68,17 +68,6 @@
   .animate-pulse-slow { animation: pulseSlow 3s ease-in-out infinite; }
 }
 
-/* Keep search results first without hiding the rest of the user's trip dashboard. */
-body.ride-search-focused main {
-  display: flex;
-  flex-direction: column;
-}
-
-body.ride-search-focused main > section:last-of-type {
-  order: -1;
-  margin-bottom: 2rem;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
