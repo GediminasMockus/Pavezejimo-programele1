@@ -22,29 +22,33 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
   const { isEnglish } = useLanguage();
 
   const text = isEnglish ? {
-    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', browseAll: 'Browse all available rides', browseHint: 'No exact route in mind?', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
+    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', browseAll: 'Browse all available rides', browseHint: 'Want to browse without a route filter?', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
   } : {
-    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', browseAll: 'Peržiūrėti visas keliones', browseHint: 'Neturi tikslaus maršruto?', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
+    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', browseAll: 'Peržiūrėti visas keliones', browseHint: 'Nori peržiūrėti be maršruto filtro?', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
   };
 
   useEffect(() => {
-    document.body.classList.remove('ride-search-focused');
-  }, []);
-
-  useEffect(() => {
-    supabase.rpc('get_my_profile_flags').then(({ data }) => setIsAdmin(data?.[0]?.is_admin === true));
+    let cancelled = false;
+    Promise.all([
+      supabase.rpc('get_my_profile_flags'),
+      supabase.from('user_profiles').select('default_role').eq('id', userId).maybeSingle(),
+    ]).then(([flagsResult, profileResult]) => {
+      if (cancelled) return;
+      setIsAdmin(flagsResult.data?.[0]?.is_admin === true);
+      const preferredRole = profileResult.data?.default_role;
+      if (preferredRole === 'driver' || preferredRole === 'passenger') setMode(preferredRole);
+    });
+    return () => { cancelled = true; };
   }, [userId]);
 
   const pick = (role: TripRole, filters?: FilterState, create = false) => {
     try { localStorage.setItem('pavezejimai_filters', JSON.stringify(filters ?? emptyFilters)); } catch { /* continue */ }
-    if (role === 'driver' || create) document.body.classList.remove('ride-search-focused');
     onPick(role, filters, create);
   };
 
-  const openPassengerResults = (filters: FilterState) => {
+  const openResults = (resultRole: TripRole, filters: FilterState) => {
     try { localStorage.setItem('viewMode', 'list'); } catch { /* continue */ }
-    document.body.classList.add('ride-search-focused');
-    pick('passenger', filters);
+    pick(resultRole, filters);
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
@@ -60,7 +64,7 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
 
     setSearchError('');
     const filters = { ...emptyFilters, fromLocation: normalizedFrom, toLocation: normalizedTo, date };
-    if (mode === 'passenger') openPassengerResults(filters);
+    if (mode === 'passenger') openResults('passenger', filters);
     else pick('driver', filters, true);
   };
 
@@ -107,19 +111,17 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
                 <button type="submit" className="mt-5 w-full min-h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-5 font-extrabold text-base shadow-lg shadow-blue-500/20 transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 flex items-center justify-center gap-2">{mode === 'passenger' ? <Search className="w-5 h-5" /> : <Car className="w-5 h-5" />}{mode === 'passenger' ? text.findRide : text.publishRide}<ArrowRight className="w-5 h-5" /></button>
                 <p className="text-center text-xs text-slate-500 mt-2.5">{text.hint}</p>
 
-                {mode === 'passenger' && (
-                  <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span className="text-sm text-slate-500">{text.browseHint}</span>
-                    <button
-                      type="button"
-                      onClick={() => openPassengerResults(emptyFilters)}
-                      className="min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >
-                      <List className="w-4 h-4" />
-                      {text.browseAll}
-                    </button>
-                  </div>
-                )}
+                <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <span className="text-sm text-slate-500">{text.browseHint}</span>
+                  <button
+                    type="button"
+                    onClick={() => openResults(mode, emptyFilters)}
+                    className="min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    <List className="w-4 h-4" />
+                    {text.browseAll}
+                  </button>
+                </div>
               </div>
             </form>
           </section>
