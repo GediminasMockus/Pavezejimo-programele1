@@ -1,4 +1,13 @@
-CREATE OR REPLACE VIEW public.public_trips AS
+-- This migration intentionally rebuilds the public discovery view. Older repository
+-- migrations created a wider version of the view, and CREATE OR REPLACE VIEW cannot
+-- remove columns in PostgreSQL. Drop the dependent search function first so a clean
+-- migration replay produces the same contract as production.
+DROP FUNCTION IF EXISTS public.search_trips(text, jsonb, double precision, double precision);
+DROP VIEW IF EXISTS public.public_trips;
+
+CREATE VIEW public.public_trips
+WITH (security_invoker = true)
+AS
 SELECT
   t.id,
   t.role,
@@ -33,6 +42,62 @@ WHERE t.deleted_at IS NULL
   AND t.created_by IS NOT NULL
   AND auth.uid() IS NOT NULL;
 
-ALTER VIEW public.public_trips SET (security_invoker = true);
 REVOKE ALL ON public.public_trips FROM anon, PUBLIC;
 GRANT SELECT ON public.public_trips TO authenticated;
+
+CREATE FUNCTION public.search_trips(
+  p_role text,
+  p_filters jsonb DEFAULT '{}'::jsonb,
+  p_lat double precision DEFAULT NULL,
+  p_lng double precision DEFAULT NULL
+)
+RETURNS SETOF public.public_trips
+LANGUAGE sql
+STABLE
+SET search_path TO ''
+AS $$
+  SELECT t.*
+  FROM public.public_trips t
+  WHERE t.role = p_role
+    AND t.departure_time > now()
+    AND (
+      COALESCE(p_filters->>'fromLocation', '') = ''
+      OR position(
+        translate(lower(p_filters->>'fromLocation'), 'ąčęėįšųūž', 'aceeisuuz')
+        IN translate(lower(t.from_location), 'ąčęėįšųūž', 'aceeisuuz')
+      ) > 0
+    )
+    AND (
+      COALESCE(p_filters->>'toLocation', '') = ''
+      OR position(
+        translate(lower(p_filters->>'toLocation'), 'ąčęėįšųūž', 'aceeisuuz')
+        IN translate(lower(t.to_location), 'ąčęėįšųūž', 'aceeisuuz')
+      ) > 0
+    )
+    AND (
+      COALESCE(p_filters->>'maxPrice', '') = ''
+      OR (t.price IS NOT NULL AND t.price::numeric <= (p_filters->>'maxPrice')::numeric)
+    )
+    AND (
+      COALESCE(p_filters->>'date', '') = ''
+      OR date_trunc('day', t.departure_time) = to_timestamp(p_filters->>'date', 'YYYY-MM-DD')
+    )
+    AND (
+      COALESCE((p_filters->>'radiusKm')::numeric, 0) = 0
+      OR (
+        p_lat IS NOT NULL AND p_lng IS NOT NULL
+        AND t.from_lat IS NOT NULL AND t.from_lng IS NOT NULL
+        AND 6371 * acos(
+          least(1, greatest(-1,
+            sin(radians(p_lat)) * sin(radians(t.from_lat))
+            + cos(radians(p_lat)) * cos(radians(t.from_lat))
+              * cos(radians(t.from_lng - p_lng))
+          ))
+        ) <= (p_filters->>'radiusKm')::numeric
+      )
+    )
+  ORDER BY t.departure_time, t.id;
+$$;
+
+REVOKE ALL ON FUNCTION public.search_trips(text, jsonb, double precision, double precision) FROM anon, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.search_trips(text, jsonb, double precision, double precision) TO authenticated;
