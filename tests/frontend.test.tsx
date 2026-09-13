@@ -66,12 +66,12 @@ describe('user workflows', () => {
  it('passes the entered route to search and creation', async () => {
    const onPick=vi.fn();
    render(<HomeScreen userId="passenger" onPick={onPick} onSignOut={() => {}} />);
-   fireEvent.change(screen.getByPlaceholderText('Vilnius'),{ target: { value: 'Trakai' } });
-   fireEvent.change(screen.getByPlaceholderText('Kaunas'),{ target: { value: 'Vilnius' } });
-   fireEvent.click(screen.getByRole('button',{name:/Rasti kelionę/}));
+   fireEvent.change(screen.getByLabelText('Iš kur'),{ target: { value: 'Trakai' } });
+   fireEvent.change(screen.getByLabelText('Į kur'),{ target: { value: 'Vilnius' } });
+   fireEvent.click(screen.getByRole('button',{name:/Rasti kelion/}));
    expect(onPick).toHaveBeenLastCalledWith('passenger',expect.objectContaining({fromLocation:'Trakai',toLocation:'Vilnius'}),false);
-   fireEvent.click(screen.getByRole('button',{name:'Vežu'}));
-   fireEvent.click(screen.getByRole('button',{name:/Paskelbti kelionę/}));
+   fireEvent.click(screen.getByRole('button',{name:/Vežu keleivius/}));
+   fireEvent.click(screen.getByRole('button',{name:/Paskelbti .*kelionę/}));
    expect(onPick).toHaveBeenLastCalledWith('driver',expect.objectContaining({fromLocation:'Trakai'}),true);
  });
  it('notifies completion once even when callback identity changes', async () => {
