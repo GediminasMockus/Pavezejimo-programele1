@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, Users, Route, Bell, Shield, LogOut, Settings as SettingsIcon, ArrowRight, Search, AlertCircle } from 'lucide-react';
+import { Car, Users, Route, Bell, Shield, LogOut, Settings as SettingsIcon, ArrowRight, Search, AlertCircle, List } from 'lucide-react';
 import { supabase, type TripRole } from '@/lib/supabase';
 import { emptyFilters, type FilterState } from '@/lib/tripFilters';
 import { useUnreadCount } from '@/lib/useUnreadCount';
@@ -22,9 +22,9 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
   const { isEnglish } = useLanguage();
 
   const text = isEnglish ? {
-    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', createOffer: 'Publish a driver ride', findOffers: 'Browse available rides', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
+    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', publishRide: 'Publish my ride', hint: 'You can change filters later.', browseAll: 'Browse all available rides', browseHint: 'No exact route in mind?', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
   } : {
-    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', createOffer: 'Paskelbti vairuotojo kelionę', findOffers: 'Peržiūrėti esamas keliones', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
+    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', publishRide: 'Paskelbti savo kelionę', hint: 'Filtrus galėsi pakeisti ir vėliau.', browseAll: 'Peržiūrėti visas keliones', browseHint: 'Neturi tikslaus maršruto?', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
   };
 
   useEffect(() => {
@@ -106,11 +106,20 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
 
                 <button type="submit" className="mt-5 w-full min-h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-5 font-extrabold text-base shadow-lg shadow-blue-500/20 transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 flex items-center justify-center gap-2">{mode === 'passenger' ? <Search className="w-5 h-5" /> : <Car className="w-5 h-5" />}{mode === 'passenger' ? text.findRide : text.publishRide}<ArrowRight className="w-5 h-5" /></button>
                 <p className="text-center text-xs text-slate-500 mt-2.5">{text.hint}</p>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-slate-100 bg-slate-50/70">
-                <button type="button" onClick={() => openPassengerResults(emptyFilters)} className="min-h-16 p-4 text-left hover:bg-white transition flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" /></div><div><p className="text-sm font-bold text-slate-800">{text.findOffers}</p><p className="text-xs text-slate-500">{text.looking}</p></div></button>
-                <button type="button" onClick={() => pick('driver', { ...emptyFilters, fromLocation: from, toLocation: to, date }, true)} className="min-h-16 p-4 text-left hover:bg-white transition flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"><div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0"><Car className="w-5 h-5" /></div><div><p className="text-sm font-bold text-slate-800">{text.createOffer}</p><p className="text-xs text-slate-500">{text.driving}</p></div></button>
+                {mode === 'passenger' && (
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <span className="text-sm text-slate-500">{text.browseHint}</span>
+                    <button
+                      type="button"
+                      onClick={() => openPassengerResults(emptyFilters)}
+                      className="min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <List className="w-4 h-4" />
+                      {text.browseAll}
+                    </button>
+                  </div>
+                )}
               </div>
             </form>
           </section>
