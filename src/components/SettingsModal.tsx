@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Settings, User, Phone, Car, Users, Bell, LogOut, Loader2, Check, Moon, Sun, Globe } from 'lucide-react';
 import { supabase, type UserProfile, type TripRole } from '@/lib/supabase';
 import { useDarkMode } from '@/lib/useDarkMode';
+import { useLanguage } from '@/lib/useLanguage';
 
 type NotificationPrefs = { newRequests: boolean; newMessages: boolean; tripReminders: boolean };
-type Language = 'lt' | 'en';
 type ProfileWithCar = UserProfile & {
   car_make?: string | null;
   car_color?: string | null;
@@ -12,7 +12,6 @@ type ProfileWithCar = UserProfile & {
 };
 
 const STORAGE_KEY = 'pavezejimai_settings';
-const LANGUAGE_KEY = 'pavezejimai_language';
 const DEFAULT_PREFS: NotificationPrefs = { newRequests: true, newMessages: true, tripReminders: false };
 
 function loadPrefs(): NotificationPrefs {
@@ -20,12 +19,6 @@ function loadPrefs(): NotificationPrefs {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     return { ...DEFAULT_PREFS, ...parsed };
   } catch { return DEFAULT_PREFS; }
-}
-
-function loadLanguage(): Language {
-  try {
-    return localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'lt';
-  } catch { return 'lt'; }
 }
 
 export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; onClose: () => void; onSignOut: () => void }) {
@@ -37,12 +30,18 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   const [carColor, setCarColor] = useState('');
   const [carPlate, setCarPlate] = useState('');
   const [prefs, setPrefs] = useState<NotificationPrefs>(loadPrefs());
-  const [language, setLanguage] = useState<Language>(loadLanguage());
+  const { language, setLanguage, isEnglish } = useLanguage();
   const { isDark, toggle: toggleDarkMode } = useDarkMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  const text = isEnglish ? {
+    settings: 'Settings', close: 'Close', loading: 'Loading…', account: 'Account information', name: 'Name', namePlaceholder: 'Your name', phone: 'Phone', email: 'Email', carInfo: 'Car information (fill in if you drive)', make: 'Make', makePlaceholder: 'e.g. VW Golf', color: 'Color', colorPlaceholder: 'e.g. red', plate: 'License plate', platePlaceholder: 'e.g. ABC123', defaultRole: 'Default role', driver: 'Driver', passenger: 'Passenger', notifications: 'Notifications', newRequests: 'New requests', newRequestsDesc: 'Notify about new ride requests', newMessages: 'New messages', newMessagesDesc: 'Notify about new messages', reminders: 'Trip reminders', remindersDesc: 'Remind me before departure', appearance: 'Appearance', darkMode: 'Dark mode', experimental: 'Experimental', darkToggle: 'Toggle dark mode', language: 'Language', languageDesc: 'Choose app language', lithuanian: 'Lithuanian', english: 'English', saving: 'Saving…', saved: 'Saved', save: 'Save changes', signOut: 'Sign out', badPhone: 'Invalid phone number format.', profileLoadError: 'Failed to load profile', profileSaveError: 'Failed to save profile', fallbackUser: 'User',
+  } : {
+    settings: 'Parametrai', close: 'Uždaryti', loading: 'Įkeliama…', account: 'Paskyros informacija', name: 'Vardas', namePlaceholder: 'Jūsų vardas', phone: 'Telefonas', email: 'El. paštas', carInfo: 'Automobilio informacija (užpildykite, jei vairuotojas)', make: 'Markė', makePlaceholder: 'pvz. VW Golf', color: 'Spalva', colorPlaceholder: 'pvz. raudona', plate: 'Valst. numeris', platePlaceholder: 'pvz. ABC123', defaultRole: 'Numatytasis vaidmuo', driver: 'Vairuotojas', passenger: 'Keleivis', notifications: 'Pranešimai', newRequests: 'Naujos užklausos', newRequestsDesc: 'Pranešti apie naują kelionės užklausą', newMessages: 'Naujos žinutės', newMessagesDesc: 'Pranešti apie naujas žinutes', reminders: 'Kelionės priminimai', remindersDesc: 'Priminti prieš išvykimą', appearance: 'Išvaizda', darkMode: 'Tamsusis režimas', experimental: 'Eksperimentinis', darkToggle: 'Perjungti tamsųjį režimą', language: 'Kalba', languageDesc: 'Pasirinkite programos kalbą', lithuanian: 'Lietuvių', english: 'English', saving: 'Saugoma…', saved: 'Išsaugota', save: 'Išsaugoti pakeitimus', signOut: 'Atsijungti', badPhone: 'Neteisingas telefono formatas.', profileLoadError: 'Nepavyko įkelti profilio', profileSaveError: 'Nepavyko išsaugoti profilio', fallbackUser: 'Vartotojas',
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -59,12 +58,12 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
         setCarColor(row.car_color ?? '');
         setCarPlate(row.car_plate ?? '');
       } else if (error) {
-        setSaveError(`Nepavyko įkelti profilio: ${error.message}`);
+        setSaveError(`${text.profileLoadError}: ${error.message}`);
       }
       setLoading(false);
     })();
     return () => { mounted = false; };
-  }, [userId]);
+  }, [userId, text.profileLoadError]);
 
   function togglePref(key: keyof NotificationPrefs) {
     const next = { ...prefs, [key]: !prefs[key] };
@@ -72,15 +71,10 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   }
 
-  function changeLanguage(value: Language) {
-    setLanguage(value);
-    try { localStorage.setItem(LANGUAGE_KEY, value); } catch { /* ignore */ }
-  }
-
   async function handleSave() {
     const normalizedPhone = phone.trim();
     if (normalizedPhone && !/^\+?[0-9 ()-]{8,20}$/.test(normalizedPhone)) {
-      setSaveError('Neteisingas telefono formatas.');
+      setSaveError(text.badPhone);
       return;
     }
 
@@ -89,7 +83,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
     setSaveError('');
 
     const { error } = await supabase.rpc('update_my_profile', {
-      p_display_name: displayName.trim() || 'Vartotojas',
+      p_display_name: displayName.trim() || text.fallbackUser,
       p_phone: normalizedPhone || null,
       p_default_role: defaultRole || null,
       p_car_make: carMake.trim() || null,
@@ -99,7 +93,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
 
     if (error) {
       setSaving(false);
-      setSaveError(`Nepavyko išsaugoti profilio: ${error.message}`);
+      setSaveError(`${text.profileSaveError}: ${error.message}`);
       return;
     }
 
@@ -107,7 +101,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
     setSaved(true);
     setProfile(current => current ? {
       ...current,
-      display_name: displayName.trim() || 'Vartotojas',
+      display_name: displayName.trim() || text.fallbackUser,
       phone: normalizedPhone || null,
       default_role: defaultRole || null,
     } : current);
@@ -118,58 +112,58 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
       <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Settings className="w-5 h-5 text-slate-700" /><h2 className="text-lg font-bold text-slate-900">Parametrai</h2></div>
-          <button onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200">Uždaryti</button>
+          <div className="flex items-center gap-2"><Settings className="w-5 h-5 text-slate-700" /><h2 className="text-lg font-bold text-slate-900">{text.settings}</h2></div>
+          <button onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200">{text.close}</button>
         </div>
 
-        {loading ? <div className="flex flex-col items-center justify-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mb-2" /><p className="text-sm">Įkeliama…</p></div> : (
+        {loading ? <div className="flex flex-col items-center justify-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mb-2" /><p className="text-sm">{text.loading}</p></div> : (
           <div className="p-5 sm:p-6 space-y-6">
             <section>
-              <h3 className="section-title"><User className="w-3.5 h-3.5" /> Paskyros informacija</h3>
+              <h3 className="section-title"><User className="w-3.5 h-3.5" /> {text.account}</h3>
               <div className="space-y-3">
-                <label className="block"><span className="field-label">Vardas</span><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Jūsų vardas" className="form-input" /></label>
-                <label className="block"><span className="field-label">Telefonas</span><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+370 6XX XXXXX" className="form-input pl-10" /></div></label>
-                {profile?.email && <label className="block"><span className="field-label">El. paštas</span><input value={profile.email} disabled className="form-input bg-slate-50 text-slate-400" /></label>}
+                <label className="block"><span className="field-label">{text.name}</span><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={text.namePlaceholder} className="form-input" /></label>
+                <label className="block"><span className="field-label">{text.phone}</span><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+370 6XX XXXXX" className="form-input pl-10" /></div></label>
+                {profile?.email && <label className="block"><span className="field-label">{text.email}</span><input value={profile.email} disabled className="form-input bg-slate-50 text-slate-400" /></label>}
               </div>
             </section>
 
             <section>
-              <h3 className="section-title"><Car className="w-3.5 h-3.5" /> Automobilio informacija (užpildykite, jei vairuotojas)</h3>
+              <h3 className="section-title"><Car className="w-3.5 h-3.5" /> {text.carInfo}</h3>
               <div className="space-y-3">
-                <label className="block"><span className="field-label">Markė</span><input value={carMake} onChange={e => setCarMake(e.target.value)} placeholder="pvz. VW Golf" className="form-input" /></label>
-                <label className="block"><span className="field-label">Spalva</span><input value={carColor} onChange={e => setCarColor(e.target.value)} placeholder="pvz. raudona" className="form-input" /></label>
-                <label className="block"><span className="field-label">Valst. numeris</span><input value={carPlate} onChange={e => setCarPlate(e.target.value)} placeholder="pvz. ABC123" className="form-input" /></label>
+                <label className="block"><span className="field-label">{text.make}</span><input value={carMake} onChange={e => setCarMake(e.target.value)} placeholder={text.makePlaceholder} className="form-input" /></label>
+                <label className="block"><span className="field-label">{text.color}</span><input value={carColor} onChange={e => setCarColor(e.target.value)} placeholder={text.colorPlaceholder} className="form-input" /></label>
+                <label className="block"><span className="field-label">{text.plate}</span><input value={carPlate} onChange={e => setCarPlate(e.target.value)} placeholder={text.platePlaceholder} className="form-input" /></label>
               </div>
             </section>
 
             <section>
-              <h3 className="section-title">Numatytasis vaidmuo</h3>
+              <h3 className="section-title">{text.defaultRole}</h3>
               <div className="grid grid-cols-2 gap-3">
-                <RoleButton active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label="Vairuotojas" />
-                <RoleButton active={defaultRole === 'passenger'} passenger onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label="Keleivis" />
+                <RoleButton active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label={text.driver} />
+                <RoleButton active={defaultRole === 'passenger'} passenger onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
               </div>
             </section>
 
             <section>
-              <h3 className="section-title"><Bell className="w-3.5 h-3.5" /> Pranešimai</h3>
+              <h3 className="section-title"><Bell className="w-3.5 h-3.5" /> {text.notifications}</h3>
               <div className="space-y-1">
-                <ToggleRow label="Naujos užklausos" description="Pranešti apie naują kelionės užklausą" checked={prefs.newRequests} onChange={() => togglePref('newRequests')} />
-                <ToggleRow label="Naujos žinutės" description="Pranešti apie naujas žinutes" checked={prefs.newMessages} onChange={() => togglePref('newMessages')} />
-                <ToggleRow label="Kelionės priminimai" description="Priminti prieš išvykimą" checked={prefs.tripReminders} onChange={() => togglePref('tripReminders')} />
+                <ToggleRow label={text.newRequests} description={text.newRequestsDesc} checked={prefs.newRequests} onChange={() => togglePref('newRequests')} />
+                <ToggleRow label={text.newMessages} description={text.newMessagesDesc} checked={prefs.newMessages} onChange={() => togglePref('newMessages')} />
+                <ToggleRow label={text.reminders} description={text.remindersDesc} checked={prefs.tripReminders} onChange={() => togglePref('tripReminders')} />
               </div>
             </section>
 
             <section>
-              <h3 className="section-title">Išvaizda</h3>
+              <h3 className="section-title">{text.appearance}</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3">{isDark ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-amber-500" />}<div><p className="text-sm font-medium text-slate-700">Tamsusis režimas</p><p className="text-xs text-slate-400">Eksperimentinis</p></div></div><button aria-label="Perjungti tamsųjį režimą" onClick={toggleDarkMode} className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} /></button></div>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3 mb-3"><Globe className="w-5 h-5 text-slate-600" /><div><p className="text-sm font-medium text-slate-700">Kalba</p><p className="text-xs text-slate-400">Pasirinkite programos kalbą</p></div></div><div className="grid grid-cols-2 gap-2"><button onClick={() => changeLanguage('lt')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'lt' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>Lietuvių</button><button onClick={() => changeLanguage('en')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'en' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>English</button></div></div>
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3">{isDark ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-amber-500" />}<div><p className="text-sm font-medium text-slate-700">{text.darkMode}</p><p className="text-xs text-slate-400">{text.experimental}</p></div></div><button aria-label={text.darkToggle} onClick={toggleDarkMode} className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} /></button></div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3 mb-3"><Globe className="w-5 h-5 text-slate-600" /><div><p className="text-sm font-medium text-slate-700">{text.language}</p><p className="text-xs text-slate-400">{text.languageDesc}</p></div></div><div className="grid grid-cols-2 gap-2"><button onClick={() => setLanguage('lt')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'lt' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{text.lithuanian}</button><button onClick={() => setLanguage('en')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'en' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{text.english}</button></div></div>
               </div>
             </section>
 
             {saveError && <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 break-words">{saveError}</div>}
-            <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saugoma…</> : saved ? <><Check className="w-4 h-4" /> Išsaugota</> : 'Išsaugoti pakeitimus'}</button>
-            <div className="pt-2 border-t border-slate-100"><button onClick={onSignOut} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 flex items-center justify-center gap-2"><LogOut className="w-4 h-4" /> Atsijungti</button></div>
+            <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {text.saving}</> : saved ? <><Check className="w-4 h-4" /> {text.saved}</> : text.save}</button>
+            <div className="pt-2 border-t border-slate-100"><button onClick={onSignOut} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 flex items-center justify-center gap-2"><LogOut className="w-4 h-4" /> {text.signOut}</button></div>
           </div>
         )}
       </div>
