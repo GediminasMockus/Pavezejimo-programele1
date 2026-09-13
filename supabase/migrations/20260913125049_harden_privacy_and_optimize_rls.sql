@@ -123,17 +123,16 @@ FOR UPDATE TO authenticated
 USING (user_id = (SELECT auth.uid())::text)
 WITH CHECK (user_id = (SELECT auth.uid())::text);
 
--- Invoker RPCs need the underlying table privileges; RLS remains the authorization boundary.
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.trips TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.user_profiles TO authenticated;
+-- Read-only invoker RPCs use RLS. Business-rule writes stay behind SECURITY DEFINER RPCs
+-- so clients cannot bypass validation with direct table writes.
+REVOKE INSERT, UPDATE, DELETE ON public.trips FROM anon, authenticated;
+GRANT SELECT ON public.trips TO authenticated, service_role;
+REVOKE INSERT, UPDATE ON public.user_profiles FROM anon, authenticated;
+GRANT SELECT ON public.user_profiles TO authenticated, service_role;
 GRANT SELECT, UPDATE ON public.notifications TO authenticated;
 
--- These functions operate on rows already protected by RLS and do not require elevated privileges.
--- The fresh-replay schema uses private helpers from these invoker RPCs, so grant only those helpers
--- explicitly instead of opening the private schema broadly.
 GRANT USAGE ON SCHEMA private TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION private.require_active_user() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION private.validate_trip(public.trips) TO authenticated, service_role;
 
 ALTER FUNCTION public.get_my_profile() SECURITY INVOKER;
 ALTER FUNCTION public.get_my_profile_flags() SECURITY INVOKER;
@@ -141,9 +140,9 @@ ALTER FUNCTION public.get_my_matches() SECURITY INVOKER;
 ALTER FUNCTION public.get_accessible_trips() SECURITY INVOKER;
 ALTER FUNCTION public.mark_notification_read(uuid) SECURITY INVOKER;
 ALTER FUNCTION public.mark_all_notifications_read() SECURITY INVOKER;
-ALTER FUNCTION public.update_my_profile(text,text,text,text,text,text) SECURITY INVOKER;
-ALTER FUNCTION public.create_my_trip(jsonb) SECURITY INVOKER;
-ALTER FUNCTION public.update_my_trip(uuid,jsonb) SECURITY INVOKER;
+ALTER FUNCTION public.update_my_profile(text,text,text,text,text,text) SECURITY DEFINER;
+ALTER FUNCTION public.create_my_trip(jsonb) SECURITY DEFINER;
+ALTER FUNCTION public.update_my_trip(uuid,jsonb) SECURITY DEFINER;
 
 -- No frontend RPC is callable anonymously or through PUBLIC inheritance.
 REVOKE EXECUTE ON FUNCTION public.confirm_ride(uuid) FROM PUBLIC, anon;
