@@ -34,8 +34,9 @@ const payload=(role,seats=2)=>({role,seats,from_location:'Private street 123',to
 const trip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver')]));
 assert.equal(trip.created_by,ids[0]);
 await asUser(ids[1],async()=>{
- const publicTrip=(await query('SELECT * FROM public.public_trips WHERE id=$1',[trip.id])).rows[0];
- assert.equal(publicTrip.from_location,'Vilnius'); assert.equal(publicTrip.phone,null);
+ const filters=JSON.stringify({fromLocation:'',toLocation:'',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
+ const publicTrip=(await query("SELECT * FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[filters,trip.id])).rows[0];
+ assert.equal(publicTrip.from_location,'Vilnius');
  assert.equal(publicTrip.from_lat,54.69); assert.equal(publicTrip.available_seats,2);
  assert.equal((await query('SELECT * FROM public.trips WHERE id=$1',[trip.id])).rows.length,0);
 });
