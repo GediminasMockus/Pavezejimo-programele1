@@ -42,7 +42,7 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
       attempts += 1;
       const main = document.querySelector('main');
       const sections = main ? Array.from(main.querySelectorAll(':scope > section')) : [];
-      const target = sections.at(-1) as HTMLElement | undefined;
+      const target = sections.length > 0 ? sections[sections.length - 1] as HTMLElement : undefined;
       const heading = target?.querySelector('h2') as HTMLElement | null;
 
       if (target && heading) {
