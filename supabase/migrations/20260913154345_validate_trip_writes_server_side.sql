@@ -82,14 +82,17 @@ $function$;
 
 REVOKE ALL ON FUNCTION private.validate_trip_payload(jsonb) FROM PUBLIC, anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.create_my_trip(p_trip jsonb)
-RETURNS uuid
+-- Earlier repository history used a composite return type, while production temporarily used uuid.
+-- Drop the function so a clean replay can converge on one stable API contract.
+DROP FUNCTION IF EXISTS public.create_my_trip(jsonb);
+CREATE FUNCTION public.create_my_trip(p_trip jsonb)
+RETURNS public.trips
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $function$
 DECLARE
-  v_id uuid;
+  v_trip public.trips;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
   PERFORM private.validate_trip_payload(p_trip);
@@ -110,8 +113,8 @@ BEGIN
     NULLIF(trim(p_trip->>'car_color'),''), NULLIF(trim(p_trip->>'car_make'),''), NULLIF(trim(p_trip->>'car_plate'),''),
     NULLIF(trim(p_trip->>'baggage'),''), NULLIF(trim(p_trip->>'notes'),''),
     COALESCE((p_trip->>'is_recurring')::boolean,false), auth.uid()::text
-  ) RETURNING id INTO v_id;
-  RETURN v_id;
+  ) RETURNING * INTO v_trip;
+  RETURN v_trip;
 END;
 $function$;
 
