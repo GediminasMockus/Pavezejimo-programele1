@@ -45,7 +45,8 @@ const EN: Record<string, string> = {
   'Automobilio informacija (užpildykite, jei vairuotojas)': 'Car information (fill in if you are a driver)', 'Numatytasis vaidmuo': 'Default role', 'Išvaizda': 'Appearance',
   'Tamsusis režimas': 'Dark mode', 'Eksperimentinis': 'Experimental', 'Kalba': 'Language', 'Pasirinkite programos kalbą': 'Choose app language', 'Atsijungti': 'Sign out',
   'Vardas': 'Name', 'El. paštas': 'Email', 'Markė': 'Make', 'Spalva': 'Color', 'Valst. numeris': 'License plate',
-  'Neteisingas telefono formatas.': 'Invalid phone format.', 'Nepavyko pateikti vertinimo.': 'Could not submit rating.', 'Šią kelionę jau įvertinote.': 'You have already rated this trip.'
+  'Neteisingas telefono formatas.': 'Invalid phone format.', 'Nepavyko pateikti vertinimo.': 'Could not submit rating.', 'Šią kelionę jau įvertinote.': 'You have already rated this trip.',
+  'Skelbimo galiojimas': 'Listing validity', 'Kelionės laikas praėjo. Šis skelbimas dar bus rodomas 24 valandas, o tada bus automatiškai pašalintas.': 'The trip time has passed. This listing will remain visible for 24 hours and will then be removed automatically.'
 };
 
 const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
@@ -84,7 +85,7 @@ function updateText(node: Text, english: boolean) {
   const raw = originalText.get(node) ?? node.nodeValue ?? '';
   if (!originalText.has(node)) originalText.set(node, raw);
   if (!english) {
-    node.nodeValue = raw;
+    if (node.nodeValue !== raw) node.nodeValue = raw;
     return;
   }
   const trimmed = raw.trim();
@@ -93,7 +94,8 @@ function updateText(node: Text, english: boolean) {
   if (translated === trimmed) return;
   const leading = raw.match(/^\s*/)?.[0] ?? '';
   const trailing = raw.match(/\s*$/)?.[0] ?? '';
-  node.nodeValue = `${leading}${translated}${trailing}`;
+  const next = `${leading}${translated}${trailing}`;
+  if (node.nodeValue !== next) node.nodeValue = next;
 }
 
 function updateElement(el: Element, english: boolean) {
@@ -107,7 +109,8 @@ function updateElement(el: Element, english: boolean) {
     if (current !== null && !saved.has(attr)) saved.set(attr, current);
     const original = saved.get(attr);
     if (original === undefined) continue;
-    el.setAttribute(attr, english ? translateValue(original) : original);
+    const next = english ? translateValue(original) : original;
+    if (el.getAttribute(attr) !== next) el.setAttribute(attr, next);
   }
 }
 
@@ -125,23 +128,47 @@ function translateTree(root: Node, english: boolean) {
 
 export function useUiTranslation() {
   const { isEnglish } = useLanguage();
+
   useEffect(() => {
-    let applying = false;
-    const apply = (root: Node = document.body) => {
-      if (applying) return;
-      applying = true;
-      translateTree(root, isEnglish);
-      applying = false;
+    const observeOptions: MutationObserverInit = { childList: true, subtree: true, characterData: true };
+    let stopped = false;
+    let scheduled = false;
+    const pending = new Set<Node>();
+
+    const applySafely = (roots: Iterable<Node>) => {
+      observer.disconnect();
+      for (const root of roots) {
+        if (root.isConnected || root === document.body) translateTree(root, isEnglish);
+      }
+      observer.takeRecords();
+      if (!stopped) observer.observe(document.body, observeOptions);
     };
-    apply();
-    const observer = new MutationObserver(mutations => {
-      if (applying) return;
+
+    const flush = () => {
+      scheduled = false;
+      if (stopped || pending.size === 0) return;
+      const roots = [...pending];
+      pending.clear();
+      applySafely(roots);
+    };
+
+    const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === 'characterData') apply(mutation.target);
-        for (const node of mutation.addedNodes) apply(node);
+        if (mutation.type === 'characterData') pending.add(mutation.target);
+        for (const node of mutation.addedNodes) pending.add(node);
+      }
+      if (!scheduled && pending.size > 0) {
+        scheduled = true;
+        queueMicrotask(flush);
       }
     });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+
+    applySafely([document.body]);
+
+    return () => {
+      stopped = true;
+      pending.clear();
+      observer.disconnect();
+    };
   }, [isEnglish]);
 }
