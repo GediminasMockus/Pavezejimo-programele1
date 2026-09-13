@@ -70,11 +70,9 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
                 <button onClick={() => pick('passenger', emptyFilters)} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-emerald-600">Ieškau</p><p className="text-[11px] text-slate-400">Rasti pasiūlymus</p></div></div></button>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-3"><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">1</p><p className="text-[10px] font-semibold text-slate-400">maršrutas</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">2</p><p className="text-[10px] font-semibold text-slate-400">žingsniai iki susitarimo</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">0</p><p className="text-[10px] font-semibold text-slate-400">nereikalingų ekranų</p></div></div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
