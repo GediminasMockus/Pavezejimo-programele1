@@ -28,38 +28,24 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
   };
 
   useEffect(() => {
+    document.body.classList.remove('ride-search-focused');
+  }, []);
+
+  useEffect(() => {
     supabase.rpc('get_my_profile_flags').then(({ data }) => setIsAdmin(data?.[0]?.is_admin === true));
   }, [userId]);
 
   const pick = (role: TripRole, filters?: FilterState, create = false) => {
     try { localStorage.removeItem('pavezejimai_filters'); } catch { /* continue */ }
+    if (role === 'driver' || create) document.body.classList.remove('ride-search-focused');
     onPick(role, filters, create);
   };
 
-  const focusRideResults = () => {
-    let attempts = 0;
-    const tryFocus = () => {
-      attempts += 1;
-      const main = document.querySelector('main');
-      const sections = main ? Array.from(main.querySelectorAll(':scope > section')) : [];
-      const target = sections.length > 0 ? sections[sections.length - 1] as HTMLElement : undefined;
-      const heading = target?.querySelector('h2') as HTMLElement | null;
-
-      if (target && heading) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        heading.tabIndex = -1;
-        heading.focus({ preventScroll: true });
-        return;
-      }
-
-      if (attempts < 24) window.setTimeout(tryFocus, 150);
-    };
-    window.setTimeout(tryFocus, 150);
-  };
-
   const openPassengerResults = (filters: FilterState) => {
+    try { localStorage.setItem('viewMode', 'list'); } catch { /* continue */ }
+    document.body.classList.add('ride-search-focused');
     pick('passenger', filters);
-    focusRideResults();
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const submit = (e: React.FormEvent) => {
