@@ -54,7 +54,7 @@ await asUser(ids[1],async()=>{
 });
 await asUser(ids[0],()=>rpc('set_ride_request_status',[r1.id,'cancelled',null]));
 await asUser(ids[0],()=>rpc('set_ride_request_status',[r2.id,'accepted',null]));
-await assert.rejects(asUser(ids[0],()=>rpc('set_ride_request_status',[r1.id,'accepted',null])),/closed/);
+await assert.rejects(asUser(ids[0],()=>rpc('set_ride_request_status',[r1.id,'accepted',null])),/no longer pending/);
 await asUser(ids[3],async()=>assert.equal((await query('SELECT * FROM public.ride_requests')).rows.length,0));
 await assert.rejects(asUser(ids[2],()=>query("UPDATE public.ride_requests SET seats_needed=8 WHERE id=$1",[r2.id])),/permission denied/);
 const passengerTrip=await asUser(ids[1],()=>rpc('create_my_trip',[payload('passenger',2)]));
