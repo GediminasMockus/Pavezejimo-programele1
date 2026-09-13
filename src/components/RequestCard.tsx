@@ -84,7 +84,7 @@ export function RequestCard({
   const isPending = request.status === 'pending';
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 animate-fade-in">
+    <div className={`rounded-2xl bg-white border border-slate-200 p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.text}`}>
