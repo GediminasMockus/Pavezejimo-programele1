@@ -36,6 +36,32 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
     onPick(role, filters, create);
   };
 
+  const focusRideResults = () => {
+    let attempts = 0;
+    const tryFocus = () => {
+      attempts += 1;
+      const main = document.querySelector('main');
+      const sections = main ? Array.from(main.querySelectorAll(':scope > section')) : [];
+      const target = sections.at(-1) as HTMLElement | undefined;
+      const heading = target?.querySelector('h2') as HTMLElement | null;
+
+      if (target && heading) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        heading.tabIndex = -1;
+        heading.focus({ preventScroll: true });
+        return;
+      }
+
+      if (attempts < 24) window.setTimeout(tryFocus, 150);
+    };
+    window.setTimeout(tryFocus, 150);
+  };
+
+  const openPassengerResults = (filters: FilterState) => {
+    pick('passenger', filters);
+    focusRideResults();
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedFrom = from.trim();
@@ -47,7 +73,9 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
     }
 
     setSearchError('');
-    pick(mode, { ...emptyFilters, fromLocation: normalizedFrom, toLocation: normalizedTo, date }, mode === 'driver');
+    const filters = { ...emptyFilters, fromLocation: normalizedFrom, toLocation: normalizedTo, date };
+    if (mode === 'passenger') openPassengerResults(filters);
+    else pick('driver', filters, true);
   };
 
   return (
@@ -95,7 +123,7 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-slate-100 bg-slate-50/70">
-                <button type="button" onClick={() => pick('passenger', emptyFilters)} className="min-h-16 p-4 text-left hover:bg-white transition flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" /></div><div><p className="text-sm font-bold text-slate-800">{text.findOffers}</p><p className="text-xs text-slate-500">{text.looking}</p></div></button>
+                <button type="button" onClick={() => openPassengerResults(emptyFilters)} className="min-h-16 p-4 text-left hover:bg-white transition flex items-center gap-3 border-b sm:border-b-0 sm:border-r border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"><div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5" /></div><div><p className="text-sm font-bold text-slate-800">{text.findOffers}</p><p className="text-xs text-slate-500">{text.looking}</p></div></button>
                 <button type="button" onClick={() => pick('driver', { ...emptyFilters, fromLocation: from, toLocation: to, date }, true)} className="min-h-16 p-4 text-left hover:bg-white transition flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"><div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0"><Car className="w-5 h-5" /></div><div><p className="text-sm font-bold text-slate-800">{text.createOffer}</p><p className="text-xs text-slate-500">{text.driving}</p></div></button>
               </div>
             </form>
