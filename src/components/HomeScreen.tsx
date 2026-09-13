@@ -36,7 +36,7 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
   }, [userId]);
 
   const pick = (role: TripRole, filters?: FilterState, create = false) => {
-    try { localStorage.removeItem('pavezejimai_filters'); } catch { /* continue */ }
+    try { localStorage.setItem('pavezejimai_filters', JSON.stringify(filters ?? emptyFilters)); } catch { /* continue */ }
     if (role === 'driver' || create) document.body.classList.remove('ride-search-focused');
     onPick(role, filters, create);
   };
