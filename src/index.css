@@ -68,12 +68,15 @@
   .animate-pulse-slow { animation: pulseSlow 3s ease-in-out infinite; }
 }
 
-/* A search from the home screen should behave like a results page, not a dashboard.
-   ListScreen renders matching offers as its final direct section, so hide personal
-   dashboard sections while this one-shot search mode is active. Returning Home
-   removes the class. */
-body.ride-search-focused main > section:not(:last-of-type) {
-  display: none;
+/* Keep search results first without hiding the rest of the user's trip dashboard. */
+body.ride-search-focused main {
+  display: flex;
+  flex-direction: column;
+}
+
+body.ride-search-focused main > section:last-of-type {
+  order: -1;
+  margin-bottom: 2rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
