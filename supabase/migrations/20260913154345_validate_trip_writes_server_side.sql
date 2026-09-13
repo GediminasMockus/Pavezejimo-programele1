@@ -118,7 +118,8 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.update_my_trip(p_trip_id uuid, p_trip jsonb)
+DROP FUNCTION IF EXISTS public.update_my_trip(uuid,jsonb);
+CREATE FUNCTION public.update_my_trip(p_trip_id uuid, p_trip jsonb)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
