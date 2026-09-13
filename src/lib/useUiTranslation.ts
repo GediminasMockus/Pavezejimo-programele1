@@ -21,7 +21,7 @@ const EN: Record<string, string> = {
   'Siųsti užklausą vairuotojui': 'Send request to driver', 'Siūlyti pavežėjimą': 'Offer a ride', 'Keleivio maršrutas': 'Passenger route', 'Jūsų kelionė': 'Your trip',
   'Neturite aktyvios vairuotojo kelionės tuo pačiu metu. Pirmiausia ją sukurkite.': 'You do not have an active driver trip at that time. Create one first.',
   'Žinutė keleiviui (nebūtina)': 'Message to passenger (optional)', 'Siųsti pasiūlymą': 'Send offer', 'Uždaryti': 'Close',
-  'Redaguoti skelbimą': 'Edit listing', 'Siūlyti pavežėjimą': 'Offer a ride', 'Ieškoti kelionės': 'Look for a ride', 'Iš kur': 'From', 'Į kur': 'To',
+  'Redaguoti skelbimą': 'Edit listing', 'Ieškoti kelionės': 'Look for a ride', 'Iš kur': 'From', 'Į kur': 'To',
   'Kada važiuojate': 'Departure time', 'Telefonas': 'Phone', 'Vietų skaičius': 'Seats', 'Kaina': 'Price', 'Pastabos': 'Notes', 'Išsaugoti': 'Save', 'Išsaugota': 'Saved',
   'Nustatoma jūsų vieta…': 'Detecting your location…', 'Nepavyko nustatyti jūsų vietos. Leiskite prieigą prie vietos naršyklės nustatymuose, kad matytumėte savo poziciją žemėlapyje.': 'Could not determine your location. Allow location access in browser settings to see your position on the map.',
   'Skelbimas sukurtas!': 'Listing created!', 'Skelbimas atnaujintas!': 'Listing updated!', 'Pasiūlymas išsiųstas!': 'Offer sent!', 'Užklausa išsiųsta!': 'Request sent!',
@@ -42,7 +42,7 @@ const EN: Record<string, string> = {
   'Filtrai': 'Filters', 'Iš': 'From', 'Į': 'To', 'Data': 'Date', 'Maks. kaina': 'Max price', 'Vietų min.': 'Min seats', 'Atstumas': 'Distance', 'Išvalyti': 'Clear',
   'Rodyti daugiau': 'Show more', 'Nieko nerasta': 'Nothing found', 'Nėra skelbimų': 'No listings', 'Mano kelionės': 'My trips', 'Mano užklausos': 'My requests', 'Mano pasiūlymai': 'My offers',
   'Naujos užklausos': 'New requests', 'Naujos žinutės': 'New messages', 'Kelionės priminimai': 'Trip reminders', 'Paskyros informacija': 'Account information',
-  'Automobilio informacija (užpildykite, jei vairuotojas)': 'Car information (fill in if you are a driver)', 'Numatytasis vaidmuo': 'Default role', 'Pranešimai': 'Notifications', 'Išvaizda': 'Appearance',
+  'Automobilio informacija (užpildykite, jei vairuotojas)': 'Car information (fill in if you are a driver)', 'Numatytasis vaidmuo': 'Default role', 'Išvaizda': 'Appearance',
   'Tamsusis režimas': 'Dark mode', 'Eksperimentinis': 'Experimental', 'Kalba': 'Language', 'Pasirinkite programos kalbą': 'Choose app language', 'Atsijungti': 'Sign out',
   'Vardas': 'Name', 'El. paštas': 'Email', 'Markė': 'Make', 'Spalva': 'Color', 'Valst. numeris': 'License plate',
   'Neteisingas telefono formatas.': 'Invalid phone format.', 'Nepavyko pateikti vertinimo.': 'Could not submit rating.', 'Šią kelionę jau įvertinote.': 'You have already rated this trip.'
