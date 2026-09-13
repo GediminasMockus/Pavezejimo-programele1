@@ -34,3 +34,5 @@ jobs:
           git add -A
           git commit -m "refactor: harden ride lifecycle and navigation"
           git push origin HEAD:master
+
+# rerun after verified script correction
