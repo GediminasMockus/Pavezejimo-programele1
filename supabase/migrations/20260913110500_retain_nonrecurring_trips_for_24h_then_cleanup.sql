@@ -90,11 +90,11 @@ BEGIN
       EXECUTE format('select cron.unschedule(%s)', v_job_id);
     END LOOP;
 
-    EXECUTE $$select cron.schedule(
+    EXECUTE $cron$select cron.schedule(
       'cleanup-expired-nonrecurring-trips',
       '15 * * * *',
       'select public.cleanup_expired_nonrecurring_trips();'
-    )$$;
+    )$cron$;
   END IF;
 END;
 $$;
