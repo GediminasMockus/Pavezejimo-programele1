@@ -1,4 +1,6 @@
-CREATE OR REPLACE FUNCTION public.delete_my_trip(p_trip_id uuid, p_reason text)
+DROP FUNCTION IF EXISTS public.delete_my_trip(uuid, text);
+
+CREATE FUNCTION public.delete_my_trip(p_trip_id uuid, p_reason text)
 RETURNS public.trips
 LANGUAGE plpgsql
 SECURITY DEFINER
