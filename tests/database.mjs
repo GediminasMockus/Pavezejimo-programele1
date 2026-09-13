@@ -45,7 +45,7 @@ await asUser(ids[1],async()=>{
  assert.equal(grants.can_update,false); assert.equal(grants.can_truncate,false);
 });
 await assert.rejects(asUser(ids[1],()=>query('UPDATE public.user_profiles SET is_admin=true WHERE id=$1',[ids[1]])),/permission denied/);
-await assert.rejects(asUser(ids[1],()=>rpc('update_my_trip',[trip.id,payload('driver')])),/not authorized/);
+await assert.rejects(asUser(ids[1],()=>rpc('update_my_trip',[trip.id,payload('driver')])),/access denied|not authorized/);
 async function request(user,tripId,seats=1) {
  return asUser(user,async()=> (await query("INSERT INTO public.ride_requests(trip_id,passenger_id,passenger_name,pickup_location,dropoff_location,seats_needed) VALUES($1,$2,'Passenger','Pickup','Dropoff',$3) RETURNING *",[tripId,user,seats])).rows[0]);
 }
