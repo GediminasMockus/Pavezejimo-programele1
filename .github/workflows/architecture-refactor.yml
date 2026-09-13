@@ -35,4 +35,4 @@ jobs:
           git commit -m "refactor: harden ride lifecycle and navigation"
           git push origin HEAD:master
 
-# rerun after migration replay repair
+# final verified run
