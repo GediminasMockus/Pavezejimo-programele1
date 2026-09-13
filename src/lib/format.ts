@@ -1,8 +1,13 @@
 import type { Trip } from '@/lib/supabase';
+import { getLanguage } from '@/lib/useLanguage';
+
+function locale() {
+  return getLanguage() === 'en' ? 'en-GB' : 'lt-LT';
+}
 
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString('lt-LT', {
+  return d.toLocaleString(locale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -13,16 +18,20 @@ export function formatDateTime(iso: string): string {
 
 export function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString('lt-LT', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 export function formatPrice(trip: Pick<Trip, 'price' | 'price_unit'>): string | null {
   if (trip.price === null || trip.price === undefined) return null;
-  const formatted = Number(trip.price).toLocaleString('lt-LT', {
+  const language = getLanguage();
+  const formatted = Number(trip.price).toLocaleString(language === 'en' ? 'en-GB' : 'lt-LT', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
-  return `${formatted} € / ${trip.price_unit}`;
+  const unit = language === 'en'
+    ? (trip.price_unit === 'asmeniui' ? 'person' : 'total')
+    : trip.price_unit;
+  return `${formatted} € / ${unit}`;
 }
 
 export function toLocalInput(d: Date): string {
@@ -33,11 +42,20 @@ export function toLocalInput(d: Date): string {
 export function formatDistanceToNow(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const language = getLanguage();
+
+  if (language === 'en') {
+    if (diffInSeconds < 60) return 'a few seconds ago';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hr ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} d ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
 
   if (diffInSeconds < 60) return 'prieš kelias sekundes';
   if (diffInSeconds < 3600) return `prieš ${Math.floor(diffInSeconds / 60)} min.`;
   if (diffInSeconds < 86400) return `prieš ${Math.floor(diffInSeconds / 3600)} val.`;
   if (diffInSeconds < 604800) return `prieš ${Math.floor(diffInSeconds / 86400)} d.`;
-  
+
   return date.toLocaleDateString('lt-LT', { day: 'numeric', month: 'short' });
 }
