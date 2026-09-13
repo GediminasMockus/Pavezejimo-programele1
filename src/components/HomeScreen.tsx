@@ -22,7 +22,14 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
       .then(({ data }) => setIsAdmin(data?.[0]?.is_admin === true));
   }, [userId]);
 
-
+  const pick = (role: TripRole, filters?: FilterState, create = false) => {
+    try {
+      localStorage.removeItem('pavezejimai_filters');
+    } catch {
+      // Ignore localStorage errors and continue with the current search.
+    }
+    onPick(role, filters, create);
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -55,12 +62,12 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
                   <label className="block rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition"><span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Į</span><input value={to} onChange={e => setTo(e.target.value)} placeholder="Kaunas" className="w-full bg-transparent outline-none text-base font-semibold text-slate-900 placeholder:text-slate-300" /></label>
                   <label className="block rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition"><span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Kada</span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-transparent outline-none text-base font-semibold text-slate-900" /></label>
                 </div>
-                <button onClick={() => onPick(mode, { ...emptyFilters, fromLocation: from, toLocation: to, date }, mode === 'driver')} className="mt-4 w-full rounded-2xl bg-slate-900 hover:bg-blue-600 text-white py-4 px-5 font-extrabold text-base shadow-lg shadow-slate-900/15 hover:shadow-blue-500/20 transition-all active:scale-[0.99]">{mode === 'passenger' ? 'Rasti kelionę' : 'Paskelbti kelionę'}<span className="ml-2">→</span></button>
+                <button onClick={() => pick(mode, { ...emptyFilters, fromLocation: from, toLocation: to, date }, mode === 'driver')} className="mt-4 w-full rounded-2xl bg-slate-900 hover:bg-blue-600 text-white py-4 px-5 font-extrabold text-base shadow-lg shadow-slate-900/15 hover:shadow-blue-500/20 transition-all active:scale-[0.99]">{mode === 'passenger' ? 'Rasti kelionę' : 'Paskelbti kelionę'}<span className="ml-2">→</span></button>
                 <p className="text-center text-[11px] text-slate-400 mt-3">Maršrutas ir laikas padės parodyti tinkamiausius atitikmenis.</p>
               </div>
               <div className="grid grid-cols-2 divide-x divide-slate-100 bg-slate-50/70">
-                <button onClick={() => onPick('driver', { ...emptyFilters, fromLocation: from, toLocation: to, date }, true)} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><Car className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Vežu</p><p className="text-[11px] text-slate-400">Sukurti pasiūlymą</p></div></div></button>
-                <button onClick={() => onPick('passenger')} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-emerald-600">Ieškau</p><p className="text-[11px] text-slate-400">Rasti pasiūlymus</p></div></div></button>
+                <button onClick={() => pick('driver', { ...emptyFilters, fromLocation: from, toLocation: to, date }, true)} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><Car className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-blue-600">Vežu</p><p className="text-[11px] text-slate-400">Sukurti pasiūlymą</p></div></div></button>
+                <button onClick={() => pick('passenger', emptyFilters)} className="p-4 text-left hover:bg-white transition group"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><Users className="w-4 h-4" /></div><div><p className="text-sm font-bold text-slate-800 group-hover:text-emerald-600">Ieškau</p><p className="text-[11px] text-slate-400">Rasti pasiūlymus</p></div></div></button>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3"><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">1</p><p className="text-[10px] font-semibold text-slate-400">maršrutas</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">2</p><p className="text-[10px] font-semibold text-slate-400">žingsniai iki susitarimo</p></div><div className="rounded-2xl bg-white/70 border border-slate-200 p-3 text-center"><p className="text-lg font-black text-slate-900">0</p><p className="text-[10px] font-semibold text-slate-400">nereikalingų ekranų</p></div></div>
