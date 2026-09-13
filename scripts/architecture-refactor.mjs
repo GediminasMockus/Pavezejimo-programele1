@@ -128,16 +128,10 @@ function replaceOnce(source, oldText, newText, label) {
   write(path, s);
 }
 
-// Translation bridge: include newly introduced lifecycle/notification strings while the UI migrates to direct keys.
+// Translation bridge: include the new lifecycle sentence while the UI migrates to direct keys.
 {
   const path = 'src/lib/useUiTranslation.ts';
   let s = read(path);
-  s = replaceOnce(
-    s,
-    "  'Skelbimo galiojimas': 'Listing validity', 'Kelionės laikas praėjo. Šis skelbimas dar bus rodomas 24 valandas, o tada bus automatiškai pašalintas.': 'The trip time has passed. This listing will remain visible for 24 hours and will then be removed automatically.'",
-    "  'Skelbimo galiojimas': 'Listing validity', 'Kelionės laikas praėjo. Šis skelbimas dar bus rodomas 24 valandas, o tada bus automatiškai pašalintas.': 'The trip time has passed. This listing will remain visible for 24 hours and will then be removed automatically.',\n  'Pažymėti visus': 'Mark all as read', 'Nėra pranešimų': 'No notifications'",
-    'translation additions',
-  );
   const patternAnchor = "  [/^Į: (.*)$/, m => `To: ${m[1]}`]";
   s = replaceOnce(
     s,
