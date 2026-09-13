@@ -31,6 +31,8 @@ async function asUser(id,fn) {
 const query=(sql,args=[])=>db.query(sql,args);
 const rpc=(name,args)=>query('SELECT * FROM public.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+')',args).then(r=>r.rows[0]);
 const payload=(role,seats=2)=>({role,seats,from_location:'Private street 123',to_location:'Private street 456',from_area:'Vilnius',to_area:'Kaunas',from_lat:54.687123,from_lng:25.279876,to_lat:54.898543,to_lng:23.903678,departure_time:new Date(Date.now()+7200000).toISOString(),name:'Test',car_make:'Test',car_color:'Blue',car_plate:'TEST01',phone:'+37061234567'});
+await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[payload('driver',9)])),/seats must be between 1 and 8/);
+await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[{...payload('driver'),from_area:''}])),/public trip areas are required/);
 const trip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver')]));
 assert.equal(trip.created_by,ids[0]);
 await asUser(ids[1],async()=>{
@@ -39,6 +41,8 @@ await asUser(ids[1],async()=>{
  assert.equal(publicTrip.from_location,'Vilnius');
  assert.equal(publicTrip.from_lat,54.69); assert.equal(publicTrip.available_seats,2);
  assert.equal((await query('SELECT * FROM public.trips WHERE id=$1',[trip.id])).rows.length,0);
+ const grants=(await query("SELECT has_table_privilege(current_user,'public.ride_requests','UPDATE') AS can_update, has_table_privilege(current_user,'public.ride_requests','TRUNCATE') AS can_truncate")).rows[0];
+ assert.equal(grants.can_update,false); assert.equal(grants.can_truncate,false);
 });
 await assert.rejects(asUser(ids[1],()=>query('UPDATE public.user_profiles SET is_admin=true WHERE id=$1',[ids[1]])),/permission denied/);
 await assert.rejects(asUser(ids[1],()=>rpc('update_my_trip',[trip.id,payload('driver')])),/not authorized/);
@@ -46,6 +50,7 @@ async function request(user,tripId,seats=1) {
  return asUser(user,async()=> (await query("INSERT INTO public.ride_requests(trip_id,passenger_id,passenger_name,pickup_location,dropoff_location,seats_needed) VALUES($1,$2,'Passenger','Pickup','Dropoff',$3) RETURNING *",[tripId,user,seats])).rows[0]);
 }
 const r1=await request(ids[1],trip.id,2),r2=await request(ids[2],trip.id,1);
+await assert.rejects(asUser(ids[0],()=>rpc('update_my_trip',[trip.id,payload('driver')])),/active requests/);
 await asUser(ids[0],()=>rpc('set_ride_request_status',[r1.id,'accepted',null]));
 await assert.rejects(asUser(ids[0],()=>rpc('set_ride_request_status',[r2.id,'accepted',null])),/not enough seats/);
 await assert.rejects(asUser(ids[3],()=>rpc('set_ride_request_status',[r1.id,'cancelled',null])),/not authorized/);
@@ -81,6 +86,6 @@ await asUser(ids[2],async()=>{
  assert.equal((await query('SELECT public.claim_geocode() AS allowed')).rows[0].allowed,true);
  assert.equal((await query('SELECT public.claim_geocode() AS allowed')).rows[0].allowed,false);
 });
-console.log('Booking, capacity, authorization, privacy, chat, history, completion, rating and geocoder tests passed.');
+console.log('Booking, capacity, authorization, privacy, validation, chat, history, completion, rating and geocoder tests passed.');
 
 await db.close();
