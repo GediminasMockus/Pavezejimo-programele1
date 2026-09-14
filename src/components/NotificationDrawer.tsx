@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, X, Check, Clock, Route } from 'lucide-react';
-import { supabase, type Notification } from '@/lib/supabase';
+import { supabase, type Notification, type TripRole } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
 
 interface NotificationDrawerProps {
   userId: string;
   onClose: () => void;
+  onOpenMatch?: (tripId: string, matchedTripRole: TripRole) => void;
 }
 
-export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps) {
+export function NotificationDrawer({ userId, onClose, onOpenMatch }: NotificationDrawerProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +70,8 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
       case 'new_message':
         return <Bell className="w-5 h-5 text-blue-600" />;
       case 'auto_match':
+      case 'auto_match_driver':
+      case 'auto_match_passenger':
         return <Route className="w-5 h-5 text-indigo-600" />;
       default:
         return <Bell className="w-5 h-5 text-slate-600" />;
@@ -86,6 +89,8 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
       case 'new_message':
         return 'bg-blue-50 border-blue-200';
       case 'auto_match':
+      case 'auto_match_driver':
+      case 'auto_match_passenger':
         return 'bg-indigo-50 border-indigo-200';
       default:
         return 'bg-slate-50 border-slate-200';
@@ -140,13 +145,27 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {notifications.map((notification) => (
-                <div
+              {notifications.map((notification) => {
+                const matchedTripRole =
+                  notification.type === 'auto_match_driver'
+                    ? 'driver'
+                    : notification.type === 'auto_match_passenger'
+                      ? 'passenger'
+                      : null;
+                const canOpenMatch = Boolean(matchedTripRole && notification.related_trip_id && onOpenMatch);
+
+                return (
+                <button
+                  type="button"
                   key={notification.id}
-                  className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50' : ''}`}
+                  className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${!notification.read ? 'bg-blue-50/50' : ''}`}
                   onClick={() => {
-                    if (!notification.read) markAsRead(notification.id);
+                    if (!notification.read) void markAsRead(notification.id);
+                    if (canOpenMatch && matchedTripRole && notification.related_trip_id) {
+                      onOpenMatch?.(notification.related_trip_id, matchedTripRole);
+                    }
                   }}
+                  aria-label={canOpenMatch ? `${notification.title} – peržiūrėti kelionę` : notification.title}
                 >
                   <div className="flex gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border ${getNotificationBg(notification.type)}`}>
@@ -160,13 +179,21 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
                         )}
                       </div>
                       <p className="text-sm text-slate-600 mt-1 line-clamp-2">{notification.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">
-                        {formatDistanceToNow(new Date(notification.created_at))}
-                      </p>
+                      <div className="flex items-center justify-between gap-3 mt-2">
+                        <p className="text-xs text-slate-400">
+                          {formatDistanceToNow(new Date(notification.created_at))}
+                        </p>
+                        {canOpenMatch && (
+                          <span className="text-xs font-semibold text-indigo-600">
+                            Peržiūrėti kelionę →
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                </button>
+                );
+              })}
             </div>
           )}
         </div>

@@ -52,6 +52,7 @@ export default function App() {
   const [startForm, setStartForm] = useState(false);
   const [screen, setScreen] = useState<Screen>('home');
   const [activeRole, setActiveRole] = useState<TripRole | null>(null);
+  const [focusTripId, setFocusTripId] = useState<string | null>(null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const { toasts, success, error, info, warning, remove } = useToast();
@@ -82,6 +83,14 @@ export default function App() {
 
   const userId = session.user.id;
 
+  const openMatchedTrip = (tripId: string, matchedTripRole: TripRole) => {
+    setSearch(emptyFilters);
+    setStartForm(false);
+    setFocusTripId(tripId);
+    setActiveRole(matchedTripRole === 'driver' ? 'passenger' : 'driver');
+    setScreen('list');
+  };
+
   return (
     <div className="min-h-screen text-slate-800">
       <Background />
@@ -92,19 +101,23 @@ export default function App() {
           onPick={(role, searchFilters, create = false) => {
             setSearch(searchFilters ?? emptyFilters);
             setStartForm(create);
+            setFocusTripId(null);
             setActiveRole(role);
             setScreen('list');
           }}
+          onOpenMatchedTrip={openMatchedTrip}
           onSignOut={() => supabase.auth.signOut()}
         />
       )}
       {screen === 'list' && activeRole && (
         <ListScreen
-          key={userId}
+          key={`${userId}:${activeRole}:${focusTripId ?? ''}`}
           role={activeRole}
           initialFilters={search}
           initialForm={startForm}
+          focusTripId={focusTripId}
           userId={userId}
+          onOpenMatchedTrip={openMatchedTrip}
           onBack={() => {
             setScreen('home');
             setActiveRole(null);
@@ -116,7 +129,7 @@ export default function App() {
   );
 }
 
-function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }: { initialFilters: FilterState; initialForm: boolean; role: TripRole; userId: string; onBack: () => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, onOpenMatchedTrip }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
@@ -144,6 +157,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }
   const [publicLimit, setPublicLimit] = useState(100);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [filters, setFilters] = useState<FilterState>(() => {
+    if (focusTripId) return emptyFilters;
     if (initialFilters.fromLocation || initialFilters.toLocation || initialFilters.date) return initialFilters;
     try {
       const saved = localStorage.getItem('pavezejimai_filters');
@@ -301,6 +315,17 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }
   const nextOwnTrip = useMemo(() => ownTrips.filter(t => t.status === 'active' && new Date(t.departure_time).getTime() >= now).sort((a,b) => new Date(a.departure_time).getTime()-new Date(b.departure_time).getTime())[0], [ownTrips, now]);
   const preliminaryMatches = useMemo(() => nextOwnTrip ? findBestMatches({ ...nextOwnTrip, seats: nextOwnTrip.available_seats }, otherTrips, 3) : [], [nextOwnTrip, otherTrips]);
   const bestMatches = useRoadMatches(nextOwnTrip, preliminaryMatches);
+
+  useEffect(() => {
+    if (!focusTripId || loading) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`trip-${focusTripId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusTripId, loading, filteredOtherTrips.length]);
 
   const requestsByTrip = useMemo(() => {
     const map = new Map<string, RideRequest[]>();
@@ -594,6 +619,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }
           <NotificationDrawer
             userId={userId}
             onClose={() => setShowNotifications(false)}
+            onOpenMatch={(tripId, matchedTripRole) => {
+              setShowNotifications(false);
+              onOpenMatchedTrip(tripId, matchedTripRole);
+            }}
           />
         )}
 
@@ -884,12 +913,17 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }
                   {filteredOtherTrips.map((t) => {
                     const alreadyRequested = mySentRequestTripIds.has(t.id);
                     const myRequest = mySentRequests.find((r) => r.trip_id === t.id);
+                    const isFocused = t.id === focusTripId;
                     return (
-                      <TripCard
+                      <div
                         key={t.id}
+                        id={`trip-${t.id}`}
+                        className={isFocused ? 'rounded-2xl ring-4 ring-indigo-300 ring-offset-2' : ''}
+                      >
+                      <TripCard
                         trip={t}
                         onSelect={isDriver ? () => setOfferTarget(t) : () => setRequestTarget(t)}
-                        highlight={alreadyRequested}
+                        highlight={alreadyRequested || isFocused}
                         onPreviewRoute={() => {
                           setPreviewTrip(t);
                           setPreviewRequest(myRequest ?? null);
@@ -900,6 +934,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm }
                         userRating={t.created_by ? getUserRating(t.created_by) : null}
                         selectLabel={isDriver ? 'Siūlyti pavežėjimą' : 'Siųsti užklausą'}
                       />
+                      </div>
                     );
                   })}
                 </div>

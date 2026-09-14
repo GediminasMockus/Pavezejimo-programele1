@@ -8,7 +8,7 @@ import { AdminLogs } from './AdminLogs';
 import { SettingsModal } from './SettingsModal';
 import { NotificationDrawer } from './NotificationDrawer';
 
-export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void }) {
+export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -78,7 +78,16 @@ export function HomeScreen({ userId, onPick, onSignOut }: { userId: string; onPi
       </div>
       {showSettings && <SettingsModal userId={userId} onClose={() => setShowSettings(false)} onSignOut={onSignOut} />}
       {showAdmin && <AdminLogs onClose={() => setShowAdmin(false)} />}
-      {showNotifications && <NotificationDrawer userId={userId} onClose={() => setShowNotifications(false)} />}
+      {showNotifications && (
+        <NotificationDrawer
+          userId={userId}
+          onClose={() => setShowNotifications(false)}
+          onOpenMatch={(tripId, matchedTripRole) => {
+            setShowNotifications(false);
+            onOpenMatchedTrip?.(tripId, matchedTripRole);
+          }}
+        />
+      )}
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 pb-10">
         <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-7 lg:gap-12 items-center min-h-[calc(100vh-7rem)]">
