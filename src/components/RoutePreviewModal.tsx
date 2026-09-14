@@ -73,7 +73,13 @@ export function RoutePreviewModal({
     mapInstance.current = map;
     setTimeout(() => map.invalidateSize(), 100);
 
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize({ pan: false });
+    });
+    observer.observe(mapRef.current);
+
     return () => {
+      observer.disconnect();
       map.remove();
       mapInstance.current = null;
     };
@@ -84,7 +90,6 @@ export function RoutePreviewModal({
     const map = mapInstance.current;
     const controller = new AbortController();
 
-    // Clear previous layers
     map.eachLayer((layer) => {
       if (layer instanceof L.Marker || layer instanceof L.Polyline) {
         map.removeLayer(layer);
@@ -95,15 +100,14 @@ export function RoutePreviewModal({
       setLoading(true);
       const points: [number, number][] = [];
 
-      // Driver route (dashed blue)
       let driverRouteData: RouteData | null = null;
       if (hasDriverCoords) {
         L.marker([trip.from_lat!, trip.from_lng!], { icon: bluePin('Iš') })
           .addTo(map)
-          .bindPopup(mapPopup("Išvykimas", trip.from_location));
+          .bindPopup(mapPopup('Išvykimas', trip.from_location));
         L.marker([trip.to_lat!, trip.to_lng!], { icon: bluePin('Į') })
           .addTo(map)
-          .bindPopup(mapPopup("Atvykimas", trip.to_location));
+          .bindPopup(mapPopup('Atvykimas', trip.to_location));
 
         driverRouteData = await fetchRoute(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!, controller.signal);
         if (controller.signal.aborted) return;
@@ -125,18 +129,16 @@ export function RoutePreviewModal({
         points.push([trip.to_lat!, trip.to_lng!]);
       }
 
-      // Full route with passenger (solid green)
       let fullRouteData: RouteData | null = null;
       let detour: number | undefined;
       if (hasDriverCoords && hasRequestCoords) {
         L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
           .addTo(map)
-          .bindPopup(mapPopup("Keleivio paėmimas", request!.pickup_location));
+          .bindPopup(mapPopup('Keleivio paėmimas', request!.pickup_location));
         L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: greenPin('B') })
           .addTo(map)
-          .bindPopup(mapPopup("Keleivio išlaipinimas", request!.dropoff_location));
+          .bindPopup(mapPopup('Keleivio išlaipinimas', request!.dropoff_location));
 
-        // Fetch all three legs of the route
         const [leg1, leg2, leg3] = await Promise.all([
           fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat!, request!.pickup_lng!, controller.signal),
           fetchRoute(request!.pickup_lat!, request!.pickup_lng!, request!.dropoff_lat!, request!.dropoff_lng!, controller.signal),
@@ -161,7 +163,6 @@ export function RoutePreviewModal({
             opacity: 0.85,
           }).addTo(map);
         } else {
-          // Fallback to straight lines
           L.polyline(
             [
               [trip.from_lat!, trip.from_lng!],
@@ -200,25 +201,26 @@ export function RoutePreviewModal({
   const fullDist = routeInfo.fullRoute?.distance ?? null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-          <div>
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:p-4">
+      <div className="w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-white sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="shrink-0 bg-white/95 backdrop-blur px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-lg font-bold text-slate-900">Maršruto peržiūra</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 truncate">
               {trip.from_location} → {trip.to_location} · {formatDateTime(trip.departure_time)}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100"
+            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100"
+            aria-label="Uždaryti maršruto peržiūrą"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-5 sm:p-6">
-          <div className="relative w-full h-[300px] sm:h-[350px] rounded-2xl overflow-hidden border border-slate-200">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+          <div className="relative w-full h-[48dvh] min-h-[280px] max-h-[560px] sm:h-[52dvh] sm:min-h-[360px] sm:max-h-[620px] rounded-2xl overflow-hidden border border-slate-200">
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-[500]">
                 <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
@@ -227,7 +229,7 @@ export function RoutePreviewModal({
             <div ref={mapRef} className="w-full h-full" />
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
             {hasDriverCoords && (
               <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-900 mb-1">
