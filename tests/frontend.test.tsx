@@ -8,6 +8,7 @@ import { navigationUrl } from '../src/lib/navigation';
 import { applyFilters, emptyFilters, findBestMatches } from '../src/lib/tripFilters';
 import { HomeScreen } from '../src/components/HomeScreen';
 import { ChatDrawer } from '../src/components/ChatDrawer';
+import { RequestModal } from '../src/components/RequestModal';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 const mock = vi.hoisted(() => ({
@@ -85,6 +86,26 @@ describe('user workflows', () => {
    await new Promise(resolve=>setTimeout(resolve,30));
    expect(callback).toHaveBeenCalledTimes(1);
  });
+ it('prefills a best-match request from the passenger listing', () => {
+   const passengerTrip = {
+     ...trip,
+     id: 'passenger-trip',
+     role: 'passenger' as const,
+     created_by: 'passenger',
+     from_location: 'Trakai',
+     to_location: 'Vilnius',
+     name: 'Tester',
+     phone: '+37060000000',
+     seats: 2,
+     baggage: 'Mažas',
+   };
+   render(<RequestModal trip={trip} passengerTrip={passengerTrip} userId="passenger" onClose={() => {}} onSubmitted={() => {}} />);
+   expect(screen.getByText('Jūsų skelbimo duomenys užpildyti automatiškai')).toBeTruthy();
+   expect(screen.getByText('Trakai → Vilnius')).toBeTruthy();
+   expect(screen.queryByPlaceholderText('pvz. Vilnius, stotis')).toBeNull();
+   expect(screen.getByPlaceholderText('Jei norite, parašykite vairuotojui žinutę')).toBeTruthy();
+ });
+
  it('does not geocode while typing', async () => {
    const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[]}); vi.stubGlobal('fetch',fetch);
    function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <AddressInput value={value} onChange={setValue} placeholder="Address" />; }

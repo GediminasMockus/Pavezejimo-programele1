@@ -144,6 +144,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = useUnreadCount(userId);
   const [requestTarget, setRequestTarget] = useState<Trip | null>(null);
+  const [requestPassengerTrip, setRequestPassengerTrip] = useState<Trip | null>(null);
   const [offerTarget, setOfferTarget] = useState<Trip | null>(null);
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
   const [previewRequest, setPreviewRequest] = useState<RideRequest | null>(null);
@@ -556,10 +557,15 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         {requestTarget && (
           <RequestModal
             trip={requestTarget}
+            passengerTrip={requestPassengerTrip}
             userId={userId}
-            onClose={() => setRequestTarget(null)}
+            onClose={() => {
+              setRequestTarget(null);
+              setRequestPassengerTrip(null);
+            }}
             onSubmitted={() => {
               setRequestTarget(null);
+              setRequestPassengerTrip(null);
               loadRequests();
               toast.success('Užklausa išsiųsta!');
             }}
@@ -869,7 +875,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                           </div>
                           <TripCard
                             trip={match.trip}
-                            onSelect={isDriver ? () => setOfferTarget(match.trip) : () => setRequestTarget(match.trip)}
+                            onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
+                              setRequestPassengerTrip(nextOwnTrip ?? null);
+                              setRequestTarget(match.trip);
+                            }}
                             highlight={mySentRequestTripIds.has(match.trip.id)}
                             onPreviewRoute={() => {
                               setPreviewTrip(match.trip);
@@ -922,7 +931,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       >
                       <TripCard
                         trip={t}
-                        onSelect={isDriver ? () => setOfferTarget(t) : () => setRequestTarget(t)}
+                        onSelect={isDriver ? () => setOfferTarget(t) : () => {
+                          setRequestPassengerTrip(null);
+                          setRequestTarget(t);
+                        }}
                         highlight={alreadyRequested || isFocused}
                         onPreviewRoute={() => {
                           setPreviewTrip(t);
