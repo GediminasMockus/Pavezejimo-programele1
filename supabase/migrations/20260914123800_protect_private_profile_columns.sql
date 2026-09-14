@@ -1,3 +1,5 @@
+drop function if exists public.get_my_profile();
+
 create or replace function public.get_my_profile()
 returns table(
   id text,
