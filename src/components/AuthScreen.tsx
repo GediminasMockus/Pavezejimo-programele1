@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Route, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Background } from '@/components/Background';
+import { useLanguage } from '@/lib/useLanguage';
 
 export function AuthScreen() {
+  const { isEnglish } = useLanguage();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,8 +22,12 @@ export function AuthScreen() {
       setError('Įveskite el. paštą ir slaptažodį.');
       return;
     }
-    if (password.length < 6) {
+    if (mode === 'signin' && password.length < 6) {
       setError('Slaptažodis turi būti bent 6 simbolių.');
+      return;
+    }
+    if (mode === 'signup' && password.length < 10) {
+      setError(isEnglish ? 'Password must be at least 10 characters.' : 'Slaptažodis turi būti bent 10 simbolių.');
       return;
     }
 
@@ -136,7 +142,9 @@ export function AuthScreen() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Bent 6 simboliai"
+                placeholder={mode === 'signup'
+                  ? (isEnglish ? 'At least 10 characters' : 'Bent 10 simbolių')
+                  : 'Slaptažodis'}
                 className="form-input"
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               />
