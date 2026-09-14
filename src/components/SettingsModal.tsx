@@ -128,21 +128,23 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
             </section>
 
             <section>
-              <h3 className="section-title"><Car className="w-3.5 h-3.5" /> {text.carInfo}</h3>
-              <div className="space-y-3">
-                <label className="block"><span className="field-label">{text.make}</span><input value={carMake} onChange={e => setCarMake(e.target.value)} placeholder={text.makePlaceholder} className="form-input" /></label>
-                <label className="block"><span className="field-label">{text.color}</span><input value={carColor} onChange={e => setCarColor(e.target.value)} placeholder={text.colorPlaceholder} className="form-input" /></label>
-                <label className="block"><span className="field-label">{text.plate}</span><input value={carPlate} onChange={e => setCarPlate(e.target.value)} placeholder={text.platePlaceholder} className="form-input" /></label>
-              </div>
-            </section>
-
-            <section>
               <h3 className="section-title">{text.defaultRole}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <RoleButton active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label={text.driver} />
                 <RoleButton active={defaultRole === 'passenger'} passenger onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
               </div>
             </section>
+
+            {defaultRole !== 'passenger' && (
+              <section>
+                <h3 className="section-title"><Car className="w-3.5 h-3.5" /> {text.carInfo}</h3>
+                <div className="space-y-3">
+                  <label className="block"><span className="field-label">{text.make}</span><input value={carMake} onChange={e => setCarMake(e.target.value)} placeholder={text.makePlaceholder} className="form-input" /></label>
+                  <label className="block"><span className="field-label">{text.color}</span><input value={carColor} onChange={e => setCarColor(e.target.value)} placeholder={text.colorPlaceholder} className="form-input" /></label>
+                  <label className="block"><span className="field-label">{text.plate}</span><input value={carPlate} onChange={e => setCarPlate(e.target.value)} placeholder={text.platePlaceholder} className="form-input" /></label>
+                </div>
+              </section>
+            )}
 
             <section>
               <h3 className="section-title"><Bell className="w-3.5 h-3.5" /> {text.notifications}</h3>
