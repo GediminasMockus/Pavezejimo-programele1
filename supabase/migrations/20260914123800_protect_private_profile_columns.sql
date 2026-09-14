@@ -1,4 +1,5 @@
 drop function if exists public.get_my_profile();
+drop function if exists public.get_my_profile_flags();
 
 create or replace function public.get_my_profile()
 returns table(
