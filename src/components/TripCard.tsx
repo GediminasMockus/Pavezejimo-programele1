@@ -104,7 +104,6 @@ export function TripCard({
               Pasikartojantis
             </span>
           )}
-          <span className="min-w-0 text-xs text-slate-400 break-words">{formatDateTime(trip.departure_time)}</span>
         </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-1">
           {onEdit && (
@@ -123,29 +122,30 @@ export function TripCard({
               className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
               aria-label={`Pašalinti skelbimą: ${trip.from_location} → ${trip.to_location}`}
             >
-              {deleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </button>
           )}
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-2 text-slate-900">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromIconColor}`} />
-            <span className="font-semibold text-sm truncate">{trip.from_location}</span>
-          </div>
-          <div className="ml-1.5 border-l-2 border-dashed border-slate-300 h-3 my-0.5" />
-          <div className="flex items-center gap-1.5">
-            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toIconColor}`} />
-            <span className="font-semibold text-sm truncate">{trip.to_location}</span>
-          </div>
+      <div className="mt-1.5 text-xs text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
+        {formatDateTime(trip.departure_time)}
+      </div>
+
+      <div className="mt-2 text-slate-900">
+        <div className="flex items-start gap-1.5">
+          <MapPin className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${fromIconColor}`} />
+          <span className="min-w-0 font-semibold text-sm leading-snug break-words">{trip.from_location}</span>
         </div>
-        <div className="flex-shrink-0 flex flex-col items-end gap-1">
+        <div className="ml-1.5 border-l-2 border-dashed border-slate-300 h-3 my-0.5" />
+        <div className="flex items-start gap-1.5">
+          <MapPin className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${toIconColor}`} />
+          <span className="min-w-0 font-semibold text-sm leading-snug break-words">{trip.to_location}</span>
+        </div>
+      </div>
+
+      {(priceStr || distance !== null) && (
+        <div className="mt-2 space-y-1.5">
           {priceStr && (
             <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 shadow-md shadow-amber-500/30">
               <Euro className="w-3.5 h-3.5 text-white" />
@@ -153,19 +153,18 @@ export function TripCard({
             </div>
           )}
           {distance !== null && (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">
-              <Route className="w-3 h-3" />
-              <span className="text-xs font-medium">≈ {formatDistance(distance)}</span>
+            <div className="flex">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">
+                <Route className="w-3 h-3" />
+                <span className="text-xs font-medium">≈ {formatDistance(distance)}</span>
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
-        <button
-          onClick={onShowProfile}
-          className="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600 hover:underline transition-colors"
-        >
+        <button onClick={onShowProfile} className="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600 hover:underline transition-colors">
           <User className="w-3 h-3 text-slate-400" />
           {trip.name}
           {userRating && userRating.total > 0 && (
@@ -180,10 +179,7 @@ export function TripCard({
           {trip.seats} {isDriver ? 'vietos' : 'keleiviai'}
         </span>
         {showPrivateDetails && trip.phone && (
-          <a
-            href={`tel:${trip.phone}`}
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-          >
+          <a href={`tel:${trip.phone}`} className="inline-flex items-center gap-1 text-blue-600 hover:underline">
             <Phone className="w-3 h-3" />
             {trip.phone}
           </a>
@@ -191,9 +187,9 @@ export function TripCard({
       </div>
 
       {isDriver && carInfo && (
-        <div className="mt-1.5 inline-flex items-center gap-1 text-xs text-slate-600 bg-blue-50 rounded-lg px-2 py-1">
-          <Car className="w-3 h-3 text-blue-500" />
-          {showPrivateDetails ? carInfo : [trip.car_make, trip.car_color].filter(Boolean).join(' · ')}
+        <div className="mt-1.5 inline-flex items-center gap-1 text-xs text-slate-600 bg-blue-50 rounded-lg px-2 py-1 max-w-full">
+          <Car className="w-3 h-3 text-blue-500 flex-shrink-0" />
+          <span className="break-words">{showPrivateDetails ? carInfo : [trip.car_make, trip.car_color].filter(Boolean).join(' · ')}</span>
         </div>
       )}
 
@@ -204,9 +200,7 @@ export function TripCard({
         </div>
       )}
 
-      {trip.notes && (
-        <p className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5">{trip.notes}</p>
-      )}
+      {trip.notes && <p className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5 break-words">{trip.notes}</p>}
 
       {onPreviewRoute && (
         <button
