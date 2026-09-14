@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Route, Mail, Lock, User, Loader2, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Background } from '@/components/Background';
 import { useLanguage } from '@/lib/useLanguage';
@@ -10,6 +10,7 @@ export function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,36 +18,60 @@ export function AuthScreen() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice('');
 
     if (!email.trim() || !password.trim()) {
-      setError('Įveskite el. paštą ir slaptažodį.');
+      setError(isEnglish ? 'Enter your email and password.' : 'Įveskite el. paštą ir slaptažodį.');
       return;
     }
     if (mode === 'signin' && password.length < 6) {
-      setError('Slaptažodis turi būti bent 6 simbolių.');
+      setError(isEnglish ? 'Password must be at least 6 characters.' : 'Slaptažodis turi būti bent 6 simbolių.');
       return;
     }
-    if (mode === 'signup' && password.length < 10) {
-      setError(isEnglish ? 'Password must be at least 10 characters.' : 'Slaptažodis turi būti bent 10 simbolių.');
-      return;
+    if (mode === 'signup') {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (!phone.trim()) {
+        setError(isEnglish ? 'Phone number is required.' : 'Telefono numeris yra privalomas.');
+        return;
+      }
+      if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+        setError(isEnglish ? 'Enter a valid phone number.' : 'Įveskite teisingą telefono numerį.');
+        return;
+      }
+      if (password.length < 10) {
+        setError(isEnglish ? 'Password must be at least 10 characters.' : 'Slaptažodis turi būti bent 10 simbolių.');
+        return;
+      }
     }
 
     setLoading(true);
 
     if (mode === 'signup') {
+      const trimmedEmail = email.trim();
+      const trimmedPhone = phone.trim();
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: trimmedEmail,
         password,
-        options: { data: { display_name: name.trim() || email.split('@')[0] } },
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            display_name: name.trim() || trimmedEmail.split('@')[0],
+            phone: trimmedPhone,
+          },
+        },
       });
       if (error) {
         setError(error.message === 'User already registered'
-          ? 'Vartotojas su tokiu el. paštu jau užregistruotas.'
+          ? (isEnglish ? 'A user with this email is already registered.' : 'Vartotojas su tokiu el. paštu jau užregistruotas.')
           : error.message);
         setLoading(false);
         return;
       }
-      if (!data.session) setNotice('Patikrinkite el. paštą ir patvirtinkite registraciją. Tada prisijunkite.');
+      if (!data.session) {
+        setNotice(isEnglish
+          ? 'Check your email and confirm your registration using the link we sent you. Then sign in.'
+          : 'Patikrinkite el. paštą ir patvirtinkite registraciją paspausdami atsiųstą nuorodą. Tada prisijunkite.');
+      }
       setLoading(false);
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -55,7 +80,7 @@ export function AuthScreen() {
       });
       if (error) {
         setError(error.message === 'Invalid login credentials'
-          ? 'Neteisingas el. paštas arba slaptažodis.'
+          ? (isEnglish ? 'Incorrect email or password.' : 'Neteisingas el. paštas arba slaptažodis.')
           : error.message);
         setLoading(false);
         return;
@@ -75,7 +100,9 @@ export function AuthScreen() {
           Priemiesčio Pavežėjimai
         </h1>
         <p className="mt-2 text-slate-500 text-sm">
-          {mode === 'signin' ? 'Prisijunkite, kad tęstumėte' : 'Sukurkite paskyrą, kad pradėtumėte'}
+          {mode === 'signin'
+            ? (isEnglish ? 'Sign in to continue' : 'Prisijunkite, kad tęstumėte')
+            : (isEnglish ? 'Create an account to get started' : 'Sukurkite paskyrą, kad pradėtumėte')}
         </p>
       </div>
 
@@ -84,44 +111,64 @@ export function AuthScreen() {
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <div className="flex rounded-full bg-slate-100 p-1 mb-6">
             <button
-              onClick={() => { setMode('signin'); setError(null); }}
+              onClick={() => { setMode('signin'); setError(null); setNotice(''); }}
               className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${
                 mode === 'signin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
               }`}
             >
-              Prisijungti
+              {isEnglish ? 'Sign in' : 'Prisijungti'}
             </button>
             <button
-              onClick={() => { setMode('signup'); setError(null); }}
+              onClick={() => { setMode('signup'); setError(null); setNotice(''); }}
               className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${
                 mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
               }`}
             >
-              Registruotis
+              {isEnglish ? 'Register' : 'Registruotis'}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'signup' && (
-              <label className="block">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-                  <User className="w-4 h-4 text-slate-400" />
-                  Vardas
-                </span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="pvz. Jonas"
-                  className="form-input"
-                />
-              </label>
+              <>
+                <label className="block">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
+                    <User className="w-4 h-4 text-slate-400" />
+                    {isEnglish ? 'Name' : 'Vardas'}
+                  </span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={isEnglish ? 'e.g. Jonas' : 'pvz. Jonas'}
+                    className="form-input"
+                    autoComplete="name"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
+                    <Phone className="w-4 h-4 text-slate-400" />
+                    {isEnglish ? 'Phone number' : 'Telefono numeris'}
+                  </span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+370 6xx xxxxx"
+                    className="form-input"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    required
+                  />
+                </label>
+              </>
             )}
 
             <label className="block">
               <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
                 <Mail className="w-4 h-4 text-slate-400" />
-                El. paštas
+                {isEnglish ? 'Email' : 'El. paštas'}
               </span>
               <input
                 type="email"
@@ -130,13 +177,14 @@ export function AuthScreen() {
                 placeholder="vardas@pavyzdys.lt"
                 className="form-input"
                 autoComplete="email"
+                required
               />
             </label>
 
             <label className="block">
               <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
                 <Lock className="w-4 h-4 text-slate-400" />
-                Slaptažodis
+                {isEnglish ? 'Password' : 'Slaptažodis'}
               </span>
               <input
                 type="password"
@@ -144,9 +192,10 @@ export function AuthScreen() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === 'signup'
                   ? (isEnglish ? 'At least 10 characters' : 'Bent 10 simbolių')
-                  : 'Slaptažodis'}
+                  : (isEnglish ? 'Password' : 'Slaptažodis')}
                 className="form-input"
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                required
               />
             </label>
 
@@ -162,22 +211,30 @@ export function AuthScreen() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>{mode === 'signin' ? 'Jungiamasi…' : 'Kuriama…'}</span>
+                  <span>{mode === 'signin'
+                    ? (isEnglish ? 'Signing in…' : 'Jungiamasi…')
+                    : (isEnglish ? 'Creating…' : 'Kuriama…')}</span>
                 </>
               ) : (
-                <span>{mode === 'signin' ? 'Prisijungti' : 'Registruotis'}</span>
+                <span>{mode === 'signin'
+                  ? (isEnglish ? 'Sign in' : 'Prisijungti')
+                  : (isEnglish ? 'Register' : 'Registruotis')}</span>
               )}
             </button>
           </form>
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          {mode === 'signin' ? 'Neturite paskyros? ' : 'Turite paskyrą? '}
+          {mode === 'signin'
+            ? (isEnglish ? "Don't have an account? " : 'Neturite paskyros? ')
+            : (isEnglish ? 'Already have an account? ' : 'Turite paskyrą? ')}
           <button
-            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
+            onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setNotice(''); }}
             className="text-blue-600 font-semibold hover:underline"
           >
-            {mode === 'signin' ? 'Registruokitės' : 'Prisijunkite'}
+            {mode === 'signin'
+              ? (isEnglish ? 'Register' : 'Registruokitės')
+              : (isEnglish ? 'Sign in' : 'Prisijunkite')}
           </button>
         </p>
       </div>
