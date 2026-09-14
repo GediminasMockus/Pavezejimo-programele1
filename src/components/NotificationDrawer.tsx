@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, X, Check, Clock } from 'lucide-react';
+import { Bell, X, Check, Clock, Route } from 'lucide-react';
 import { supabase, type Notification } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
 
@@ -68,6 +68,8 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
         return <Clock className="w-5 h-5 text-amber-600" />;
       case 'new_message':
         return <Bell className="w-5 h-5 text-blue-600" />;
+      case 'auto_match':
+        return <Route className="w-5 h-5 text-indigo-600" />;
       default:
         return <Bell className="w-5 h-5 text-slate-600" />;
     }
@@ -83,6 +85,8 @@ export function NotificationDrawer({ userId, onClose }: NotificationDrawerProps)
         return 'bg-amber-50 border-amber-200';
       case 'new_message':
         return 'bg-blue-50 border-blue-200';
+      case 'auto_match':
+        return 'bg-indigo-50 border-indigo-200';
       default:
         return 'bg-slate-50 border-slate-200';
     }
