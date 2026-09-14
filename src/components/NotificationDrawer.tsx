@@ -7,8 +7,7 @@ import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 const RELEVANCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function isRelevant(notification: Notification) {
-  return !notification.read &&
-    new Date(notification.created_at).getTime() >= Date.now() - RELEVANCE_WINDOW_MS;
+  return new Date(notification.created_at).getTime() >= Date.now() - RELEVANCE_WINDOW_MS;
 }
 
 interface NotificationDrawerProps {
@@ -30,7 +29,6 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
-      .eq('read', false)
       .gte('created_at', relevantSince)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -74,18 +72,20 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
 
 
   async function markAsRead(id: string) {
-    setNotifications(items => items.filter(item => item.id !== id));
+    setNotifications(items =>
+      items.map(item => item.id === id ? { ...item, read: true } : item),
+    );
     const { error } = await supabase.rpc('mark_notification_read', { p_notification_id: id });
     if (error) void loadNotifications();
   }
 
   async function markAllAsRead() {
-    setNotifications([]);
+    setNotifications(items => items.map(item => ({ ...item, read: true })));
     const { error } = await supabase.rpc('mark_all_notifications_read');
     if (error) void loadNotifications();
   }
 
-  const unreadCount = notifications.length;
+  const unreadCount = notifications.filter(notification => !notification.read).length;
 
   function getNotificationIcon(type: Notification['type']) {
     switch (type) {
@@ -181,7 +181,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Bell className="w-8 h-8 mb-3 opacity-50" />
-              <p className="text-sm">Naujų aktualių pranešimų nėra</p>
+              <p className="text-sm">Naujų ar nesenų pranešimų nėra</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
