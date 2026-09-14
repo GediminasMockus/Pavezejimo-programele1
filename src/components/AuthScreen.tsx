@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { Background } from '@/components/Background';
 import { useLanguage } from '@/lib/useLanguage';
 
+const EMAIL_CONFIRM_REDIRECT = 'https://pavezejimo-programele1.vercel.app/';
+
 export function AuthScreen() {
   const { isEnglish } = useLanguage();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -53,7 +55,7 @@ export function AuthScreen() {
         email: trimmedEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: EMAIL_CONFIRM_REDIRECT,
           data: {
             display_name: name.trim() || trimmedEmail.split('@')[0],
             phone: trimmedPhone,
