@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bell, X, Check, Clock, Route, Car, Users } from 'lucide-react';
 import { supabase, type Notification, type TripRole } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+
+const RELEVANCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isRelevant(notification: Notification) {
+  return !notification.read &&
+    new Date(notification.created_at).getTime() >= Date.now() - RELEVANCE_WINDOW_MS;
+}
 
 interface NotificationDrawerProps {
   userId: string;
@@ -11,18 +19,22 @@ interface NotificationDrawerProps {
 }
 
 export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }: NotificationDrawerProps) {
+  useBodyScrollLock();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
+    const relevantSince = new Date(Date.now() - RELEVANCE_WINDOW_MS).toISOString();
     const { data } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
+      .eq('read', false)
+      .gte('created_at', relevantSince)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (data) setNotifications(data);
+    if (data) setNotifications((data as Notification[]).filter(isRelevant));
     setLoading(false);
   }, [userId]);
 
@@ -33,12 +45,25 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
     const channel = supabase
       .channel('notifications-changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-        if (payload.new.user_id === userId) {
-          setNotifications(prev => [payload.new as Notification, ...prev]);
+        const notification = payload.new as Notification;
+        if (notification.user_id === userId && isRelevant(notification)) {
+          setNotifications(prev =>
+            prev.some(item => item.id === notification.id)
+              ? prev
+              : [notification, ...prev],
+          );
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
-        setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new as Notification : n));
+        const notification = payload.new as Notification;
+        setNotifications(prev => {
+          if (!isRelevant(notification)) {
+            return prev.filter(item => item.id !== notification.id);
+          }
+          return prev.some(item => item.id === notification.id)
+            ? prev.map(item => item.id === notification.id ? notification : item)
+            : [notification, ...prev];
+        });
       })
       .subscribe();
 
@@ -49,16 +74,18 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
 
 
   async function markAsRead(id: string) {
+    setNotifications(items => items.filter(item => item.id !== id));
     const { error } = await supabase.rpc('mark_notification_read', { p_notification_id: id });
-    if (!error) setNotifications(items => items.map(item => item.id === id ? { ...item, read: true } : item));
+    if (error) void loadNotifications();
   }
 
   async function markAllAsRead() {
+    setNotifications([]);
     const { error } = await supabase.rpc('mark_all_notifications_read');
-    if (!error) setNotifications(items => items.map(item => ({ ...item, read: true })));
+    if (error) void loadNotifications();
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.length;
 
   function getNotificationIcon(type: Notification['type']) {
     switch (type) {
@@ -111,7 +138,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/20 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-end overscroll-none bg-black/20 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0">
@@ -145,7 +172,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
         </div>
 
         {/* Notifications list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Bell className="w-6 h-6 animate-pulse mb-2" />
@@ -154,7 +181,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Bell className="w-8 h-8 mb-3 opacity-50" />
-              <p className="text-sm">Nėra pranešimų</p>
+              <p className="text-sm">Naujų aktualių pranešimų nėra</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">

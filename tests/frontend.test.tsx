@@ -88,12 +88,15 @@ describe('user workflows', () => {
    expect(callback).toHaveBeenCalledTimes(1);
  });
  it('allows clearing the seat count before entering another value', () => {
-   render(<TripForm role="driver" userId="driver" onClose={() => {}} onSubmitted={() => {}} />);
+   const view = render(<TripForm role="driver" userId="driver" onClose={() => {}} onSubmitted={() => {}} />);
+   expect(document.body.style.overflow).toBe('hidden');
    const seats = screen.getByLabelText('Vietų skaičius') as HTMLInputElement;
    fireEvent.change(seats, { target: { value: '' } });
    expect(seats.value).toBe('');
    fireEvent.change(seats, { target: { value: '4' } });
    expect(seats.value).toBe('4');
+   view.unmount();
+   expect(document.body.style.overflow).toBe('');
  });
 
  it('prefills a best-match request from the passenger listing', () => {

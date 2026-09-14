@@ -21,6 +21,7 @@ import {
 } from '@/lib/supabase';
 import { AddressInput, type AddressValue } from '@/components/AddressInput';
 import { toLocalInput } from '@/lib/format';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export function TripForm({
   role,
@@ -37,6 +38,7 @@ export function TripForm({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  useBodyScrollLock();
   const isDriver = role === 'driver';
 
   const [fromAddr, setFromAddr] = useState<AddressValue>({
@@ -179,7 +181,7 @@ export function TripForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md px-0 sm:px-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-none bg-slate-900/60 backdrop-blur-md px-0 sm:px-4">
       <div className="w-full sm:max-w-lg bg-gradient-to-br from-white to-slate-50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[92vh] overflow-hidden flex flex-col">
         <div className="relative z-20 flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between shadow-lg">
           <h2 className="text-lg font-bold text-white">
