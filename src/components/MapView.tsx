@@ -48,6 +48,26 @@ export function MapView({ markers, userPos, onTripClick }: {
     return () => { map.remove(); mapInstance.current = null; };
   }, []);
 
+  useEffect(() => {
+    if (!mapRef.current || !mapInstance.current) return;
+    const element = mapRef.current;
+    const map = mapInstance.current;
+    let frame = 0;
+    const resize = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    window.addEventListener('resize', resize);
+    resize();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
   const onTripClickRef = useRef(onTripClick);
   useEffect(() => { onTripClickRef.current = onTripClick; }, [onTripClick]);
 
@@ -105,8 +125,11 @@ export function MapView({ markers, userPos, onTripClick }: {
   }
 
   return (
-    <div className="relative">
-      <div ref={mapRef} className="w-full h-[300px] sm:h-[400px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0" />
+    <div className="relative left-1/2 w-[calc(100vw-1rem)] max-w-[1600px] -translate-x-1/2 sm:w-[calc(100vw-2rem)] lg:w-[calc(100vw-3rem)]">
+      <div
+        ref={mapRef}
+        className="w-full h-[calc(100dvh-15rem)] min-h-[360px] max-h-[820px] sm:h-[calc(100dvh-13rem)] rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0"
+      />
       <button onClick={locateUser} disabled={locating} className="absolute bottom-4 right-4 z-[1000] inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-sm font-semibold shadow-lg border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-60">
         {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crosshair className="w-4 h-4 text-blue-500" />}
         <span className="hidden sm:inline">Mano vieta</span>
@@ -116,4 +139,3 @@ export function MapView({ markers, userPos, onTripClick }: {
     </div>
   );
 }
-
