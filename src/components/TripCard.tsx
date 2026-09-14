@@ -82,12 +82,12 @@ export function TripCard({
 
   return (
     <div
-      className={`rounded-2xl bg-white border p-3 sm:p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in ${
+      className={`min-w-0 overflow-hidden rounded-2xl bg-white border p-3 sm:p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in ${
         highlight ? 'border-blue-400 ring-2 ring-blue-200/50 bg-gradient-to-br from-blue-50/50 to-white' : 'border-slate-200 hover:border-blue-300'
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
           <span
             className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold shadow-sm ${
               isDriver
@@ -104,29 +104,29 @@ export function TripCard({
               Pasikartojantis
             </span>
           )}
-          <span className="text-xs text-slate-400">{formatDateTime(trip.departure_time)}</span>
+          <span className="min-w-0 text-xs text-slate-400 break-words">{formatDateTime(trip.departure_time)}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex flex-shrink-0 items-center gap-1">
           {onEdit && (
             <button
               onClick={onEdit}
-              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+              className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
               aria-label={`Redaguoti skelbimą: ${trip.from_location} → ${trip.to_location}`}
             >
-              <Pencil className="w-3.5 h-3.5" />
+              <Pencil className="w-4 h-4" />
             </button>
           )}
           {onDeleteRequest && (
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+              className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
               aria-label={`Pašalinti skelbimą: ${trip.from_location} → ${trip.to_location}`}
             >
               {deleting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               )}
             </button>
           )}
