@@ -180,8 +180,8 @@ export function TripForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md px-0 sm:px-4">
-      <div className="w-full sm:max-w-lg bg-gradient-to-br from-white to-slate-50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-indigo-600 px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between shadow-lg">
+      <div className="w-full sm:max-w-lg bg-gradient-to-br from-white to-slate-50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[92vh] overflow-hidden flex flex-col">
+        <div className="relative z-20 flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between shadow-lg">
           <h2 className="text-lg font-bold text-white">
             {editTrip
               ? 'Redaguoti skelbimą'
@@ -198,7 +198,7 @@ export function TripForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Iš kur" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
