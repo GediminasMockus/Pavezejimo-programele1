@@ -9,6 +9,7 @@ import { applyFilters, emptyFilters, findBestMatches } from '../src/lib/tripFilt
 import { HomeScreen } from '../src/components/HomeScreen';
 import { ChatDrawer } from '../src/components/ChatDrawer';
 import { RequestModal } from '../src/components/RequestModal';
+import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 const mock = vi.hoisted(() => ({
@@ -86,6 +87,15 @@ describe('user workflows', () => {
    await new Promise(resolve=>setTimeout(resolve,30));
    expect(callback).toHaveBeenCalledTimes(1);
  });
+ it('allows clearing the seat count before entering another value', () => {
+   render(<TripForm role="driver" userId="driver" onClose={() => {}} onSubmitted={() => {}} />);
+   const seats = screen.getByLabelText('Vietų skaičius') as HTMLInputElement;
+   fireEvent.change(seats, { target: { value: '' } });
+   expect(seats.value).toBe('');
+   fireEvent.change(seats, { target: { value: '4' } });
+   expect(seats.value).toBe('4');
+ });
+
  it('prefills a best-match request from the passenger listing', () => {
    const passengerTrip = {
      ...trip,

@@ -12,7 +12,7 @@ Deno.serve(async request => {
   if (error || !user) return reply({ error: 'unauthorized' }, 401);
   const query = new URL(request.url).searchParams.get('q')?.trim();
   if (!query || query.length < 3 || query.length > 160) return reply({ error: 'invalid query' }, 400);
-  const cacheKey = query.toLocaleLowerCase('lt-LT');
+  const cacheKey = 'public-area-v2:' + query.toLocaleLowerCase('lt-LT');
   try {
     const { data: cached } = await client.rpc('cached_geocode', { p_query: cacheKey });
     if (cached) return reply(cached);
@@ -24,10 +24,23 @@ Deno.serve(async request => {
     const response = await fetch(endpoint, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': Deno.env.get('GEOCODING_USER_AGENT') ?? 'PriemiescioPavezejimai/1.0', Accept: 'application/json' } });
     if (!response.ok) return reply({ error: 'geocoding unavailable' }, 502);
     const raw = await response.json();
-    const results = raw.map((item: { display_name: string; lat: string; lon: string; address?: Record<string,string> }) => ({
-      display_name: item.display_name, lat: item.lat, lon: item.lon,
-      area: item.address?.city ?? item.address?.town ?? item.address?.village ?? item.address?.municipality ?? item.address?.county ?? '',
-    }));
+    const results = raw.map((item: { display_name: string; lat: string; lon: string; address?: Record<string,string> }) => {
+      const address = item.address ?? {};
+      const locality = address.city ?? address.town ?? address.village ?? address.municipality ?? address.county;
+      const district = address.suburb ?? address.neighbourhood ?? address.city_district;
+      const street = address.road ?? address.pedestrian;
+      const publicParts = [street, district, locality].filter(
+        (part, index, parts): part is string =>
+          Boolean(part) && parts.findIndex(value => value?.toLocaleLowerCase('lt-LT') === part?.toLocaleLowerCase('lt-LT')) === index,
+      );
+
+      return {
+        display_name: item.display_name,
+        lat: item.lat,
+        lon: item.lon,
+        area: publicParts.join(', ') || locality || '',
+      };
+    });
     const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
     await service.rpc('store_geocode', { p_query: cacheKey, p_result: results });
     return reply(results);

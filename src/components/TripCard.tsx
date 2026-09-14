@@ -82,7 +82,7 @@ export function TripCard({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden rounded-2xl bg-white border p-3 sm:p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in ${
+      className={`w-full max-w-full min-w-0 overflow-hidden rounded-2xl bg-white border p-3 sm:p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 animate-fade-in ${
         highlight ? 'border-blue-400 ring-2 ring-blue-200/50 bg-gradient-to-br from-blue-50/50 to-white' : 'border-slate-200 hover:border-blue-300'
       }`}
     >

@@ -58,7 +58,7 @@ export function TripForm({
   const [toArea, setToArea] = useState(editTrip?.to_area ?? initialSearch?.toLocation ?? '');
   const [name, setName] = useState(editTrip?.name ?? '');
   const [phone, setPhone] = useState(editTrip?.phone ?? '');
-  const [seats, setSeats] = useState(editTrip?.seats ?? 1);
+  const [seats, setSeats] = useState<number | ''>(editTrip?.seats ?? 1);
   const [price, setPrice] = useState(editTrip?.price?.toString() ?? '');
   const [priceUnit, setPriceUnit] = useState<PriceUnit>(
     (editTrip?.price_unit as PriceUnit) ?? 'asmeniui',
@@ -106,7 +106,7 @@ export function TripForm({
       return;
     }
 
-    if (!Number.isInteger(seats) || seats < 1 || seats > 8) {
+    if (seats === '' || !Number.isInteger(seats) || seats < 1 || seats > 8) {
       setFormError('Vietų skaičius turi būti nuo 1 iki 8.');
       return;
     }
@@ -276,7 +276,10 @@ export function TripForm({
                 min={1}
                 max={8}
                 value={seats}
-                onChange={(e) => setSeats(Math.max(1, Number(e.target.value) || 1))}
+                onChange={(e) => setSeats(e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={() => {
+                  if (seats !== '' && (seats < 1 || seats > 8)) setSeats(Math.min(8, Math.max(1, seats)));
+                }}
                 className="form-input"
               />
             </Field>
@@ -375,8 +378,8 @@ export function TripForm({
             </span>
           </label>
 
-          <div className="grid grid-cols-2 gap-3"><label className="text-sm">Išvykimo miestas (viešas)<input className="form-input" value={fromArea} onChange={e => setFromArea(e.target.value)} maxLength={100} /></label><label className="text-sm">Atvykimo miestas (viešas)<input className="form-input" value={toArea} onChange={e => setToArea(e.target.value)} maxLength={100} /></label></div>
-          <p className="text-xs text-slate-500">Viešai rodomos tik šios vietovės ir apytikslė vieta. Tikslius adresus bei kontaktus matys patvirtintos kelionės dalyviai.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="text-sm">Išvykimo vieta (vieša)<input className="form-input" value={fromArea} onChange={e => setFromArea(e.target.value)} maxLength={100} /></label><label className="text-sm">Atvykimo vieta (vieša)<input className="form-input" value={toArea} onChange={e => setToArea(e.target.value)} maxLength={100} /></label></div>
+          <p className="text-xs text-slate-500">Automatiškai įrašoma gatvė, rajonas ir miestas be namo numerio. Jei norite, viešą vietą galite dar labiau sutrumpinti. Tikslų adresą ir kontaktus matys tik patvirtintos kelionės dalyviai.</p>
           {formError && (
             <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>
           )}
