@@ -86,6 +86,10 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip }: { u
             setShowNotifications(false);
             onOpenMatchedTrip?.(tripId, matchedTripRole);
           }}
+          onOpenRole={(role) => {
+            setShowNotifications(false);
+            onPick(role, emptyFilters, false);
+          }}
         />
       )}
 

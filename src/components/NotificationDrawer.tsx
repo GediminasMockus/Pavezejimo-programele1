@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, X, Check, Clock, Route } from 'lucide-react';
+import { Bell, X, Check, Clock, Route, Car, Users } from 'lucide-react';
 import { supabase, type Notification, type TripRole } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
 
@@ -7,9 +7,10 @@ interface NotificationDrawerProps {
   userId: string;
   onClose: () => void;
   onOpenMatch?: (tripId: string, matchedTripRole: TripRole) => void;
+  onOpenRole?: (role: TripRole) => void;
 }
 
-export function NotificationDrawer({ userId, onClose, onOpenMatch }: NotificationDrawerProps) {
+export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }: NotificationDrawerProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,9 +65,15 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch }: Notificatio
       case 'request_accepted':
         return <Check className="w-5 h-5 text-emerald-600" />;
       case 'request_rejected':
+      case 'request_cancelled':
         return <X className="w-5 h-5 text-red-600" />;
       case 'trip_reminder':
+      case 'trip_expiry':
         return <Clock className="w-5 h-5 text-amber-600" />;
+      case 'new_offer':
+        return <Car className="w-5 h-5 text-emerald-600" />;
+      case 'new_request':
+        return <Users className="w-5 h-5 text-blue-600" />;
       case 'new_message':
         return <Bell className="w-5 h-5 text-blue-600" />;
       case 'auto_match':
@@ -83,9 +90,15 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch }: Notificatio
       case 'request_accepted':
         return 'bg-emerald-50 border-emerald-200';
       case 'request_rejected':
+      case 'request_cancelled':
         return 'bg-red-50 border-red-200';
       case 'trip_reminder':
+      case 'trip_expiry':
         return 'bg-amber-50 border-amber-200';
+      case 'new_offer':
+        return 'bg-emerald-50 border-emerald-200';
+      case 'new_request':
+        return 'bg-blue-50 border-blue-200';
       case 'new_message':
         return 'bg-blue-50 border-blue-200';
       case 'auto_match':
@@ -152,7 +165,21 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch }: Notificatio
                     : notification.type === 'auto_match_passenger'
                       ? 'passenger'
                       : null;
+                const targetRole: TripRole | null =
+                  notification.type === 'new_offer'
+                    ? 'passenger'
+                    : notification.type === 'new_request'
+                      ? 'driver'
+                      : null;
                 const canOpenMatch = Boolean(matchedTripRole && notification.related_trip_id && onOpenMatch);
+                const canOpenRole = Boolean(targetRole && onOpenRole);
+                const actionLabel = canOpenMatch
+                  ? 'Peržiūrėti kelionę'
+                  : notification.type === 'new_offer'
+                    ? 'Peržiūrėti pasiūlymą'
+                    : notification.type === 'new_request'
+                      ? 'Peržiūrėti užklausą'
+                      : null;
 
                 return (
                 <button
@@ -163,9 +190,11 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch }: Notificatio
                     if (!notification.read) void markAsRead(notification.id);
                     if (canOpenMatch && matchedTripRole && notification.related_trip_id) {
                       onOpenMatch?.(notification.related_trip_id, matchedTripRole);
+                    } else if (canOpenRole && targetRole) {
+                      onOpenRole?.(targetRole);
                     }
                   }}
-                  aria-label={canOpenMatch ? `${notification.title} – peržiūrėti kelionę` : notification.title}
+                  aria-label={actionLabel ? `${notification.title} – ${actionLabel.toLocaleLowerCase('lt-LT')}` : notification.title}
                 >
                   <div className="flex gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border ${getNotificationBg(notification.type)}`}>
@@ -183,9 +212,9 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch }: Notificatio
                         <p className="text-xs text-slate-400">
                           {formatDistanceToNow(new Date(notification.created_at))}
                         </p>
-                        {canOpenMatch && (
+                        {actionLabel && (canOpenMatch || canOpenRole) && (
                           <span className="text-xs font-semibold text-indigo-600">
-                            Peržiūrėti kelionę →
+                            {actionLabel} →
                           </span>
                         )}
                       </div>

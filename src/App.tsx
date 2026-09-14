@@ -91,6 +91,14 @@ export default function App() {
     setScreen('list');
   };
 
+  const openRole = (role: TripRole) => {
+    setSearch(emptyFilters);
+    setStartForm(false);
+    setFocusTripId(null);
+    setActiveRole(role);
+    setScreen('list');
+  };
+
   return (
     <div className="min-h-screen text-slate-800">
       <Background />
@@ -118,6 +126,7 @@ export default function App() {
           focusTripId={focusTripId}
           userId={userId}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenRole={openRole}
           onBack={() => {
             setScreen('home');
             setActiveRole(null);
@@ -129,7 +138,7 @@ export default function App() {
   );
 }
 
-function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, onOpenMatchedTrip }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, onOpenMatchedTrip, onOpenRole }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
@@ -628,6 +637,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
             onOpenMatch={(tripId, matchedTripRole) => {
               setShowNotifications(false);
               onOpenMatchedTrip(tripId, matchedTripRole);
+            }}
+            onOpenRole={(targetRole) => {
+              setShowNotifications(false);
+              onOpenRole(targetRole);
             }}
           />
         )}

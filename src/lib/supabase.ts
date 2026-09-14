@@ -13,7 +13,7 @@ export type TripRole = 'driver' | 'passenger';
 export type PriceUnit = 'asmeniui' | 'viso';
 export type RequestStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 export type TripStatus = 'active' | 'completed';
-export type NotificationType = 'request_accepted' | 'request_rejected' | 'trip_reminder' | 'new_message' | 'auto_match' | 'auto_match_driver' | 'auto_match_passenger';
+export type NotificationType = 'request_accepted' | 'request_rejected' | 'request_cancelled' | 'trip_reminder' | 'trip_expiry' | 'new_message' | 'new_offer' | 'new_request' | 'auto_match' | 'auto_match_driver' | 'auto_match_passenger';
 
 export interface Trip {
   from_area?: string | null;
