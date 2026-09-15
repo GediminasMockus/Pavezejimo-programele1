@@ -103,6 +103,14 @@ const passengerTrip=await asUser(ids[1],()=>rpc('create_my_trip',[payload('passe
 const driverTrip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver',3)]));
 const offer=await asUser(ids[0],async()=> (await query("INSERT INTO public.ride_requests(trip_id,driver_trip_id,driver_id,passenger_id,passenger_name,pickup_location,dropoff_location,request_type,seats_needed) VALUES($1,$2,$3,$4,'Passenger','Pickup','Dropoff','driver_offer',1) RETURNING *",[passengerTrip.id,driverTrip.id,ids[0],ids[1]])).rows[0]);
 assert.equal(offer.seats_needed,2,'server uses passenger party size');
+await asUser(ids[1],async()=>{
+ const related=(await query('SELECT * FROM public.get_request_related_trips() WHERE id=$1',[driverTrip.id])).rows[0];
+ assert.ok(related,'passenger can load the public trip card for a pending driver offer');
+ assert.equal(related.from_location,'Vilnius','pending offer keeps the exact pickup private');
+});
+await asUser(ids[3],async()=>{
+ assert.equal((await query('SELECT * FROM public.get_request_related_trips() WHERE id=$1',[driverTrip.id])).rows.length,0,'unrelated user cannot load the offer trip');
+});
 await assert.rejects(asUser(ids[0],()=>rpc('set_ride_request_status',[offer.id,'accepted',null])),/not authorized/);
 await asUser(ids[1],()=>rpc('set_ride_request_status',[offer.id,'accepted',null]));
 const match=(await query('SELECT * FROM public.matches WHERE request_id=$1',[offer.id])).rows[0];

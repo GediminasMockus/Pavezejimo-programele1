@@ -167,7 +167,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const loadVersion = useRef(0);
   const loadedOnce = useRef(false);
   const resultsSectionRef = useRef<HTMLElement>(null);
-  const hasScrolledToInitialEmptyResults = useRef(false);
+  const hasScrolledToInitialResults = useRef(false);
   const [publicLimit, setPublicLimit] = useState(100);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [filters, setFilters] = useState<FilterState>(() => {
@@ -217,7 +217,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     if (!loadedOnce.current) setLoading(true);
     setError(null);
     try {
-      const [publicResult, privateTrips] = await Promise.all([
+      const [publicResult, privateTrips, requestRelatedTrips] = await Promise.all([
         withRetry(
           () => {
             const dateFrom = filters.date ? new Date(filters.date + 'T00:00:00') : null;
@@ -233,6 +233,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           { maxRetries: 2, delay: 1000, onRetry: (err, attempt) => console.log(`Retry ${attempt} for public trips:`, err.message) }
         ),
         fetchAllRows<Trip>((from, to) => supabase.rpc('get_accessible_trips').order('id').range(from, to)),
+        fetchAllRows<Trip>((from, to) => supabase.rpc('get_request_related_trips').order('id').range(from, to)),
       ]);
       if (version !== loadVersion.current) return;
       if (publicResult.error) {
@@ -243,6 +244,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         const publicTrips = (publicResult.data ?? []).slice(0, publicLimit) as Trip[];
         setHasMoreTrips((publicResult.data?.length ?? 0) > publicLimit);
         setPublicTripIds(new Set(publicTrips.map((trip) => trip.id)));
+        for (const trip of requestRelatedTrips) merged.set(trip.id, trip);
         for (const trip of publicTrips) merged.set(trip.id, trip);
         for (const trip of privateTrips) merged.set(trip.id, { ...merged.get(trip.id), ...trip });
         setTrips([...merged.values()].sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()));
@@ -345,11 +347,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       loading
       || focusTripId
       || !hasInitialRouteSearch
-      || filteredOtherTrips.length > 0
-      || hasScrolledToInitialEmptyResults.current
+      || hasScrolledToInitialResults.current
     ) return;
 
-    hasScrolledToInitialEmptyResults.current = true;
+    hasScrolledToInitialResults.current = true;
     const frame = window.requestAnimationFrame(() => {
       resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -382,18 +383,22 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   }, [allRequests]);
 
   const mySentRequests = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'passenger_request' && r.status !== 'cancelled');
-  const myReceivedOffers = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'driver_offer');
-  const mySentOffers = allRequests.filter((r) => r.driver_id === clientId && r.request_type === 'driver_offer');
+  const myReceivedOffers = allRequests.filter((r) => r.passenger_id === clientId && r.request_type === 'driver_offer' && r.status !== 'cancelled');
+  const mySentOffers = allRequests.filter((r) => r.driver_id === clientId && r.request_type === 'driver_offer' && r.status !== 'cancelled');
   const mySentRequestTripIds = new Set(mySentRequests.map((r) => r.trip_id));
+  const loadedTripIds = new Set(trips.map((trip) => trip.id));
+  const displayableMySentRequests = mySentRequests.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
+  const displayableMyReceivedOffers = myReceivedOffers.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
+  const displayableMySentOffers = mySentOffers.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
 
   const driverRequests = useMemo(() => {
     const ownTripIds = new Set(ownTrips.filter((t) => t.role === 'driver').map((t) => t.id));
-    return allRequests.filter((r) => r.request_type === 'passenger_request' && ownTripIds.has(r.trip_id));
+    return allRequests.filter((r) => r.request_type === 'passenger_request' && r.status !== 'cancelled' && ownTripIds.has(r.trip_id));
   }, [allRequests, ownTrips]);
 
 
   const pendingDriverRequests = driverRequests.filter((r) => r.status === 'pending');
-  const pendingPassengerOffers = myReceivedOffers.filter((r) => r.status === 'pending');
+  const pendingPassengerOffers = displayableMyReceivedOffers.filter((r) => r.status === 'pending');
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
   const rejectedDriverRequests = driverRequests.filter((r) => r.status === 'rejected');
 
@@ -798,29 +803,28 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
             )}
 
             {/* Driver: offers sent to passengers */}
-            {isDriver && mySentOffers.length > 0 && (
+            {isDriver && displayableMySentOffers.length > 0 && (
               <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Car className="h-4 w-4" /></span>
-                  Mano pasiūlymai keleiviams ({mySentOffers.length})
+                  Mano pasiūlymai keleiviams ({displayableMySentOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {mySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
+                  {displayableMySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id)!; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
                 </div>
               </section>
             )}
 
             {/* Passenger: incoming driver offers */}
-            {!isDriver && myReceivedOffers.length > 0 && (
+            {!isDriver && displayableMyReceivedOffers.length > 0 && (
               <section className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-emerald-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Car className="h-4 w-4" /></span>
-                  Vairuotojų pasiūlymai ({myReceivedOffers.length})
+                  Vairuotojų pasiūlymai ({displayableMyReceivedOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {myReceivedOffers.map((r) => {
-                    const t = findTripById(r.driver_trip_id ?? r.trip_id);
-                    if (!t) return null;
+                  {displayableMyReceivedOffers.map((r) => {
+                    const t = findTripById(r.driver_trip_id ?? r.trip_id)!;
                     return <RequestCard key={r.id} request={r} trip={t} isDriverView={false} isOffer
                       onAccept={() => updateRequestStatus(r.id, 'accepted')}
                       onReject={() => updateRequestStatus(r.id, 'rejected')}
@@ -834,16 +838,15 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
             )}
 
             {/* Passenger: my sent requests */}
-            {!isDriver && mySentRequests.length > 0 && (
+            {!isDriver && displayableMySentRequests.length > 0 && (
               <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Inbox className="h-4 w-4" /></span>
-                  Mano užklausos ({mySentRequests.length})
+                  Mano užklausos ({displayableMySentRequests.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {mySentRequests.map((r) => {
-                    const t = findTripById(r.driver_trip_id ?? r.trip_id);
-                    if (!t) return null;
+                  {displayableMySentRequests.map((r) => {
+                    const t = findTripById(r.driver_trip_id ?? r.trip_id)!;
                     return (
                       <RequestCard
                         key={r.id}
