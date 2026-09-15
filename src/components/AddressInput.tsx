@@ -3,8 +3,8 @@ import { MapPin, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 export interface AddressValue { display_name: string; lat: number | null; lng: number | null; area?: string }
 interface GeoResult { display_name: string; lat: string; lon: string; area?: string }
-export function AddressInput({ value, onChange, placeholder }: {
-  value: AddressValue; onChange: (value: AddressValue) => void; placeholder?: string;
+export function AddressInput({ id, value, onChange, placeholder }: {
+  id?: string; value: AddressValue; onChange: (value: AddressValue) => void; placeholder?: string;
 }) {
   const [suggestions, setSuggestions] = useState<GeoResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,7 @@ export function AddressInput({ value, onChange, placeholder }: {
   }
   return <div className="relative">
     <div className="flex gap-2">
-      <input type="text" value={value.display_name} onChange={event => {
+      <input id={id} type="text" value={value.display_name} onChange={event => {
         controller.current?.abort(); setLoading(false); setSuggestions([]); setError('');
         onChange({ display_name: event.target.value, lat: null, lng: null });
       }} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void search(); } }}

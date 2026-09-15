@@ -4,18 +4,23 @@ DO $publication$
 DECLARE
   v_table text;
 BEGIN
-  FOREACH v_table IN ARRAY ARRAY['notifications', 'ride_requests', 'trips', 'messages']
-  LOOP
-    IF NOT EXISTS (
-      SELECT 1
-      FROM pg_publication_tables
-      WHERE pubname = 'supabase_realtime'
-        AND schemaname = 'public'
-        AND tablename = v_table
-    ) THEN
-      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_table);
-    END IF;
-  END LOOP;
+  -- Supabase provides this publication in hosted projects. Local replay engines
+  -- such as PGlite do not, so keep the migration portable by treating realtime
+  -- publication registration as a hosted-environment capability.
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    FOREACH v_table IN ARRAY ARRAY['notifications', 'ride_requests', 'trips', 'messages']
+    LOOP
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+          AND schemaname = 'public'
+          AND tablename = v_table
+      ) THEN
+        EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_table);
+      END IF;
+    END LOOP;
+  END IF;
 END;
 $publication$;
 
