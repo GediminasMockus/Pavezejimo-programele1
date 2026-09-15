@@ -68,7 +68,7 @@ const EN: Record<string, string> = {
   'Mano pasiūlymai keleiviams': 'My offers to passengers', 'Mano skelbimai': 'My listings', 'Geriausi atitikimai': 'Best matches',
   'Geriausias atitikimas': 'Best match', 'atitikimas': 'match',
   'Įkelti daugiau skelbimų': 'Load more listings', 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!': 'There are no listings yet. Be the first to add one!',
-  'Pagal nurodytus kriterijus skelbimų nerasta. Pakeiskite filtravimą.': 'No listings match the selected criteria. Adjust the filters.',
+  'Pagal nurodytus kriterijus skelbimų nerasta.': 'No listings match the selected criteria.', 'Sukurti keleivio skelbimą': 'Create passenger listing',
 
   // Notifications
   'Pažymėti visus': 'Mark all as read', 'Nėra pranešimų': 'No notifications',

@@ -63,6 +63,18 @@ describe('data helpers', () => {
    expect(findBestMatches({ ...passenger, seats: 1 },[trip])).toHaveLength(1);
    expect(applyFilters([trip],{ ...emptyFilters, maxPrice: '10,5' })).toHaveLength(1);
  });
+ it('returns no rides when the searched route does not match', () => {
+   expect(applyFilters([trip], {
+     ...emptyFilters,
+     fromLocation: 'Klaipėda',
+     toLocation: 'Šiauliai',
+   })).toHaveLength(0);
+   expect(applyFilters([trip], {
+     ...emptyFilters,
+     fromLocation: 'Vilnius, Centras',
+     toLocation: 'Kaunas',
+   })).toEqual([trip]);
+ });
 });
 describe('user workflows', () => {
  it('passes the entered route to search and creation', async () => {

@@ -322,6 +322,16 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     () => applyFilters(otherTrips, filters, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
     [otherTrips, filters, userPos],
   );
+  const hasActiveFilters = Boolean(
+    filters.fromLocation.trim()
+    || filters.toLocation.trim()
+    || filters.date
+    || filters.minSeats > 0
+    || filters.maxPrice.trim()
+    || filters.recurringOnly
+    || filters.radiusKm > 0,
+  );
+  const hasRouteSearch = Boolean(filters.fromLocation.trim() || filters.toLocation.trim());
 
   const nextOwnTrip = useMemo(() => ownTrips.filter(t => t.status === 'active' && new Date(t.departure_time).getTime() >= now).sort((a,b) => new Date(a.departure_time).getTime()-new Date(b.departure_time).getTime())[0], [ownTrips, now]);
   const preliminaryMatches = useMemo(() => nextOwnTrip ? findBestMatches({ ...nextOwnTrip, seats: nextOwnTrip.available_seats }, otherTrips, 3) : [], [nextOwnTrip, otherTrips]);
@@ -516,7 +526,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         {showForm && (
           <TripForm
             role={role}
-            initialSearch={initialFilters}
+            initialSearch={filters}
             userId={userId}
             onClose={() => setShowForm(false)}
             onSubmitted={() => {
@@ -861,7 +871,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
             )}
 
             {/* Best matches */}
-            {bestMatches.length > 0 && (
+            {!hasActiveFilters && bestMatches.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                   Geriausi atitikimai ({bestMatches.length})
@@ -927,10 +937,20 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               {filteredOtherTrips.length === 0 ? (
                 <div className="rounded-2xl bg-white border border-dashed border-slate-300 p-10 text-center">
                   <p className="text-slate-500 text-sm">
-                    {otherTrips.length === 0
-                      ? 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!'
-                      : 'Pagal nurodytus kriterijus skelbimų nerasta. Pakeiskite filtravimą.'}
+                    {hasActiveFilters
+                      ? 'Pagal nurodytus kriterijus skelbimų nerasta.'
+                      : 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!'}
                   </p>
+                  {!isDriver && hasRouteSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(true)}
+                      className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-colors hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Sukurti keleivio skelbimą
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
