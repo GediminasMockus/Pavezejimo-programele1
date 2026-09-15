@@ -202,8 +202,9 @@ export function TripForm({
 
         <form onSubmit={handleSubmit} className="min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Iš kur" icon={<MapPin className="w-4 h-4" />}>
+            <Field label="Iš kur" inputId="trip-from" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
+                id="trip-from"
                 value={fromAddr}
                 onChange={value => {
                   setFromAddr(value);
@@ -218,8 +219,9 @@ export function TripForm({
                 placeholder="pvz. Vilnius, Centras"
               />
             </Field>
-            <Field label="Į kur" icon={<MapPin className="w-4 h-4" />}>
+            <Field label="Į kur" inputId="trip-to" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
+                id="trip-to"
                 value={toAddr}
                 onChange={value => {
                   setToAddr(value);
@@ -236,8 +238,9 @@ export function TripForm({
             </Field>
           </div>
 
-          <Field label="Kada važiuojate" icon={<Clock className="w-4 h-4" />}>
+          <Field label="Kada važiuojate" inputId="trip-departure" icon={<Clock className="w-4 h-4" />}>
             <input
+              id="trip-departure"
               type="datetime-local"
               value={departureTime}
               onChange={(e) => setDepartureTime(e.target.value)}
@@ -246,8 +249,9 @@ export function TripForm({
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Jūsų vardas" icon={<User className="w-4 h-4" />}>
+            <Field label="Jūsų vardas" inputId="trip-name" icon={<User className="w-4 h-4" />}>
               <input
+                id="trip-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -256,8 +260,9 @@ export function TripForm({
                 className="form-input"
               />
             </Field>
-            <Field label="Telefonas (nebūtina)" icon={<Phone className="w-4 h-4" />}>
+            <Field label="Telefonas (nebūtina)" inputId="trip-phone" icon={<Phone className="w-4 h-4" />}>
               <input
+                id="trip-phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -271,9 +276,11 @@ export function TripForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label={isDriver ? 'Vietų skaičius' : 'Keleivių skaičius'}
+              inputId="trip-seats"
               icon={<Users className="w-4 h-4" />}
             >
               <input
+                id="trip-seats"
                 type="number"
                 min={1}
                 max={8}
@@ -285,9 +292,10 @@ export function TripForm({
                 className="form-input"
               />
             </Field>
-            <Field label="Preliminari kaina, € (nebūtina)" icon={<Euro className="w-4 h-4" />}>
+            <Field label="Preliminari kaina, € (nebūtina)" inputId="trip-price" icon={<Euro className="w-4 h-4" />}>
               <div className="flex gap-2">
                 <input
+                  id="trip-price"
                   type="text"
                   inputMode="decimal"
                   value={price}
@@ -296,6 +304,7 @@ export function TripForm({
                   className="form-input flex-1"
                 />
                 <select
+                  aria-label="Kainos vienetas"
                   value={priceUnit}
                   onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
                   className="form-input w-auto flex-shrink-0"
@@ -315,6 +324,7 @@ export function TripForm({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input
+                  aria-label="Automobilio markė"
                   type="text"
                   value={carMake}
                   onChange={(e) => setCarMake(e.target.value)}
@@ -323,6 +333,7 @@ export function TripForm({
                   className="form-input"
                 />
                 <input
+                  aria-label="Automobilio spalva"
                   type="text"
                   value={carColor}
                   onChange={(e) => setCarColor(e.target.value)}
@@ -331,6 +342,7 @@ export function TripForm({
                   className="form-input"
                 />
                 <input
+                  aria-label="Automobilio valstybinis numeris"
                   type="text"
                   value={carPlate}
                   onChange={(e) => setCarPlate(e.target.value)}
@@ -341,8 +353,9 @@ export function TripForm({
               </div>
             </div>
           ) : (
-            <Field label="Bagažas" icon={<Briefcase className="w-4 h-4" />}>
+            <Field label="Bagažas" inputId="trip-baggage" icon={<Briefcase className="w-4 h-4" />}>
               <select
+                id="trip-baggage"
                 value={baggage}
                 onChange={(e) => setBaggage(e.target.value)}
                 className="form-input"
@@ -356,8 +369,9 @@ export function TripForm({
             </Field>
           )}
 
-          <Field label="Pastabos (nebūtina)">
+          <Field label="Pastabos (nebūtina)" inputId="trip-notes">
             <textarea
+              id="trip-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={isDriver ? 'pvz. bagažinė laisva, kaina derinama' : 'pvz. važiuoju su vaikų kėdute, kaina derinama'}
@@ -410,16 +424,18 @@ export function TripForm({
 
 function Field({
   label,
+  inputId,
   icon,
   children,
 }: {
   label: string;
+  inputId: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-2">
+      <label htmlFor={inputId} className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-2">
         {icon}
         {label}
       </label>
