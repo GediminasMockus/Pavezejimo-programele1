@@ -12,6 +12,7 @@ import { RequestModal } from '../src/components/RequestModal';
 import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import type { Trip, RideRequest } from '../src/lib/supabase';
+import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', driver_confirmed: true, passenger_confirmed: true },
@@ -62,6 +63,16 @@ describe('data helpers', () => {
    expect(findBestMatches({ ...passenger, seats: 1 },[{ ...trip, departure_time: '2030-09-13T12:00:00Z' }])).toHaveLength(0);
    expect(findBestMatches({ ...passenger, seats: 1 },[trip])).toHaveLength(1);
    expect(applyFilters([trip],{ ...emptyFilters, maxPrice: '10,5' })).toHaveLength(1);
+ });
+ it('accepts only nearby, forward and low-detour road corridors', () => {
+   const valid = { pickupDistanceKm: 4, dropoffDistanceKm: 6, pickupProgress: 0.25, dropoffProgress: 0.75,
+     detourKm: 12, detourPct: 12, passageTimeDifferenceMinutes: 45, seatsAvailable: 3, seatsNeeded: 2 };
+   expect(evaluateCorridor(valid).qualifies).toBe(true);
+   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 15.1 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, pickupProgress: 0.8, dropoffProgress: 0.3 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, detourPct: 20.1 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, passageTimeDifferenceMinutes: 91 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, seatsAvailable: 1 }).qualifies).toBe(false);
  });
  it('returns no rides when the searched route does not match', () => {
    expect(applyFilters([trip], {
@@ -134,6 +145,19 @@ describe('user workflows', () => {
    expect(screen.getByText('Trakai → Vilnius')).toBeTruthy();
    expect(screen.queryByPlaceholderText('pvz. Vilnius, stotis')).toBeNull();
    expect(screen.getByPlaceholderText('Jei norite, parašykite vairuotojui žinutę')).toBeTruthy();
+ });
+
+ it('prefills a corridor request from the searched route', () => {
+   render(<RequestModal
+     trip={trip}
+     initialRoute={{ from: { display_name: 'Šiauliai', lat: 55.9349, lng: 23.3137 }, to: { display_name: 'Kaunas', lat: 54.8985, lng: 23.9036 } }}
+     userId="passenger"
+     onClose={() => {}}
+     onSubmitted={() => {}}
+   />);
+   expect(screen.getByDisplayValue('Šiauliai')).toBeTruthy();
+   expect(screen.getByDisplayValue('Kaunas')).toBeTruthy();
+   expect(screen.getByText(/užpildytos pagal jūsų paiešką/i)).toBeTruthy();
  });
 
  it('does not geocode while typing', async () => {

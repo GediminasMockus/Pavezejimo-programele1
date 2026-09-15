@@ -4,20 +4,21 @@ import { supabase, type Trip, type NewRideRequest } from '@/lib/supabase';
 import { AddressInput, type AddressValue } from '@/components/AddressInput';
 import { haversineDistance, formatDistance, calculateDetour } from '@/lib/distance';
 import { formatDateTime, formatPrice } from '@/lib/format';
+import type { CorridorSearchRoute } from '@/lib/useCorridorMatches';
 
-export function RequestModal({ trip, passengerTrip, userId, onClose, onSubmitted }: { trip: Trip; passengerTrip?: Trip | null; userId: string; onClose: () => void; onSubmitted: () => void }) {
+export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClose, onSubmitted }: { trip: Trip; passengerTrip?: Trip | null; initialRoute?: CorridorSearchRoute | null; userId: string; onClose: () => void; onSubmitted: () => void }) {
   const [passengerName, setPassengerName] = useState(passengerTrip?.name ?? '');
   const [phone, setPhone] = useState(passengerTrip?.phone ?? '');
   const [seats, setSeats] = useState(passengerTrip?.seats ?? 1);
   const [pickupAddr, setPickupAddr] = useState<AddressValue>({
-    display_name: passengerTrip?.from_location ?? '',
-    lat: passengerTrip?.from_lat ?? null,
-    lng: passengerTrip?.from_lng ?? null,
+    display_name: passengerTrip?.from_location ?? initialRoute?.from.display_name ?? '',
+    lat: passengerTrip?.from_lat ?? initialRoute?.from.lat ?? null,
+    lng: passengerTrip?.from_lng ?? initialRoute?.from.lng ?? null,
   });
   const [dropoffAddr, setDropoffAddr] = useState<AddressValue>({
-    display_name: passengerTrip?.to_location ?? '',
-    lat: passengerTrip?.to_lat ?? null,
-    lng: passengerTrip?.to_lng ?? null,
+    display_name: passengerTrip?.to_location ?? initialRoute?.to.display_name ?? '',
+    lat: passengerTrip?.to_lat ?? initialRoute?.to.lat ?? null,
+    lng: passengerTrip?.to_lng ?? initialRoute?.to.lng ?? null,
   });
   const [baggage, setBaggage] = useState(passengerTrip?.baggage ?? '');
   const [notes, setNotes] = useState('');
@@ -130,6 +131,7 @@ export function RequestModal({ trip, passengerTrip, userId, onClose, onSubmitted
             </div>
           ) : (
             <>
+              {initialRoute && <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm font-medium text-teal-800">Paėmimo ir išlaipinimo vietos užpildytos pagal jūsų paiešką. Jei reikia, galite jas patikslinti.</div>}
               <Field label="Iš kur (paėmimo vieta)" icon={<MapPin className="w-4 h-4" />}><AddressInput value={pickupAddr} onChange={setPickupAddr} placeholder="pvz. Vilnius, stotis" /></Field>
               <Field label="Į kur (išlaipinimo vieta)" icon={<MapPin className="w-4 h-4" />}><AddressInput value={dropoffAddr} onChange={setDropoffAddr} placeholder="pvz. Trakai, pilis" /></Field>
               {detour && <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-2.5"><Route className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" /><div className="text-sm text-amber-800"><p className="font-semibold">Preliminarus papildomas atstumas tiesia linija</p><p className="mt-0.5">Vairuotojo maršrutas: {formatDistance(detour.originalDistance)} → {formatDistance(detour.newDistance)} <span className="font-semibold">(+{formatDistance(detour.detour)})</span></p>{directDist !== null && <p className="text-xs text-amber-600 mt-0.5">Jūsų kelionės atstumas: {formatDistance(directDist)}</p>}</div></div>}

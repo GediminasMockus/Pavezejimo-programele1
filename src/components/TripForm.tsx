@@ -36,7 +36,7 @@ export function TripForm({
   editTrip?: Trip | null;
   initialSearch?: { fromLocation: string; toLocation: string; date: string };
   onClose: () => void;
-  onSubmitted: () => void;
+  onSubmitted: (trip?: Trip) => void;
 }) {
   useBodyScrollLock();
   const isDriver = role === 'driver';
@@ -164,20 +164,28 @@ export function TripForm({
 
     setSubmitting(true);
     let error;
+    let savedTrip: Trip | undefined;
     if (editTrip) {
-      ({ error } = await supabase.rpc('update_my_trip', {
+      const result = await supabase.rpc('update_my_trip', {
         p_trip_id: editTrip.id,
         p_trip: payload,
-      }));
+      });
+      error = result.error;
+      savedTrip = (Array.isArray(result.data) ? result.data[0] : result.data) as Trip | undefined;
     } else {
-      ({ error } = await supabase.rpc('create_my_trip', { p_trip: payload }));
+      const result = await supabase.rpc('create_my_trip', { p_trip: payload });
+      error = result.error;
+      savedTrip = (Array.isArray(result.data) ? result.data[0] : result.data) as Trip | undefined;
     }
     setSubmitting(false);
     if (error) {
       setFormError(error.message.includes('active requests') ? 'Skelbimas turi aktyvių užklausų. Prieš redaguodami jas užbaikite arba atšaukite.' : 'Nepavyko išsaugoti skelbimo. Patikrinkite laukus ir bandykite dar kartą.');
       return;
     }
-    onSubmitted();
+    if (savedTrip?.id) {
+      void supabase.functions.invoke('corridor-match', { body: { action: 'notify', tripId: savedTrip.id } });
+    }
+    onSubmitted(savedTrip);
   }
 
   return (

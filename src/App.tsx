@@ -1,5 +1,6 @@
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { useRoadMatches } from '@/lib/useRoadMatches';
+import { useCorridorMatches, type CorridorSearchRoute } from '@/lib/useCorridorMatches';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { withRetry } from '@/lib/retry';
 import {
@@ -13,6 +14,7 @@ import {
   Bell,
   Inbox,
   Sparkles,
+  Route,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import {
@@ -156,6 +158,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const unreadCount = useUnreadCount(userId);
   const [requestTarget, setRequestTarget] = useState<Trip | null>(null);
   const [requestPassengerTrip, setRequestPassengerTrip] = useState<Trip | null>(null);
+  const [requestInitialRoute, setRequestInitialRoute] = useState<CorridorSearchRoute | null>(null);
   const [offerTarget, setOfferTarget] = useState<Trip | null>(null);
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
   const [previewRequest, setPreviewRequest] = useState<RideRequest | null>(null);
@@ -166,7 +169,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   });
   const loadVersion = useRef(0);
   const loadedOnce = useRef(false);
-  const resultsSectionRef = useRef<HTMLElement>(null);
+  const resultsSectionRef = useRef<HTMLDivElement>(null);
   const hasScrolledToInitialResults = useRef(false);
   const [publicLimit, setPublicLimit] = useState(100);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
@@ -340,6 +343,14 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     || filters.radiusKm > 0,
   );
   const hasRouteSearch = Boolean(filters.fromLocation.trim() || filters.toLocation.trim());
+  const { matches: rawCorridorMatches, loading: corridorLoading } = useCorridorMatches(role, filters);
+  const corridorMatches = useMemo(
+    () => rawCorridorMatches.filter(match =>
+      !publicTripIds.has(match.trip.id)
+      && applyFilters([match.trip], { ...filters, fromLocation: '', toLocation: '', date: '' }, userPos?.lat, userPos?.lng).length > 0,
+    ),
+    [rawCorridorMatches, publicTripIds, filters, userPos],
+  );
 
   useEffect(() => {
     const hasInitialRouteSearch = Boolean(initialFilters.fromLocation.trim() || initialFilters.toLocation.trim());
@@ -606,14 +617,17 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           <RequestModal
             trip={requestTarget}
             passengerTrip={requestPassengerTrip}
+            initialRoute={requestInitialRoute}
             userId={userId}
             onClose={() => {
               setRequestTarget(null);
               setRequestPassengerTrip(null);
+              setRequestInitialRoute(null);
             }}
             onSubmitted={() => {
               setRequestTarget(null);
               setRequestPassengerTrip(null);
+              setRequestInitialRoute(null);
               loadRequests();
               toast.success('Užklausa išsiųsta!');
             }}
@@ -936,6 +950,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       <TripCard
                         trip={match.trip}
                         onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
+                          setRequestInitialRoute(null);
                           setRequestPassengerTrip(nextOwnTrip ?? null);
                           setRequestTarget(match.trip);
                         }}
@@ -956,9 +971,54 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               </section>
             )}
 
+            <div ref={resultsSectionRef} className="scroll-mt-24">
+            {corridorLoading && hasRouteSearch && (
+              <div className="mb-6 flex min-h-20 items-center justify-center gap-2 rounded-3xl border border-teal-200 bg-teal-50/60 text-sm font-medium text-teal-800">
+                <Loader2 className="h-4 w-4 animate-spin" /> Tikrinami pakeleivingi maršrutai pagal realius kelius…
+              </div>
+            )}
+            {!corridorLoading && corridorMatches.length > 0 && (
+              <section className="mb-6 rounded-3xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-1 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-teal-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><Route className="h-4 w-4" /></span>
+                  Pakeleivingi maršrutai ({corridorMatches.length})
+                </h2>
+                <p className="mb-4 ml-10 text-xs leading-relaxed text-teal-800">Vairuotojas važiuoja kitu maršrutu, tačiau gali paimti ir išlaipinti pakeliui.</p>
+                <div className="flex flex-col gap-4">
+                  {corridorMatches.map((match) => (
+                    <div key={match.trip.id} className="min-w-0">
+                      <div className="mb-2 rounded-xl border border-teal-200 bg-white/80 px-3 py-2.5 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">Pravažiuoja netoli jūsų maršruto</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-600">{match.reasons.slice(0, 3).join(' · ')}</p>
+                            <p className="mt-1.5 text-xs font-medium text-teal-800">Papildomai apie {Math.round(match.detourKm)} km · {match.detourPct.toFixed(0)} % maršruto</p>
+                          </div>
+                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-800">{match.score}%</span>
+                        </div>
+                      </div>
+                      <TripCard
+                        trip={match.trip}
+                        onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
+                          setRequestPassengerTrip(null);
+                          setRequestInitialRoute(match.searchRoute);
+                          setRequestTarget(match.trip);
+                        }}
+                        highlight={mySentRequestTripIds.has(match.trip.id)}
+                        onPreviewRoute={() => { setPreviewTrip(match.trip); setPreviewRequest(null); }}
+                        onShowProfile={() => setProfileTarget({ userId: match.trip.created_by ?? '', name: match.trip.name, trip: match.trip })}
+                        userRating={match.trip.created_by ? getUserRating(match.trip.created_by) : null}
+                        selectLabel={isDriver ? 'Siūlyti pavežėjimą' : 'Siųsti užklausą'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
-            <section ref={resultsSectionRef} className="min-h-[calc(100svh-6rem)] scroll-mt-24 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
+            <section className="min-h-[calc(100svh-6rem)] rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
               <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-slate-800">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{isDriver ? <Inbox className="h-4 w-4" /> : <Car className="h-4 w-4" />}</span>
                 {othersLabel} ({filteredOtherTrips.length})
@@ -1001,6 +1061,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       <TripCard
                         trip={t}
                         onSelect={isDriver ? () => setOfferTarget(t) : () => {
+                          setRequestInitialRoute(null);
                           setRequestPassengerTrip(null);
                           setRequestTarget(t);
                         }}
@@ -1021,6 +1082,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 </div>
               )}
             </section>
+            </div>
           </>
         )}
       </main>
