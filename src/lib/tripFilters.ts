@@ -41,7 +41,7 @@ export function applyFilters(trips: Trip[], filters: FilterState, userLat?: numb
 function locationMatches(a: string, b: string): boolean {
   const left = normalize(a);
   const right = normalize(b);
-  return left.includes(right) || right.includes(left);
+  return left.includes(right);
 }
 
 function normalize(value: string): string {
@@ -82,8 +82,8 @@ export function findBestMatches(userTrip: MatchInput, availableTrips: Trip[], li
     let score = 0;
     const reasons: string[] = [];
 
-    const fromText = locationMatches(userTrip.from_location, trip.from_location);
-    const toText = locationMatches(userTrip.to_location, trip.to_location);
+    const fromText = locationsOverlap(userTrip.from_location, trip.from_location);
+    const toText = locationsOverlap(userTrip.to_location, trip.to_location);
     if (fromText) { score += 20; reasons.push('Išvykimo vieta sutampa'); }
     if (toText) { score += 20; reasons.push('Atvykimo vieta sutampa'); }
 
@@ -119,6 +119,10 @@ export function findBestMatches(userTrip: MatchInput, availableTrips: Trip[], li
   }
 
   return matches.sort((a, b) => b.score - a.score || new Date(a.trip.departure_time).getTime() - new Date(b.trip.departure_time).getTime()).slice(0, limit);
+}
+
+function locationsOverlap(a: string, b: string): boolean {
+  return locationMatches(a, b) || locationMatches(b, a);
 }
 
 function distanceScore(distanceKm: number, maxPoints: number): number {

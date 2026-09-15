@@ -34,12 +34,21 @@ const payload=(role,seats=2)=>({role,seats,from_location:'Private street 123',to
 await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[payload('driver',9)])),/seats must be between 1 and 8/);
 await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[{...payload('driver'),from_area:''}])),/public trip areas are required/);
 const trip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver')]));
+const sameCityDifferentStreetTrip=await asUser(ids[2],()=>rpc('create_my_trip',[{
+ ...payload('driver'),
+ from_location:'Different street 999, Vilnius',
+ to_location:'Different street 888, Kaunas',
+}]));
 assert.equal(trip.created_by,ids[0]);
 await asUser(ids[1],async()=>{
  const filters=JSON.stringify({fromLocation:'',toLocation:'',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
  const publicTrip=(await query("SELECT * FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[filters,trip.id])).rows[0];
  assert.equal(publicTrip.from_location,'Vilnius');
  assert.equal(publicTrip.from_lat,54.69); assert.equal(publicTrip.available_seats,2);
+ const preciseFilters=JSON.stringify({fromLocation:'Private street 123',toLocation:'Private street 456',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
+ const preciseResults=(await query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL)",[preciseFilters])).rows;
+ assert.deepEqual(preciseResults.map(row=>row.id),[trip.id]);
+ assert.ok(!preciseResults.some(row=>row.id===sameCityDifferentStreetTrip.id));
  assert.equal((await query('SELECT * FROM public.trips WHERE id=$1',[trip.id])).rows.length,0);
  const grants=(await query("SELECT has_table_privilege(current_user,'public.ride_requests','UPDATE') AS can_update, has_table_privilege(current_user,'public.ride_requests','TRUNCATE') AS can_truncate")).rows[0];
  assert.equal(grants.can_update,false); assert.equal(grants.can_truncate,false);

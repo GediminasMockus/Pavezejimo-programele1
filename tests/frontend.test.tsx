@@ -73,7 +73,12 @@ describe('data helpers', () => {
      ...emptyFilters,
      fromLocation: 'Vilnius, Centras',
      toLocation: 'Kaunas',
-   })).toEqual([trip]);
+   })).toHaveLength(0);
+   expect(applyFilters([{ ...trip, from_location: 'Vilnius, Centras' }], {
+     ...emptyFilters,
+     fromLocation: 'Vilnius, Centras',
+     toLocation: 'Kaunas',
+   })).toHaveLength(1);
  });
 });
 describe('user workflows', () => {

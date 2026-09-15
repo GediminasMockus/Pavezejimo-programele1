@@ -141,6 +141,7 @@ export default function App() {
 
 function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, onOpenMatchedTrip, onOpenRole }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [publicTripIds, setPublicTripIds] = useState<Set<string>>(new Set());
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -233,11 +234,14 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       ]);
       if (version !== loadVersion.current) return;
       if (publicResult.error) {
+        setPublicTripIds(new Set());
         setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
       } else {
         const merged = new Map<string, Trip>();
+        const publicTrips = (publicResult.data ?? []).slice(0, publicLimit) as Trip[];
         setHasMoreTrips((publicResult.data?.length ?? 0) > publicLimit);
-        for (const trip of (publicResult.data ?? []).slice(0, publicLimit)) merged.set(trip.id, trip as Trip);
+        setPublicTripIds(new Set(publicTrips.map((trip) => trip.id)));
+        for (const trip of publicTrips) merged.set(trip.id, trip);
         for (const trip of privateTrips) merged.set(trip.id, { ...merged.get(trip.id), ...trip });
         setTrips([...merged.values()].sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()));
       }
@@ -317,9 +321,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   );
 
   const ownTrips = useMemo(() => visibleTrips.filter((t) => t.role === role && t.created_by === clientId).map(t => ({ ...t, available_seats: t.seats - allRequests.filter(r => (r.driver_trip_id ?? r.trip_id) === t.id && r.status === "accepted").reduce((sum, r) => sum + r.seats_needed, 0) })), [visibleTrips, role, clientId, allRequests]);
-  const otherTrips = useMemo(() => visibleTrips.filter((t) => t.role === othersRole && t.created_by !== clientId && t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > now - 24 * 60 * 60 * 1000), [visibleTrips, othersRole, clientId, now]);
+  const otherTrips = useMemo(() => visibleTrips.filter((t) => publicTripIds.has(t.id) && t.role === othersRole && t.created_by !== clientId && t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > now - 24 * 60 * 60 * 1000), [visibleTrips, publicTripIds, othersRole, clientId, now]);
   const filteredOtherTrips = useMemo(
-    () => applyFilters(otherTrips, filters, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
+    () => applyFilters(otherTrips, { ...filters, fromLocation: '', toLocation: '' }, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
     [otherTrips, filters, userPos],
   );
   const hasActiveFilters = Boolean(
