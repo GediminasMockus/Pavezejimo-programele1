@@ -730,9 +730,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           <>
             {/* Driver: incoming requests */}
             {isDriver && driverRequests.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Inbox className="w-4 h-4" />
+              <section className="mb-6 rounded-3xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-amber-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Inbox className="h-4 w-4" /></span>
                   Gautos užklausos ({driverRequests.length})
                 </h2>
 
@@ -799,8 +799,11 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Driver: offers sent to passengers */}
             {isDriver && mySentOffers.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Mano pasiūlymai keleiviams ({mySentOffers.length})</h2>
+              <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Car className="h-4 w-4" /></span>
+                  Mano pasiūlymai keleiviams ({mySentOffers.length})
+                </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {mySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id); if (!t) return null; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
                 </div>
@@ -809,9 +812,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Passenger: incoming driver offers */}
             {!isDriver && myReceivedOffers.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Car className="w-4 h-4" /> Vairuotojų pasiūlymai ({myReceivedOffers.length})
+              <section className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-emerald-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Car className="h-4 w-4" /></span>
+                  Vairuotojų pasiūlymai ({myReceivedOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {myReceivedOffers.map((r) => {
@@ -831,8 +835,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Passenger: my sent requests */}
             {!isDriver && mySentRequests.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Inbox className="h-4 w-4" /></span>
                   Mano užklausos ({mySentRequests.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -861,8 +866,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Own trips */}
             {ownTrips.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              <section className="mb-6 rounded-3xl border border-blue-200 bg-blue-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-blue-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><List className="h-4 w-4" /></span>
                   Mano skelbimai ({ownTrips.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -895,8 +901,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Best matches */}
             {!hasActiveFilters && bestMatches.length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              <section className="mb-6 rounded-3xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm sm:p-5">
+                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-violet-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700"><Sparkles className="h-4 w-4" /></span>
                   Geriausi atitikimai ({bestMatches.length})
                 </h2>
                 <div className="flex flex-col gap-3">
@@ -948,8 +955,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
-            <section ref={resultsSectionRef} className="scroll-mt-24">
-              <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            <section ref={resultsSectionRef} className="min-h-[calc(100svh-6rem)] scroll-mt-24 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
+              <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-slate-800">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{isDriver ? <Inbox className="h-4 w-4" /> : <Car className="h-4 w-4" />}</span>
                 {othersLabel} ({filteredOtherTrips.length})
               </h2>
               <FilterBar
@@ -958,7 +966,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 resultCount={filteredOtherTrips.length}
               />
               {filteredOtherTrips.length === 0 ? (
-                <div className="rounded-2xl bg-white border border-dashed border-slate-300 p-10 text-center">
+                <div className="flex min-h-[45svh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center sm:p-10">
                   <p className="text-slate-500 text-sm">
                     {hasActiveFilters
                       ? 'Pagal nurodytus kriterijus skelbimų nerasta.'
