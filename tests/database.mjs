@@ -34,10 +34,31 @@ const payload=(role,seats=2)=>({role,seats,from_location:'Private street 123',to
 await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[payload('driver',9)])),/seats must be between 1 and 8/);
 await assert.rejects(asUser(ids[0],()=>rpc('create_my_trip',[{...payload('driver'),from_area:''}])),/public trip areas are required/);
 const trip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver')]));
-const sameCityDifferentStreetTrip=await asUser(ids[2],()=>rpc('create_my_trip',[{
+const otherIntercityStreetTrip=await asUser(ids[2],()=>rpc('create_my_trip',[{
  ...payload('driver'),
  from_location:'Different street 999, Vilnius',
  to_location:'Different street 888, Kaunas',
+}]));
+const inflectedCityTrip=await asUser(ids[3],()=>rpc('create_my_trip',[{
+ ...payload('driver'),
+ from_location:'Kėdainių rajono savivaldybė, Lietuva',
+ to_location:'Radviliškio rajono savivaldybė, Lietuva',
+ from_area:'Kėdainiai',
+ to_area:'Radviliškis',
+}]));
+const sameCityMatchingTrip=await asUser(ids[0],()=>rpc('create_my_trip',[{
+ ...payload('driver'),
+ from_location:'Gedimino pr. 1, Vilnius',
+ to_location:'Ukmergės g. 10, Vilnius',
+ from_area:'Vilnius',
+ to_area:'Vilnius',
+}]));
+const sameCityOtherTrip=await asUser(ids[2],()=>rpc('create_my_trip',[{
+ ...payload('driver'),
+ from_location:'Savanorių pr. 99, Vilnius',
+ to_location:'Kalvarijų g. 20, Vilnius',
+ from_area:'Vilnius',
+ to_area:'Vilnius',
 }]));
 assert.equal(trip.created_by,ids[0]);
 await asUser(ids[1],async()=>{
@@ -45,10 +66,17 @@ await asUser(ids[1],async()=>{
  const publicTrip=(await query("SELECT * FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[filters,trip.id])).rows[0];
  assert.equal(publicTrip.from_location,'Vilnius');
  assert.equal(publicTrip.from_lat,54.69); assert.equal(publicTrip.available_seats,2);
- const preciseFilters=JSON.stringify({fromLocation:'Private street 123',toLocation:'Private street 456',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
- const preciseResults=(await query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL)",[preciseFilters])).rows;
- assert.deepEqual(preciseResults.map(row=>row.id),[trip.id]);
- assert.ok(!preciseResults.some(row=>row.id===sameCityDifferentStreetTrip.id));
+ const intercityFilters=JSON.stringify({fromLocation:'Private street 123, Vilnius',toLocation:'Private street 456, Kaunas',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
+ const intercityResults=(await query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL)",[intercityFilters])).rows.map(row=>row.id);
+ assert.ok(intercityResults.includes(trip.id));
+ assert.ok(intercityResults.includes(otherIntercityStreetTrip.id),'intercity search matches by cities, not streets');
+ const inflectedCityFilters=JSON.stringify({fromLocation:'Kėdainiai',toLocation:'Radviliškis',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
+ const inflectedCityResults=(await query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL)",[inflectedCityFilters])).rows.map(row=>row.id);
+ assert.ok(inflectedCityResults.includes(inflectedCityTrip.id),'city search tolerates Lithuanian inflection in the full address');
+ const sameCityFilters=JSON.stringify({fromLocation:'Gedimino prospektas, Vilnius',toLocation:'Ukmergės gatvė, Vilnius',date:'',minSeats:0,maxPrice:'',recurringOnly:false,radiusKm:0});
+ const sameCityResults=(await query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL)",[sameCityFilters])).rows.map(row=>row.id);
+ assert.ok(sameCityResults.includes(sameCityMatchingTrip.id),'same-city search tolerates street suffixes and abbreviations');
+ assert.ok(!sameCityResults.includes(sameCityOtherTrip.id),'same-city search excludes unrelated streets');
  assert.equal((await query('SELECT * FROM public.trips WHERE id=$1',[trip.id])).rows.length,0);
  const grants=(await query("SELECT has_table_privilege(current_user,'public.ride_requests','UPDATE') AS can_update, has_table_privilege(current_user,'public.ride_requests','TRUNCATE') AS can_truncate")).rows[0];
  assert.equal(grants.can_update,false); assert.equal(grants.can_truncate,false);
