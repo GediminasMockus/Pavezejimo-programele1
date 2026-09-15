@@ -12,6 +12,7 @@ import {
   Grid,
   Bell,
   Inbox,
+  Sparkles,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import {
@@ -867,44 +868,45 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 </h2>
                 <div className="flex flex-col gap-3">
                   {bestMatches.map((match, idx) => (
-                    <div key={match.trip.id} className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                              {match.score} taškų
+                    <div key={match.trip.id} className="w-full min-w-0">
+                      <div className="mb-2 rounded-xl border border-indigo-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-violet-50 px-3 py-2.5 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-start gap-2.5">
+                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+                              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                             </span>
-                            <div className="flex flex-wrap gap-1">
-                              {match.reasons.slice(0, 3).map((reason, i) => (
-                                <span key={i} className="text-xs text-slate-600">
-                                  {reason}
-                                  {i < Math.min(match.reasons.length - 1, 2) && ' · '}
-                                </span>
-                              ))}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold leading-tight text-slate-900">
+                                {idx === 0 ? 'Geriausias atitikimas' : `Atitikimas Nr. ${idx + 1}`}
+                              </p>
+                              <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                                {match.reasons.slice(0, 3).join(' · ')}
+                              </p>
                             </div>
                           </div>
-                          <TripCard
-                            trip={match.trip}
-                            onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
-                              setRequestPassengerTrip(nextOwnTrip ?? null);
-                              setRequestTarget(match.trip);
-                            }}
-                            highlight={mySentRequestTripIds.has(match.trip.id)}
-                            onPreviewRoute={() => {
-                              setPreviewTrip(match.trip);
-                              setPreviewRequest(mySentRequests.find((r) => r.trip_id === match.trip.id) ?? null);
-                            }}
-                            onShowProfile={() =>
-                              setProfileTarget({ userId: match.trip.created_by ?? '', name: match.trip.name, trip: match.trip })
-                            }
-                            userRating={match.trip.created_by ? getUserRating(match.trip.created_by) : null}
-                            selectLabel={isDriver ? 'Siūlyti pavežėjimą' : 'Siųsti užklausą'}
-                          />
+                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-white px-2.5 py-1 text-xs font-bold text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-200">
+                            {match.score}%
+                            <span className="ml-1 hidden sm:inline">atitikimas</span>
+                          </span>
                         </div>
                       </div>
+                      <TripCard
+                        trip={match.trip}
+                        onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
+                          setRequestPassengerTrip(nextOwnTrip ?? null);
+                          setRequestTarget(match.trip);
+                        }}
+                        highlight={mySentRequestTripIds.has(match.trip.id)}
+                        onPreviewRoute={() => {
+                          setPreviewTrip(match.trip);
+                          setPreviewRequest(mySentRequests.find((r) => r.trip_id === match.trip.id) ?? null);
+                        }}
+                        onShowProfile={() =>
+                          setProfileTarget({ userId: match.trip.created_by ?? '', name: match.trip.name, trip: match.trip })
+                        }
+                        userRating={match.trip.created_by ? getUserRating(match.trip.created_by) : null}
+                        selectLabel={isDriver ? 'Siūlyti pavežėjimą' : 'Siųsti užklausą'}
+                      />
                     </div>
                   ))}
                 </div>

@@ -65,7 +65,8 @@ const EN: Record<string, string> = {
   // Filters and list sections
   'Filtruoti': 'Filter', 'Filtravimo kriterijai': 'Filter criteria', 'Uždaryti filtrus': 'Close filters', 'Min. vietų': 'Min seats', 'Bet kiek': 'Any',
   'Max kaina, €': 'Max price, €', 'Atstumas nuo manęs, km': 'Distance from me, km', 'Neribotas': 'Unlimited', 'Tik pasikartojantys': 'Recurring only', 'skelbimų': 'listings',
-  'Mano pasiūlymai keleiviams': 'My offers to passengers', 'Mano skelbimai': 'My listings', 'Geriausi atitikimai': 'Best matches', 'taškų': 'points',
+  'Mano pasiūlymai keleiviams': 'My offers to passengers', 'Mano skelbimai': 'My listings', 'Geriausi atitikimai': 'Best matches',
+  'Geriausias atitikimas': 'Best match', 'atitikimas': 'match',
   'Įkelti daugiau skelbimų': 'Load more listings', 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!': 'There are no listings yet. Be the first to add one!',
   'Pagal nurodytus kriterijus skelbimų nerasta. Pakeiskite filtravimą.': 'No listings match the selected criteria. Adjust the filters.',
 
@@ -88,6 +89,7 @@ const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^Mano užklausos \((\d+)\)$/, m => `My requests (${m[1]})`],
   [/^Mano skelbimai \((\d+)\)$/, m => `My listings (${m[1]})`],
   [/^Geriausi atitikimai \((\d+)\)$/, m => `Best matches (${m[1]})`],
+  [/^Atitikimas Nr\. (\d+)$/, m => `Match #${m[1]}`],
   [/^(\d+) laukianti užklausa$/, m => `${m[1]} pending request`],
   [/^(\d+) laukiančios užklausos$/, m => `${m[1]} pending requests`],
   [/^Redaguoti skelbimą: (.*)$/, m => `Edit listing: ${m[1]}`],
