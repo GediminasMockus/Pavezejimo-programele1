@@ -24,3 +24,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Local tool state and accidental scratch markers
+.bolt/
+supabase/.temp/
+/tmp
+/tmp[0-9]*
