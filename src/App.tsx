@@ -166,6 +166,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   });
   const loadVersion = useRef(0);
   const loadedOnce = useRef(false);
+  const resultsSectionRef = useRef<HTMLElement>(null);
+  const hasScrolledToInitialEmptyResults = useRef(false);
   const [publicLimit, setPublicLimit] = useState(100);
   const [hasMoreTrips, setHasMoreTrips] = useState(false);
   const [filters, setFilters] = useState<FilterState>(() => {
@@ -336,6 +338,23 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     || filters.radiusKm > 0,
   );
   const hasRouteSearch = Boolean(filters.fromLocation.trim() || filters.toLocation.trim());
+
+  useEffect(() => {
+    const hasInitialRouteSearch = Boolean(initialFilters.fromLocation.trim() || initialFilters.toLocation.trim());
+    if (
+      loading
+      || focusTripId
+      || !hasInitialRouteSearch
+      || filteredOtherTrips.length > 0
+      || hasScrolledToInitialEmptyResults.current
+    ) return;
+
+    hasScrolledToInitialEmptyResults.current = true;
+    const frame = window.requestAnimationFrame(() => {
+      resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [loading, focusTripId, initialFilters.fromLocation, initialFilters.toLocation, filteredOtherTrips.length]);
 
   const nextOwnTrip = useMemo(() => ownTrips.filter(t => t.status === 'active' && new Date(t.departure_time).getTime() >= now).sort((a,b) => new Date(a.departure_time).getTime()-new Date(b.departure_time).getTime())[0], [ownTrips, now]);
   const preliminaryMatches = useMemo(() => nextOwnTrip ? findBestMatches({ ...nextOwnTrip, seats: nextOwnTrip.available_seats }, otherTrips, 3) : [], [nextOwnTrip, otherTrips]);
@@ -929,7 +948,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
-            <section>
+            <section ref={resultsSectionRef} className="scroll-mt-24">
               <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
                 {othersLabel} ({filteredOtherTrips.length})
               </h2>
