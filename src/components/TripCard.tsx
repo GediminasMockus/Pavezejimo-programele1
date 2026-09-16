@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import type { Trip } from '@/lib/supabase';
 import { haversineDistance, formatDistance } from '@/lib/distance';
-import { formatDateTime, formatPrice } from '@/lib/format';
+import { formatDateTime, formatPrice, formatTripExpiryCountdown } from '@/lib/format';
 
 export function TripCard({
   trip,
@@ -35,6 +35,7 @@ export function TripCard({
   userRating,
   showPrivateDetails = false,
   selectLabel,
+  currentTime = Date.now(),
 }: {
   trip: Trip;
   highlight?: boolean;
@@ -48,6 +49,7 @@ export function TripCard({
   userRating?: { avg: number; total: number } | null;
   showPrivateDetails?: boolean;
   selectLabel?: string;
+  currentTime?: number;
 }) {
   const [deleting, setDeleting] = useState(false);
 
@@ -61,6 +63,9 @@ export function TripCard({
   const fromIconColor = isDriver ? 'text-blue-500' : 'text-emerald-500';
   const toIconColor = isDriver ? 'text-blue-600' : 'text-emerald-600';
   const priceStr = formatPrice(trip);
+  const expiryMessage = trip.status === 'active' && !trip.is_recurring
+    ? formatTripExpiryCountdown(trip.departure_time, currentTime)
+    : null;
 
   const hasCoords =
     trip.from_lat !== null &&
@@ -86,6 +91,12 @@ export function TripCard({
         highlight ? 'border-blue-400 ring-2 ring-blue-200/50 bg-gradient-to-br from-blue-50/50 to-white' : 'border-slate-200 hover:border-blue-300'
       }`}
     >
+      {expiryMessage && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-700" role="status">
+          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          <span>{expiryMessage}</span>
+        </div>
+      )}
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
           <span

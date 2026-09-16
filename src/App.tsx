@@ -924,6 +924,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       <TripCard
                         key={t.id}
                         trip={t}
+                        currentTime={now}
                         highlight
                         pendingCount={pendingCount}
                         onEdit={() => setEditTrip(t)}
@@ -977,6 +978,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       </div>
                       <TripCard
                         trip={match.trip}
+                        currentTime={now}
                         onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
                           setRequestInitialRoute(null);
                           setRequestPassengerTrip(nextOwnTrip ?? null);
@@ -1032,6 +1034,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       </div>
                       <TripCard
                         trip={match.trip}
+                        currentTime={now}
                         onSelect={isDriver ? () => setOfferTarget(match.trip) : () => {
                           setRequestPassengerTrip(null);
                           setRequestInitialRoute(match.searchRoute);
@@ -1093,6 +1096,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       >
                       <TripCard
                         trip={t}
+                        currentTime={now}
                         onSelect={isDriver ? () => setOfferTarget(t) : () => {
                           setRequestInitialRoute(null);
                           setRequestPassengerTrip(null);

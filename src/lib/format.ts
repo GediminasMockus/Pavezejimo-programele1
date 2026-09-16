@@ -39,6 +39,23 @@ export function toLocalInput(d: Date): string {
   return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
+const NON_RECURRING_TRIP_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+export function formatTripExpiryCountdown(departureTime: string, currentTime: number): string | null {
+  const departureMs = new Date(departureTime).getTime();
+  if (!Number.isFinite(departureMs) || currentTime < departureMs) return null;
+
+  const remainingMs = departureMs + NON_RECURRING_TRIP_RETENTION_MS - currentTime;
+  if (remainingMs <= 0) return 'Skelbimo galiojimas pasibaigė – bus netrukus pašalintas.';
+
+  const totalMinutes = Math.ceil(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `Iki automatinio ištrynimo liko ${minutes} min.`;
+  if (minutes === 0) return `Iki automatinio ištrynimo liko ${hours} val.`;
+  return `Iki automatinio ištrynimo liko ${hours} val. ${minutes} min.`;
+}
+
 export function formatDistanceToNow(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);

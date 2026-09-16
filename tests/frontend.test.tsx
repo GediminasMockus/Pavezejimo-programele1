@@ -13,6 +13,7 @@ import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
+import { formatTripExpiryCountdown } from '../src/lib/format';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', driver_confirmed: true, passenger_confirmed: true },
@@ -35,6 +36,12 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('shows the remaining 24-hour retention time after departure', () => {
+   const departure = '2030-09-12T12:00:00Z';
+   expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T11:59:00Z').getTime())).toBeNull();
+   expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T13:15:00Z').getTime())).toBe('Iki automatinio ištrynimo liko 22 val. 45 min.');
+   expect(formatTripExpiryCountdown(departure, new Date('2030-09-13T12:00:00Z').getTime())).toBe('Skelbimo galiojimas pasibaigė – bus netrukus pašalintas.');
+ });
  it('retries transient Supabase responses but not authorization failures', async () => {
    const temporary = vi.fn().mockResolvedValueOnce({ error: { message: 'busy' }, status: 503 }).mockResolvedValue({ data: [1], error: null });
    expect(await withRetry(temporary, { delay: 0 })).toEqual({ data: [1], error: null });
