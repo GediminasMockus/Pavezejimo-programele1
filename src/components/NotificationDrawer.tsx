@@ -3,12 +3,7 @@ import { Bell, X, Check, Clock, Route, Car, Users } from 'lucide-react';
 import { supabase, type Notification, type TripRole } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
-
-const RELEVANCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-function isRelevant(notification: Notification) {
-  return new Date(notification.created_at).getTime() >= Date.now() - RELEVANCE_WINDOW_MS;
-}
+import { isNotificationFresh, notificationCutoff } from '@/lib/notificationRetention';
 
 interface NotificationDrawerProps {
   userId: string;
@@ -25,15 +20,21 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
-    const relevantSince = new Date(Date.now() - RELEVANCE_WINDOW_MS).toISOString();
-    const { data } = await supabase
+    const relevantSince = notificationCutoff();
+    const cleanup = supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .lt('created_at', relevantSince);
+    const query = supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .gte('created_at', relevantSince)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (data) setNotifications((data as Notification[]).filter(isRelevant));
+    const [, { data }] = await Promise.all([cleanup, query]);
+    if (data) setNotifications((data as Notification[]).filter(item => isNotificationFresh(item.created_at)));
     setLoading(false);
   }, [userId]);
 
@@ -45,7 +46,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
       .channel('notifications-changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
         const notification = payload.new as Notification;
-        if (notification.user_id === userId && isRelevant(notification)) {
+        if (notification.user_id === userId && isNotificationFresh(notification.created_at)) {
           setNotifications(prev =>
             prev.some(item => item.id === notification.id)
               ? prev
@@ -56,7 +57,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, (payload) => {
         const notification = payload.new as Notification;
         setNotifications(prev => {
-          if (!isRelevant(notification)) {
+          if (!isNotificationFresh(notification.created_at)) {
             return prev.filter(item => item.id !== notification.id);
           }
           return prev.some(item => item.id === notification.id)
@@ -66,7 +67,12 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
       })
       .subscribe();
 
+    const expiryTimer = window.setInterval(() => {
+      setNotifications(items => items.filter(item => isNotificationFresh(item.created_at)));
+    }, 60_000);
+
     return () => {
+      window.clearInterval(expiryTimer);
       supabase.removeChannel(channel);
     };
   }, [userId, loadNotifications]);

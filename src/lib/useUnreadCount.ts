@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { notificationCutoff } from './notificationRetention';
 
 export function useUnreadCount(userId: string) {
   const [count, setCount] = useState(0);
@@ -8,11 +9,13 @@ export function useUnreadCount(userId: string) {
     let cancelled = false;
 
     async function refresh() {
+      const relevantSince = notificationCutoff();
       const { count: total, error } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .eq('read', false);
+        .eq('read', false)
+        .gte('created_at', relevantSince);
 
       if (!cancelled && !error) setCount(total ?? 0);
     }
@@ -21,7 +24,15 @@ export function useUnreadCount(userId: string) {
       if (document.visibilityState === 'visible') void refresh();
     };
 
-    void refresh();
+    const initialCutoff = notificationCutoff();
+    void Promise.all([
+      supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .lt('created_at', initialCutoff),
+      refresh(),
+    ]);
     const channel = supabase
       .channel('unread-' + userId)
       .on('postgres_changes', {

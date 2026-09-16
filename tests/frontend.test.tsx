@@ -16,6 +16,7 @@ import { RequestCard } from '../src/components/RequestCard';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
+import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', status: 'accepted', driver_confirmed: true, passenger_confirmed: true },
@@ -24,7 +25,7 @@ const mock = vi.hoisted(() => ({
 vi.mock('../src/lib/supabase', () => {
  const result = (data: unknown) => {
    const chain: Record<string, unknown> = {};
-   for (const name of ['select','eq','gte','order','limit','single','maybeSingle']) chain[name] = () => chain;
+   for (const name of ['select','delete','eq','gte','lt','order','limit','single','maybeSingle']) chain[name] = () => chain;
    chain.then = (resolve: (value: unknown) => unknown) => Promise.resolve({ data, error: null, count: 0 }).then(resolve);
    return chain;
  };
@@ -39,6 +40,12 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('keeps notifications for exactly 48 hours', () => {
+   const now = new Date('2030-09-12T12:00:00Z').getTime();
+   expect(NOTIFICATION_RETENTION_MS).toBe(48 * 60 * 60 * 1000);
+   expect(isNotificationFresh('2030-09-10T12:00:00Z', now)).toBe(true);
+   expect(isNotificationFresh('2030-09-10T11:59:59Z', now)).toBe(false);
+ });
  it('shows the remaining 24-hour retention time after departure', () => {
    const departure = '2030-09-12T12:00:00Z';
    expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T11:59:00Z').getTime())).toBeNull();

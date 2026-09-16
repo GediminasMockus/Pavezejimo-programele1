@@ -131,6 +131,14 @@ await asUser(ids[2],async()=>{
  assert.equal((await query('SELECT public.claim_geocode() AS allowed')).rows[0].allowed,true);
  assert.equal((await query('SELECT public.claim_geocode() AS allowed')).rows[0].allowed,false);
 });
+
+const oldOwnNotification=(await query("INSERT INTO public.notifications(user_id,type,title,message,created_at) VALUES($1,'trip_reminder','Old','Old',now()-interval '49 hours') RETURNING id",[ids[0]])).rows[0];
+const recentOwnNotification=(await query("INSERT INTO public.notifications(user_id,type,title,message,created_at) VALUES($1,'trip_reminder','Recent','Recent',now()-interval '47 hours') RETURNING id",[ids[0]])).rows[0];
+const otherOldNotification=(await query("INSERT INTO public.notifications(user_id,type,title,message,created_at) VALUES($1,'trip_reminder','Other old','Other old',now()-interval '49 hours') RETURNING id",[ids[1]])).rows[0];
+await asUser(ids[0],()=>query("DELETE FROM public.notifications WHERE created_at < now()-interval '48 hours'"));
+assert.equal((await query('SELECT count(*)::int AS count FROM public.notifications WHERE id=$1',[oldOwnNotification.id])).rows[0].count,0,'user can delete their expired notification');
+assert.equal((await query('SELECT count(*)::int AS count FROM public.notifications WHERE id=$1',[recentOwnNotification.id])).rows[0].count,1,'recent notification is retained');
+assert.equal((await query('SELECT count(*)::int AS count FROM public.notifications WHERE id=$1',[otherOldNotification.id])).rows[0].count,1,"another user's notification is protected");
 console.log('Booking, capacity, authorization, privacy, validation, chat, history, completion, rating and geocoder tests passed.');
 
 await db.close();
