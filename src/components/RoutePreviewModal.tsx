@@ -3,37 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { X, MapPin, Route as RouteIcon, Loader2 } from 'lucide-react';
 import type { Trip, RideRequest } from '@/lib/supabase';
-import { haversineDistance, formatDistance } from '@/lib/distance';
+import { formatDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
-
-interface RouteData {
-  coordinates: [number, number][];
-  distance: number;
-}
-
-async function fetchRoute(
-  fromLat: number,
-  fromLng: number,
-  toLat: number,
-  toLng: number,
-  signal?: AbortSignal,
-): Promise<RouteData | null> {
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`, { signal },
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json.routes || !json.routes[0]) return null;
-    const coords: [number, number][] = json.routes[0].geometry.coordinates.map(
-      (c: [number, number]) => [c[1], c[0]],
-    );
-    const distance = json.routes[0].distance / 1000;
-    return { coordinates: coords, distance };
-  } catch {
-    return null;
-  }
-}
+import { fetchDrivingRoute, type DrivingRoute, type RoutePoint } from '@/lib/routing';
 
 export function RoutePreviewModal({
   trip,
@@ -48,8 +20,9 @@ export function RoutePreviewModal({
   const mapInstance = useRef<L.Map | null>(null);
   const [loading, setLoading] = useState(true);
   const [routeInfo, setRouteInfo] = useState<{
-    driverRoute?: RouteData | null;
-    fullRoute?: RouteData | null;
+    driverRoute?: DrivingRoute | null;
+    passengerRoute?: DrivingRoute | null;
+    fullRoute?: DrivingRoute | null;
     detour?: number;
   }>({});
 
@@ -100,7 +73,28 @@ export function RoutePreviewModal({
       setLoading(true);
       const points: [number, number][] = [];
 
-      let driverRouteData: RouteData | null = null;
+      const driverPoints: RoutePoint[] | null = hasDriverCoords
+        ? [[trip.from_lat!, trip.from_lng!], [trip.to_lat!, trip.to_lng!]]
+        : null;
+      const passengerPoints: RoutePoint[] | null = hasRequestCoords
+        ? [[request!.pickup_lat!, request!.pickup_lng!], [request!.dropoff_lat!, request!.dropoff_lng!]]
+        : null;
+      const fullPoints: RoutePoint[] | null = hasDriverCoords && hasRequestCoords
+        ? [
+            [trip.from_lat!, trip.from_lng!],
+            [request!.pickup_lat!, request!.pickup_lng!],
+            [request!.dropoff_lat!, request!.dropoff_lng!],
+            [trip.to_lat!, trip.to_lng!],
+          ]
+        : null;
+
+      const [driverRouteData, passengerRouteData, fullRouteData] = await Promise.all([
+        driverPoints ? fetchDrivingRoute(driverPoints, controller.signal) : Promise.resolve(null),
+        passengerPoints ? fetchDrivingRoute(passengerPoints, controller.signal) : Promise.resolve(null),
+        fullPoints ? fetchDrivingRoute(fullPoints, controller.signal) : Promise.resolve(null),
+      ]);
+      if (controller.signal.aborted) return;
+
       if (hasDriverCoords) {
         L.marker([trip.from_lat!, trip.from_lng!], { icon: bluePin('Iš') })
           .addTo(map)
@@ -109,8 +103,6 @@ export function RoutePreviewModal({
           .addTo(map)
           .bindPopup(mapPopup('Atvykimas', trip.to_location));
 
-        driverRouteData = await fetchRoute(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!, controller.signal);
-        if (controller.signal.aborted) return;
         if (driverRouteData) {
           L.polyline(driverRouteData.coordinates, {
             color: '#2563eb',
@@ -129,7 +121,6 @@ export function RoutePreviewModal({
         points.push([trip.to_lat!, trip.to_lng!]);
       }
 
-      let fullRouteData: RouteData | null = null;
       let detour: number | undefined;
       if (hasDriverCoords && hasRequestCoords) {
         L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
@@ -139,25 +130,8 @@ export function RoutePreviewModal({
           .addTo(map)
           .bindPopup(mapPopup('Keleivio išlaipinimas', request!.dropoff_location));
 
-        const [leg1, leg2, leg3] = await Promise.all([
-          fetchRoute(trip.from_lat!, trip.from_lng!, request!.pickup_lat!, request!.pickup_lng!, controller.signal),
-          fetchRoute(request!.pickup_lat!, request!.pickup_lng!, request!.dropoff_lat!, request!.dropoff_lng!, controller.signal),
-          fetchRoute(request!.dropoff_lat!, request!.dropoff_lng!, trip.to_lat!, trip.to_lng!, controller.signal),
-        ]);
-
-        if (controller.signal.aborted) return;
-        const allCoords: [number, number][] = [];
-        let totalDist = 0;
-        for (const leg of [leg1, leg2, leg3]) {
-          if (leg) {
-            allCoords.push(...leg.coordinates);
-            totalDist += leg.distance;
-          }
-        }
-
-        if (allCoords.length > 0) {
-          fullRouteData = { coordinates: allCoords, distance: totalDist };
-          L.polyline(allCoords, {
+        if (fullRouteData) {
+          L.polyline(fullRouteData.coordinates, {
             color: '#059669',
             weight: 5,
             opacity: 0.85,
@@ -177,8 +151,9 @@ export function RoutePreviewModal({
         points.push([request!.pickup_lat!, request!.pickup_lng!]);
         points.push([request!.dropoff_lat!, request!.dropoff_lng!]);
 
-        const driverDist = driverRouteData?.distance ?? haversineDistance(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!);
-        detour = Math.max(0, totalDist - driverDist);
+        if (driverRouteData && fullRouteData) {
+          detour = Math.max(0, fullRouteData.distance - driverRouteData.distance);
+        }
       }
 
       if (points.length > 0) {
@@ -187,6 +162,7 @@ export function RoutePreviewModal({
 
       setRouteInfo({
         driverRoute: driverRouteData,
+        passengerRoute: passengerRouteData,
         fullRoute: fullRouteData,
         detour,
       });
@@ -197,8 +173,10 @@ export function RoutePreviewModal({
     return () => controller.abort();
   }, [trip, request, hasDriverCoords, hasRequestCoords]);
 
-  const driverDist = routeInfo.driverRoute?.distance ?? (hasDriverCoords ? haversineDistance(trip.from_lat!, trip.from_lng!, trip.to_lat!, trip.to_lng!) : null);
+  const driverDist = routeInfo.driverRoute?.distance ?? null;
+  const passengerDist = routeInfo.passengerRoute?.distance ?? null;
   const fullDist = routeInfo.fullRoute?.distance ?? null;
+  const routingFailed = !loading && hasDriverCoords && !routeInfo.driverRoute;
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:p-4">
@@ -234,7 +212,7 @@ export function RoutePreviewModal({
               <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-900 mb-1">
                   <span className="w-4 h-1 rounded bg-blue-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #2563eb 0 6px, transparent 6px 12px)' }} />
-                  Vairuotojo maršrutas
+                  Tiesioginis vairuotojo maršrutas
                 </div>
                 <div className="text-sm text-blue-800">
                   {trip.from_location} → {trip.to_location}
@@ -252,17 +230,33 @@ export function RoutePreviewModal({
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900 mb-1">
                   <span className="w-4 h-1 rounded bg-emerald-500" />
-                  Maršrutas su keleiviu
+                  Keleivio atkarpa
                 </div>
                 <div className="text-sm text-emerald-800">
                   {request!.pickup_location} → {request!.dropoff_location}
                 </div>
-                {fullDist !== null && (
+                {passengerDist !== null && (
                   <div className="flex items-center gap-1.5 text-sm text-emerald-700 mt-1">
                     <RouteIcon className="w-3.5 h-3.5" />
-                    {formatDistance(fullDist)}
+                    {formatDistance(passengerDist)}
                   </div>
                 )}
+              </div>
+            )}
+
+            {hasDriverCoords && hasRequestCoords && fullDist !== null && (
+              <div className="rounded-xl border border-teal-200 bg-teal-50 p-3">
+                <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-teal-900">
+                  <span className="h-1 w-4 rounded bg-teal-600" />
+                  Visas patvirtintas maršrutas
+                </div>
+                <div className="text-sm text-teal-800">
+                  Vairuotojo pradžia → keleivio paėmimas → keleivio išlaipinimas → vairuotojo tikslas
+                </div>
+                <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-teal-700">
+                  <RouteIcon className="h-3.5 w-3.5" />
+                  {formatDistance(fullDist)}
+                </div>
               </div>
             )}
 
@@ -276,9 +270,15 @@ export function RoutePreviewModal({
               }`}>
                 <div className="flex items-center gap-1.5 font-semibold">
                   <MapPin className="w-4 h-4" />
-                  Papildomas nuokrypis: +{formatDistance(routeInfo.detour)}
+                  Papildomai vairuotojui: +{formatDistance(routeInfo.detour)}
                 </div>
               </div>
+            )}
+
+            {routingFailed && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+                Kelio atstumo apskaičiuoti nepavyko. Tiesios linijos kilometrai nerodomi, nes jie neatitiktų realaus važiavimo.
+              </p>
             )}
 
             {!hasDriverCoords && (

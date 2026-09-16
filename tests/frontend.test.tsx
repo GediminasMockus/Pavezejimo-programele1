@@ -17,6 +17,7 @@ import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
+import { fetchDrivingRoute } from '../src/lib/routing';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', status: 'accepted', driver_confirmed: true, passenger_confirmed: true },
@@ -40,6 +41,20 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('calculates an ordered road route through every confirmed waypoint', async () => {
+   const fetchMock = vi.fn().mockResolvedValue({
+     ok: true,
+     json: async () => ({ routes: [{ distance: 123456, geometry: { coordinates: [[25.1, 54.1], [24.2, 55.2]] } }] }),
+   });
+   vi.stubGlobal('fetch', fetchMock);
+   const route = await fetchDrivingRoute([[54.1, 25.1], [54.5, 24.5], [55.2, 24.2]]);
+   expect(fetchMock).toHaveBeenCalledWith(
+     expect.stringContaining('/25.1,54.1;24.5,54.5;24.2,55.2?'),
+     { signal: undefined },
+   );
+   expect(route?.distance).toBe(123.456);
+   expect(route?.coordinates).toEqual([[54.1, 25.1], [55.2, 24.2]]);
+ });
  it('keeps notifications for exactly 48 hours', () => {
    const now = new Date('2030-09-12T12:00:00Z').getTime();
    expect(NOTIFICATION_RETENTION_MS).toBe(48 * 60 * 60 * 1000);
