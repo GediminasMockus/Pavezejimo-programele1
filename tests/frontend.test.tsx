@@ -11,27 +11,29 @@ import { ChatDrawer } from '../src/components/ChatDrawer';
 import { RequestModal } from '../src/components/RequestModal';
 import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
+import { NotificationDrawer } from '../src/components/NotificationDrawer';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', driver_confirmed: true, passenger_confirmed: true },
+  notifications: [] as unknown[],
 }));
 vi.mock('../src/lib/supabase', () => {
  const result = (data: unknown) => {
    const chain: Record<string, unknown> = {};
-   for (const name of ['select','eq','order','limit','single','maybeSingle']) chain[name] = () => chain;
+   for (const name of ['select','eq','gte','order','limit','single','maybeSingle']) chain[name] = () => chain;
    chain.then = (resolve: (value: unknown) => unknown) => Promise.resolve({ data, error: null, count: 0 }).then(resolve);
    return chain;
  };
  const channel = { on: () => channel, subscribe: () => channel };
  mock.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === 'get_my_matches' ? [{ id: 'match', request_id: 'request' }] : [{ display_name: 'Tester', is_admin: false }], error: null }));
- mock.from.mockImplementation((name: string) => result(name === 'ride_requests' ? mock.request : []));
+ mock.from.mockImplementation((name: string) => result(name === 'ride_requests' ? mock.request : name === 'notifications' ? mock.notifications : []));
  return { supabase: { rpc: mock.rpc, from: mock.from, channel: () => channel, removeChannel: vi.fn(),
    auth: { getSession: () => Promise.resolve({ data: { session: { access_token: 'test' } } }) } } };
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); mock.notifications = []; });
 const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver', seats: 2, available_seats: 2,
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
@@ -102,6 +104,18 @@ describe('data helpers', () => {
  });
 });
 describe('user workflows', () => {
+ it('opens the related chat from a new-message notification', async () => {
+   const onOpenChat = vi.fn();
+   mock.notifications = [{
+     id: 'notification', user_id: 'driver', type: 'new_message', title: 'Nauja žinutė',
+     message: 'Keleivis: Sveiki', related_trip_id: null, related_request_id: 'request',
+     read: false, created_at: new Date().toISOString(),
+   }];
+   render(<NotificationDrawer userId="driver" onClose={() => {}} onOpenChat={onOpenChat} />);
+   const notification = await screen.findByRole('button', { name: /nauja žinutė.*atidaryti pokalbį/i });
+   fireEvent.click(notification);
+   expect(onOpenChat).toHaveBeenCalledWith('request');
+ });
  it('passes the entered route to search and creation', async () => {
    const onPick=vi.fn();
    render(<HomeScreen userId="passenger" onPick={onPick} onSignOut={() => {}} />);

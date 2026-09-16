@@ -53,6 +53,7 @@ type AppHistoryState = {
   filters?: FilterState;
   create?: boolean;
   focusTripId?: string | null;
+  chatRequestId?: string | null;
 };
 
 const APP_HISTORY_KEY = 'pavezejimaiNavigation';
@@ -70,6 +71,7 @@ function readAppHistoryState(state: unknown = window.history.state): AppHistoryS
       filters: value.filters ?? emptyFilters,
       create: value.create === true,
       focusTripId: typeof value.focusTripId === 'string' ? value.focusTripId : null,
+      chatRequestId: typeof value.chatRequestId === 'string' ? value.chatRequestId : null,
     };
   }
   return null;
@@ -88,6 +90,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>(initialNavigation?.screen ?? 'home');
   const [activeRole, setActiveRole] = useState<TripRole | null>(initialNavigation?.role ?? null);
   const [focusTripId, setFocusTripId] = useState<string | null>(initialNavigation?.focusTripId ?? null);
+  const [chatRequestId, setChatRequestId] = useState<string | null>(initialNavigation?.chatRequestId ?? null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const { toasts, success, error, info, warning, remove } = useToast();
@@ -114,6 +117,7 @@ export default function App() {
         setSearch(navigation.filters ?? emptyFilters);
         setStartForm(navigation.create ?? false);
         setFocusTripId(navigation.focusTripId ?? null);
+        setChatRequestId(navigation.chatRequestId ?? null);
         setActiveRole(navigation.role);
         setScreen('list');
         return;
@@ -121,6 +125,7 @@ export default function App() {
       setSearch(emptyFilters);
       setStartForm(false);
       setFocusTripId(null);
+      setChatRequestId(null);
       setActiveRole(null);
       setScreen('home');
     };
@@ -144,12 +149,13 @@ export default function App() {
 
   const userId = session.user.id;
 
-  const showList = (role: TripRole, filters: FilterState, create: boolean, tripId: string | null) => {
-    const navigation: AppHistoryState = { screen: 'list', role, filters, create, focusTripId: tripId };
+  const showList = (role: TripRole, filters: FilterState, create: boolean, tripId: string | null, requestId: string | null = null) => {
+    const navigation: AppHistoryState = { screen: 'list', role, filters, create, focusTripId: tripId, chatRequestId: requestId };
     window.history.pushState(browserStateWith(navigation), '');
     setSearch(filters);
     setStartForm(create);
     setFocusTripId(tripId);
+    setChatRequestId(requestId);
     setActiveRole(role);
     setScreen('list');
   };
@@ -160,6 +166,22 @@ export default function App() {
 
   const openRole = (role: TripRole) => {
     showList(role, emptyFilters, false, null);
+  };
+
+  const openNotificationChat = async (requestId: string) => {
+    const { data: request, error: requestError } = await supabase
+      .from('ride_requests')
+      .select('id, passenger_id, driver_id, request_type')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (requestError || !request) {
+      error('Nepavyko atidaryti šio pokalbio. Atnaujinkite puslapį ir bandykite dar kartą.');
+      return;
+    }
+
+    const targetRole: TripRole = request.passenger_id === userId ? 'passenger' : 'driver';
+    showList(targetRole, emptyFilters, false, null, requestId);
   };
 
   return (
@@ -173,19 +195,22 @@ export default function App() {
             showList(role, searchFilters ?? emptyFilters, create, null);
           }}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenChat={openNotificationChat}
           onSignOut={() => supabase.auth.signOut()}
         />
       )}
       {screen === 'list' && activeRole && (
         <ListScreen
-          key={`${userId}:${activeRole}:${focusTripId ?? ''}`}
+          key={`${userId}:${activeRole}:${focusTripId ?? ''}:${chatRequestId ?? ''}`}
           role={activeRole}
           initialFilters={search}
           initialForm={startForm}
           focusTripId={focusTripId}
+          initialChatRequestId={chatRequestId}
           userId={userId}
           onOpenMatchedTrip={openMatchedTrip}
           onOpenRole={openRole}
+          onOpenNotificationChat={openNotificationChat}
           onBack={() => {
             if (readAppHistoryState()?.screen === 'list' && window.history.length > 1) {
               window.history.back();
@@ -202,7 +227,7 @@ export default function App() {
   );
 }
 
-function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, onOpenMatchedTrip, onOpenRole }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, initialChatRequestId, onOpenMatchedTrip, onOpenRole, onOpenNotificationChat }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; initialChatRequestId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; onOpenNotificationChat: (requestId: string) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [publicTripIds, setPublicTripIds] = useState<Set<string>>(new Set());
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
@@ -229,6 +254,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     return saved === 'grid' ? 'grid' : 'list';
   });
   const loadVersion = useRef(0);
+  const openedNotificationChat = useRef<string | null>(null);
   const loadedOnce = useRef(false);
   const resultsSectionRef = useRef<HTMLDivElement>(null);
   const hasScrolledToInitialResults = useRef(false);
@@ -525,6 +551,17 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     setChatRequest(request ?? null);
   }
 
+  useEffect(() => {
+    if (!initialChatRequestId || loading || openedNotificationChat.current === initialChatRequestId) return;
+    const request = allRequests.find((item) => item.id === initialChatRequestId);
+    if (!request) return;
+    const trip = trips.find((item) => item.id === (request.driver_trip_id ?? request.trip_id));
+    if (!trip) return;
+    openedNotificationChat.current = initialChatRequestId;
+    setChatTrip(trip);
+    setChatRequest(request);
+  }, [initialChatRequestId, loading, allRequests, trips]);
+
   function openGoogleMapsNavigation(trip: Trip, request?: RideRequest | null) {
     window.open(navigationUrl(trip, request), '_blank', 'noopener,noreferrer');
   }
@@ -744,6 +781,13 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
             onOpenRole={(targetRole) => {
               setShowNotifications(false);
               onOpenRole(targetRole);
+            }}
+            onOpenChat={(requestId) => {
+              setShowNotifications(false);
+              const request = allRequests.find((item) => item.id === requestId);
+              const trip = request ? findTripById(request.driver_trip_id ?? request.trip_id) : undefined;
+              if (request && trip) openChat(trip, request);
+              else void onOpenNotificationChat(requestId);
             }}
           />
         )}

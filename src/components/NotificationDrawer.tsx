@@ -15,9 +15,10 @@ interface NotificationDrawerProps {
   onClose: () => void;
   onOpenMatch?: (tripId: string, matchedTripRole: TripRole) => void;
   onOpenRole?: (role: TripRole) => void;
+  onOpenChat?: (requestId: string) => void;
 }
 
-export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }: NotificationDrawerProps) {
+export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, onOpenChat }: NotificationDrawerProps) {
   useBodyScrollLock();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +201,14 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
                       : null;
                 const canOpenMatch = Boolean(matchedTripRole && notification.related_trip_id && onOpenMatch);
                 const canOpenRole = Boolean(targetRole && onOpenRole);
-                const actionLabel = canOpenMatch
+                const canOpenChat = Boolean(
+                  notification.type === 'new_message'
+                  && notification.related_request_id
+                  && onOpenChat,
+                );
+                const actionLabel = canOpenChat
+                  ? 'Atidaryti pokalbį'
+                  : canOpenMatch
                   ? 'Peržiūrėti kelionę'
                   : notification.type === 'new_offer'
                     ? 'Peržiūrėti pasiūlymą'
@@ -215,7 +223,9 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
                   className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${!notification.read ? 'bg-blue-50/50' : ''}`}
                   onClick={() => {
                     if (!notification.read) void markAsRead(notification.id);
-                    if (canOpenMatch && matchedTripRole && notification.related_trip_id) {
+                    if (canOpenChat && notification.related_request_id) {
+                      onOpenChat?.(notification.related_request_id);
+                    } else if (canOpenMatch && matchedTripRole && notification.related_trip_id) {
                       onOpenMatch?.(notification.related_trip_id, matchedTripRole);
                     } else if (canOpenRole && targetRole) {
                       onOpenRole?.(targetRole);
@@ -239,7 +249,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole }:
                         <p className="text-xs text-slate-400">
                           {formatDistanceToNow(new Date(notification.created_at))}
                         </p>
-                        {actionLabel && (canOpenMatch || canOpenRole) && (
+                        {actionLabel && (canOpenChat || canOpenMatch || canOpenRole) && (
                           <span className="text-xs font-semibold text-indigo-600">
                             {actionLabel} →
                           </span>

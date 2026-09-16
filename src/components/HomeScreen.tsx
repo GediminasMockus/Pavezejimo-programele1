@@ -8,7 +8,7 @@ import { AdminLogs } from './AdminLogs';
 import { SettingsModal } from './SettingsModal';
 import { NotificationDrawer } from './NotificationDrawer';
 
-export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void }) {
+export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenChat }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenChat?: (requestId: string) => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -89,6 +89,10 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip }: { u
           onOpenRole={(role) => {
             setShowNotifications(false);
             onPick(role, emptyFilters, false);
+          }}
+          onOpenChat={(requestId) => {
+            setShowNotifications(false);
+            onOpenChat?.(requestId);
           }}
         />
       )}
