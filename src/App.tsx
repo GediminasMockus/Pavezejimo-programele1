@@ -49,13 +49,47 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { NotificationDrawer } from '@/components/NotificationDrawer';
 
 type Screen = 'home' | 'list';
+type AppHistoryState = {
+  screen: Screen;
+  role?: TripRole;
+  filters?: FilterState;
+  create?: boolean;
+  focusTripId?: string | null;
+};
+
+const APP_HISTORY_KEY = 'pavezejimaiNavigation';
+
+function readAppHistoryState(state: unknown = window.history.state): AppHistoryState | null {
+  if (!state || typeof state !== 'object') return null;
+  const navigation = (state as Record<string, unknown>)[APP_HISTORY_KEY];
+  if (!navigation || typeof navigation !== 'object') return null;
+  const value = navigation as Partial<AppHistoryState>;
+  if (value.screen === 'home') return { screen: 'home' };
+  if (value.screen === 'list' && (value.role === 'driver' || value.role === 'passenger')) {
+    return {
+      screen: 'list',
+      role: value.role,
+      filters: value.filters ?? emptyFilters,
+      create: value.create === true,
+      focusTripId: typeof value.focusTripId === 'string' ? value.focusTripId : null,
+    };
+  }
+  return null;
+}
+
+function browserStateWith(navigation: AppHistoryState) {
+  const current = window.history.state;
+  const base = current && typeof current === 'object' ? current : {};
+  return { ...base, [APP_HISTORY_KEY]: navigation };
+}
 
 export default function App() {
-  const [search, setSearch] = useState<FilterState>(emptyFilters);
-  const [startForm, setStartForm] = useState(false);
-  const [screen, setScreen] = useState<Screen>('home');
-  const [activeRole, setActiveRole] = useState<TripRole | null>(null);
-  const [focusTripId, setFocusTripId] = useState<string | null>(null);
+  const initialNavigation = useMemo(() => readAppHistoryState(), []);
+  const [search, setSearch] = useState<FilterState>(initialNavigation?.filters ?? emptyFilters);
+  const [startForm, setStartForm] = useState(initialNavigation?.create ?? false);
+  const [screen, setScreen] = useState<Screen>(initialNavigation?.screen ?? 'home');
+  const [activeRole, setActiveRole] = useState<TripRole | null>(initialNavigation?.role ?? null);
+  const [focusTripId, setFocusTripId] = useState<string | null>(initialNavigation?.focusTripId ?? null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const { toasts, success, error, info, warning, remove } = useToast();
@@ -69,6 +103,32 @@ export default function App() {
       setSession(sess);
     });
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!readAppHistoryState()) {
+      window.history.replaceState(browserStateWith({ screen: 'home' }), '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const navigation = readAppHistoryState(event.state);
+      if (navigation?.screen === 'list' && navigation.role) {
+        setSearch(navigation.filters ?? emptyFilters);
+        setStartForm(navigation.create ?? false);
+        setFocusTripId(navigation.focusTripId ?? null);
+        setActiveRole(navigation.role);
+        setScreen('list');
+        return;
+      }
+      setSearch(emptyFilters);
+      setStartForm(false);
+      setFocusTripId(null);
+      setActiveRole(null);
+      setScreen('home');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   if (authLoading) {
@@ -86,20 +146,22 @@ export default function App() {
 
   const userId = session.user.id;
 
-  const openMatchedTrip = (tripId: string, matchedTripRole: TripRole) => {
-    setSearch(emptyFilters);
-    setStartForm(false);
+  const showList = (role: TripRole, filters: FilterState, create: boolean, tripId: string | null) => {
+    const navigation: AppHistoryState = { screen: 'list', role, filters, create, focusTripId: tripId };
+    window.history.pushState(browserStateWith(navigation), '');
+    setSearch(filters);
+    setStartForm(create);
     setFocusTripId(tripId);
-    setActiveRole(matchedTripRole === 'driver' ? 'passenger' : 'driver');
+    setActiveRole(role);
     setScreen('list');
   };
 
+  const openMatchedTrip = (tripId: string, matchedTripRole: TripRole) => {
+    showList(matchedTripRole === 'driver' ? 'passenger' : 'driver', emptyFilters, false, tripId);
+  };
+
   const openRole = (role: TripRole) => {
-    setSearch(emptyFilters);
-    setStartForm(false);
-    setFocusTripId(null);
-    setActiveRole(role);
-    setScreen('list');
+    showList(role, emptyFilters, false, null);
   };
 
   return (
@@ -110,11 +172,7 @@ export default function App() {
         <HomeScreen
           userId={userId}
           onPick={(role, searchFilters, create = false) => {
-            setSearch(searchFilters ?? emptyFilters);
-            setStartForm(create);
-            setFocusTripId(null);
-            setActiveRole(role);
-            setScreen('list');
+            showList(role, searchFilters ?? emptyFilters, create, null);
           }}
           onOpenMatchedTrip={openMatchedTrip}
           onSignOut={() => supabase.auth.signOut()}
@@ -131,8 +189,13 @@ export default function App() {
           onOpenMatchedTrip={openMatchedTrip}
           onOpenRole={openRole}
           onBack={() => {
-            setScreen('home');
-            setActiveRole(null);
+            if (readAppHistoryState()?.screen === 'list' && window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.history.replaceState(browserStateWith({ screen: 'home' }), '');
+              setScreen('home');
+              setActiveRole(null);
+            }
           }}
           toast={{ success, error, info, warning }}
         />
