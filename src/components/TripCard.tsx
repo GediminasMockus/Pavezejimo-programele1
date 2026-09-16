@@ -103,6 +103,12 @@ export function TripCard({
             {isDriver ? <Car className="w-3 h-3" /> : <Users className="w-3 h-3" />}
             {isDriver ? 'Vairuotojas' : 'Keleivis'}
           </span>
+          {expiryMessage && (
+            <span className="inline-flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold leading-relaxed text-red-700" role="status">
+              <Clock className="mt-0.5 h-3 w-3 flex-shrink-0" />
+              <span>{expiryMessage}</span>
+            </span>
+          )}
           {trip.is_recurring && (
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm">
               <Repeat className="w-3 h-3" />
@@ -132,13 +138,6 @@ export function TripCard({
           )}
         </div>
       </div>
-
-      {expiryMessage && (
-        <div className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-700" role="status">
-          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-          <span>{expiryMessage}</span>
-        </div>
-      )}
 
       <div className="mt-1.5 text-xs text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
         {formatDateTime(trip.departure_time)}
