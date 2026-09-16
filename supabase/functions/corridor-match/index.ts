@@ -101,19 +101,21 @@ function nearestOnRoute(target: Point, geometry: [number, number][]) {
   return { distanceKm: bestDistance, progress: totalKm > 0 ? bestAlongKm / totalKm : 0 };
 }
 
-async function getRoadRoute(points: Point[], baseUrl: string): Promise<RoadRoute> {
+async function getRoadRoute(points: Point[], baseUrl: string, includeGeometry = false): Promise<RoadRoute> {
   const coordinates = points.map(item => `${item.lng},${item.lat}`).join(';');
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`, {
-    signal: AbortSignal.timeout(8000),
+  const overview = includeGeometry ? 'simplified' : 'false';
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/route/v1/driving/${coordinates}?overview=${overview}&geometries=geojson&steps=false`, {
+    signal: AbortSignal.timeout(25_000),
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) throw new Error(`routing provider returned ${response.status}`);
   const json = await response.json();
   const route = json?.routes?.[0];
-  if (!route || !Number.isFinite(route.distance) || !Number.isFinite(route.duration) || !Array.isArray(route.geometry?.coordinates)) {
+  if (!route || !Number.isFinite(route.distance) || !Number.isFinite(route.duration)
+    || (includeGeometry && !Array.isArray(route.geometry?.coordinates))) {
     throw new Error('routing provider returned no route');
   }
-  return { distanceKm: route.distance / 1000, durationMinutes: route.duration / 60, geometry: route.geometry.coordinates };
+  return { distanceKm: route.distance / 1000, durationMinutes: route.duration / 60, geometry: route.geometry?.coordinates ?? [] };
 }
 
 async function geocode(location: string): Promise<Point & { display_name: string }> {
@@ -149,20 +151,19 @@ async function evaluatePair(
   const cacheKey = `${driver.from_lat},${driver.from_lng}:${driver.to_lat},${driver.to_lng}`;
   let driverRoutePromise = driverRouteCache.get(cacheKey);
   if (!driverRoutePromise) {
-    driverRoutePromise = getRoadRoute([point(driver, 'from'), point(driver, 'to')], routingBaseUrl);
+    driverRoutePromise = getRoadRoute([point(driver, 'from'), point(driver, 'to')], routingBaseUrl, true);
     driverRouteCache.set(cacheKey, driverRoutePromise);
   }
-  const driverRoute = await driverRoutePromise;
-  const pickup = nearestOnRoute(point(passenger, 'from'), driverRoute.geometry);
-  const dropoff = nearestOnRoute(point(passenger, 'to'), driverRoute.geometry);
-  if (dropoff.progress - pickup.progress < 0.01) return null;
-
-  const combined = await getRoadRoute([
+  const combinedPromise = getRoadRoute([
     point(driver, 'from'),
     point(passenger, 'from'),
     point(passenger, 'to'),
     point(driver, 'to'),
   ], routingBaseUrl);
+  const [driverRoute, combined] = await Promise.all([driverRoutePromise, combinedPromise]);
+  const pickup = nearestOnRoute(point(passenger, 'from'), driverRoute.geometry);
+  const dropoff = nearestOnRoute(point(passenger, 'to'), driverRoute.geometry);
+  if (dropoff.progress - pickup.progress < 0.01) return null;
   const detourKm = Math.max(0, combined.distanceKm - driverRoute.distanceKm);
   const detourPct = driverRoute.distanceKm > 0 ? detourKm / driverRoute.distanceKm * 100 : 100;
   const estimatedPickup = new Date(new Date(driver.departure_time).getTime() + pickup.progress * driverRoute.durationMinutes * 60_000);
