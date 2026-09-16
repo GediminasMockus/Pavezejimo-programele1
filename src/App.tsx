@@ -351,6 +351,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     ),
     [rawCorridorMatches, publicTripIds, filters, userPos],
   );
+  const totalSearchResults = filteredOtherTrips.length + corridorMatches.length;
+  const hasSearchResults = totalSearchResults > 0;
 
   useEffect(() => {
     const hasInitialRouteSearch = Boolean(initialFilters.fromLocation.trim() || initialFilters.toLocation.trim());
@@ -1023,7 +1025,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
-            <section className="min-h-[calc(100svh-6rem)] rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5">
+            <section className={`${hasSearchResults ? '' : 'min-h-[calc(100svh-6rem)]'} rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5`}>
               <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-slate-800">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{isDriver ? <Inbox className="h-4 w-4" /> : <Car className="h-4 w-4" />}</span>
                 {othersLabel} ({filteredOtherTrips.length})
@@ -1031,9 +1033,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               <FilterBar
                 filters={filters}
                 onChange={setFilters}
-                resultCount={filteredOtherTrips.length}
+                resultCount={totalSearchResults}
               />
-              {filteredOtherTrips.length === 0 ? (
+              {!hasSearchResults ? (
                 <div className="flex min-h-[45svh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center sm:p-10">
                   <p className="text-slate-500 text-sm">
                     {hasActiveFilters
@@ -1051,7 +1053,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     </button>
                   )}
                 </div>
-              ) : (
+              ) : filteredOtherTrips.length > 0 ? (
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {filteredOtherTrips.map((t) => {
                     const alreadyRequested = mySentRequestTripIds.has(t.id);
@@ -1085,7 +1087,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     );
                   })}
                 </div>
-              )}
+              ) : null}
             </section>
             </div>
           </>
