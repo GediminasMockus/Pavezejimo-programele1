@@ -478,9 +478,16 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
   const rejectedDriverRequests = driverRequests.filter((r) => r.status === 'rejected');
 
+  const mapTrips = useMemo(() => {
+    const unique = new Map<string, Trip>();
+    for (const trip of filteredOtherTrips) unique.set(trip.id, trip);
+    for (const match of corridorMatches) unique.set(match.trip.id, match.trip);
+    return [...unique.values()];
+  }, [filteredOtherTrips, corridorMatches]);
+
   const mapMarkers = useMemo<MapMarker[]>(() => {
     const result: MapMarker[] = [];
-    for (const t of filteredOtherTrips) {
+    for (const t of mapTrips) {
       if (t.from_lat !== null && t.from_lng !== null) {
         result.push({ trip: t, lat: t.from_lat, lng: t.from_lng, label: `Iš: ${t.from_location}`, isFrom: true });
       }
@@ -489,7 +496,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       }
     }
     return result;
-  }, [filteredOtherTrips]);
+  }, [mapTrips]);
 
   async function updateRequestStatus(
     requestId: string,
@@ -606,13 +613,31 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-4">
         <div className="inline-flex rounded-full bg-slate-100 p-1 gap-1">
           <button
-            onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            onClick={() => setViewMode('list')}
+            className={`sm:hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
               viewMode === 'list' || viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {viewMode === 'list' ? <Grid className="w-4 h-4" /> : <List className="w-4 h-4" />}
-            {viewMode === 'list' ? 'Kortelės' : 'Sąrašas'}
+            <List className="w-4 h-4" />
+            Skelbimai
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+              viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <List className="w-4 h-4" />
+            Sąrašas
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+              viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Grid className="w-4 h-4" />
+            Tinklelis
           </button>
           <button
             onClick={() => setViewMode('map')}
