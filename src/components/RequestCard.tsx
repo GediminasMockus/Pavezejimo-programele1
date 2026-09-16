@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   MapPin,
   User,
@@ -16,6 +17,7 @@ import {
 import type { Trip, RideRequest, RequestStatus } from '@/lib/supabase';
 import { calculateDetour, formatDistance, haversineDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
+import { CancelRequestModal } from '@/components/CancelRequestModal';
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
   pending: { label: 'Laukia patvirtinimo', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
@@ -41,12 +43,13 @@ export function RequestCard({
   isDriverView: boolean;
   onAccept?: () => void;
   onReject?: () => void;
-  onCancel?: () => void;
+  onCancel?: () => void | Promise<void>;
   onChat?: () => void;
   onPreviewRoute?: () => void;
   onNavigation?: () => void;
   isOffer?: boolean;
 }) {
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const status = STATUS_CONFIG[request.status];
   const StatusIcon = status.icon;
 
@@ -207,12 +210,12 @@ export function RequestCard({
       )}
 
       {isOffer && isDriverView && isPending && onCancel && (
-        <button onClick={onCancel} className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200"><X className="w-4 h-4 inline mr-1" />Atšaukti pasiūlymą</button>
+        <button onClick={() => setShowCancelConfirmation(true)} className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200"><X className="w-4 h-4 inline mr-1" />Atšaukti pasiūlymą</button>
       )}
 
       {!isDriverView && !isOffer && isPending && (
         <button
-          onClick={onCancel}
+          onClick={() => setShowCancelConfirmation(true)}
           className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
         >
           <X className="w-4 h-4" />
@@ -220,7 +223,7 @@ export function RequestCard({
         </button>
       )}
 
-      {request.status === 'accepted' && !request.completed_at && onCancel && <button onClick={onCancel} className="mt-3 w-full py-2 text-sm text-red-600">Atšaukti kelionę</button>}
+      {request.status === 'accepted' && !request.completed_at && onCancel && <button onClick={() => setShowCancelConfirmation(true)} className="mt-3 w-full py-2 text-sm text-red-600">Atšaukti kelionę</button>}
       {request.status === 'accepted' && (
         <div className="mt-3 flex gap-2">
           {onChat && (
@@ -252,6 +255,17 @@ export function RequestCard({
           <MapIcon className="w-4 h-4" />
           Peržiūrėti maršrutą
         </button>
+      )}
+
+      {showCancelConfirmation && onCancel && (
+        <CancelRequestModal
+          request={request}
+          onClose={() => setShowCancelConfirmation(false)}
+          onConfirm={async () => {
+            await onCancel();
+            setShowCancelConfirmation(false);
+          }}
+        />
       )}
     </div>
   );

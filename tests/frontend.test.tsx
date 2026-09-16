@@ -12,6 +12,7 @@ import { RequestModal } from '../src/components/RequestModal';
 import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import { NotificationDrawer } from '../src/components/NotificationDrawer';
+import { RequestCard } from '../src/components/RequestCard';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
@@ -104,6 +105,25 @@ describe('data helpers', () => {
  });
 });
 describe('user workflows', () => {
+ it('requires confirmation before cancelling an accepted ride', async () => {
+   const onCancel = vi.fn();
+   const acceptedRequest = {
+     ...mock.request,
+     trip_id: trip.id,
+     pickup_location: 'Vilnius',
+     dropoff_location: 'Kaunas',
+     status: 'accepted',
+     request_type: 'passenger_request',
+     completed_at: null,
+     created_at: '2030-09-12T10:00:00Z',
+   } as RideRequest;
+   render(<RequestCard request={acceptedRequest} trip={trip} isDriverView={false} onCancel={onCancel} />);
+   fireEvent.click(screen.getByRole('button', { name: 'Atšaukti kelionę' }));
+   expect(onCancel).not.toHaveBeenCalled();
+   expect(screen.getByRole('dialog', { name: 'Atšaukti kelionę?' })).toBeTruthy();
+   fireEvent.click(screen.getByRole('button', { name: 'Taip, atšaukti kelionę' }));
+   await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+ });
  it('opens the related chat from a new-message notification', async () => {
    const onOpenChat = vi.fn();
    mock.notifications = [{
