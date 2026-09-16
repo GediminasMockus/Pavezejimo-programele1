@@ -69,9 +69,10 @@ describe('data helpers', () => {
      detourKm: 12, detourPct: 12, passageTimeDifferenceMinutes: 45, seatsAvailable: 3, seatsNeeded: 2 };
    expect(evaluateCorridor(valid).qualifies).toBe(true);
    expect(evaluateCorridor({ ...valid, pickupDistanceKm: 60.2, dropoffDistanceKm: 4.4, detourKm: 34.2, detourPct: 13.1 }).qualifies).toBe(true);
-   expect(evaluateCorridor({ ...valid, detourKm: 45.1 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 2, dropoffDistanceKm: 4, detourKm: 70, detourPct: 25 }).qualifies).toBe(true);
+   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 20, dropoffDistanceKm: 20, detourKm: 45.1 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, pickupProgress: 0.8, dropoffProgress: 0.3 }).qualifies).toBe(false);
-   expect(evaluateCorridor({ ...valid, detourPct: 20.1 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 20, dropoffDistanceKm: 20, detourPct: 20.1 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, passageTimeDifferenceMinutes: 91 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, seatsAvailable: 1 }).qualifies).toBe(false);
  });

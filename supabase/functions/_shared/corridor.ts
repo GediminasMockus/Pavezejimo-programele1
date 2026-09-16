@@ -29,8 +29,11 @@ export function evaluateCorridor(metrics: CorridorMetrics): CorridorEvaluation {
   const timeFits = metrics.passageTimeDifferenceMinutes == null
     || metrics.passageTimeDifferenceMinutes <= CORRIDOR_LIMITS.maxPassageTimeDifferenceMinutes;
   const seatsFit = metrics.seatsAvailable >= metrics.seatsNeeded;
-  const qualifies = metrics.detourKm <= CORRIDOR_LIMITS.maxDetourKm
-    && metrics.detourPct <= CORRIDOR_LIMITS.maxDetourPct
+  const followsExistingCorridor = metrics.pickupDistanceKm <= CORRIDOR_LIMITS.preferredDistanceToRouteKm
+    && metrics.dropoffDistanceKm <= CORRIDOR_LIMITS.preferredDistanceToRouteKm;
+  const practicalDetour = metrics.detourKm <= CORRIDOR_LIMITS.maxDetourKm
+    && metrics.detourPct <= CORRIDOR_LIMITS.maxDetourPct;
+  const qualifies = (followsExistingCorridor || practicalDetour)
     && correctDirection
     && timeFits
     && seatsFit;

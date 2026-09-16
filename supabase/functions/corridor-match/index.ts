@@ -28,6 +28,14 @@ type TripRow = {
   departure_time: string;
   seats: number;
   created_by: string | null;
+  name?: string;
+  price?: number | null;
+  price_unit?: string;
+  baggage?: string | null;
+  notes?: string | null;
+  created_at?: string;
+  status?: string;
+  is_recurring?: boolean;
 };
 type PublicTrip = TripRow & { available_seats?: number } & Record<string, unknown>;
 type RoadRoute = { distanceKm: number; durationMinutes: number; geometry: [number, number][] };
@@ -135,6 +143,36 @@ async function geocode(location: string): Promise<Point & { display_name: string
 
 function localDate(value: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Vilnius', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
+}
+
+function publicLocation(area: string | null | undefined, location: string) {
+  return area?.trim() || location.split(',')[0].trim();
+}
+
+function toPublicTrip(trip: TripRow, availableSeats: number): PublicTrip {
+  const roundCoordinate = (value: number | null) => value === null ? null : Math.round(value * 100) / 100;
+  return {
+    id: trip.id,
+    role: trip.role,
+    from_location: publicLocation(trip.from_area, trip.from_location),
+    to_location: publicLocation(trip.to_area, trip.to_location),
+    from_lat: roundCoordinate(trip.from_lat),
+    from_lng: roundCoordinate(trip.from_lng),
+    to_lat: roundCoordinate(trip.to_lat),
+    to_lng: roundCoordinate(trip.to_lng),
+    departure_time: trip.departure_time,
+    name: trip.name,
+    seats: trip.seats,
+    price: trip.price,
+    price_unit: trip.price_unit,
+    baggage: trip.baggage,
+    notes: trip.notes,
+    created_at: trip.created_at,
+    available_seats: availableSeats,
+    status: trip.status ?? 'active',
+    created_by: trip.created_by,
+    is_recurring: trip.is_recurring ?? false,
+  };
 }
 
 async function evaluatePair(
@@ -257,15 +295,29 @@ Deno.serve(async request => {
     if (candidatesError) throw candidatesError;
     const candidates = (candidatesData ?? []).filter(validCoordinates) as TripRow[];
     const ids = candidates.map(item => item.id);
-    let publicData: Record<string, unknown>[] = [];
+    const acceptedSeatsByTrip = new Map<string, number>();
     if (ids.length) {
-      // public_trips deliberately requires auth.uid(). The service-role JWT has
-      // no user subject, so this sanitized projection must use the caller JWT.
-      const { data, error } = await userClient.from('public_trips').select('*').in('id', ids);
+      const { data, error } = await service.from('ride_requests')
+        .select('trip_id,driver_trip_id,seats_needed')
+        .eq('status', 'accepted')
+        .or(`trip_id.in.(${ids.join(',')}),driver_trip_id.in.(${ids.join(',')})`);
       if (error) throw error;
-      publicData = data ?? [];
+      for (const request of data ?? []) {
+        const tripId = request.driver_trip_id ?? request.trip_id;
+        if (tripId && ids.includes(tripId)) {
+          acceptedSeatsByTrip.set(tripId, (acceptedSeatsByTrip.get(tripId) ?? 0) + Number(request.seats_needed || 0));
+        }
+      }
     }
-    const publicById = new Map((publicData ?? []).map(item => [item.id, item as PublicTrip]));
+    // The public_trips view uses security-invoker RLS, so a caller cannot read
+    // an unrelated trip until a request exists. Build the same safe projection
+    // inside this authenticated function and never return private trip fields.
+    const publicById = new Map(candidates.map(candidate => {
+      const availableSeats = candidate.role === 'driver'
+        ? Math.max(0, candidate.seats - (acceptedSeatsByTrip.get(candidate.id) ?? 0))
+        : candidate.seats;
+      return [candidate.id, toPublicTrip(candidate, availableSeats)];
+    }));
 
     const ranked = candidates
       .filter(candidate => !requestedDate || localDate(candidate.departure_time) === requestedDate)
