@@ -155,7 +155,7 @@ async function evaluatePair(
   const driverRoute = await driverRoutePromise;
   const pickup = nearestOnRoute(point(passenger, 'from'), driverRoute.geometry);
   const dropoff = nearestOnRoute(point(passenger, 'to'), driverRoute.geometry);
-  if (pickup.distanceKm > 15 || dropoff.distanceKm > 15 || dropoff.progress - pickup.progress < 0.01) return null;
+  if (dropoff.progress - pickup.progress < 0.01) return null;
 
   const combined = await getRoadRoute([
     point(driver, 'from'),
@@ -273,6 +273,7 @@ Deno.serve(async request => {
       .map(item => item.candidate);
 
     const routeCache = new Map<string, Promise<RoadRoute>>();
+    let evaluationFailures = 0;
     const evaluated = await mapWithConcurrency(ranked, 3, async candidate => {
       const driver = subject.role === 'driver' ? subject : candidate;
       const passenger = subject.role === 'passenger' ? subject : candidate;
@@ -280,8 +281,15 @@ Deno.serve(async request => {
       const seatsAvailable = Number(driverPublic?.available_seats ?? driver.seats);
       const desiredTime = action === 'notify' ? passenger.departure_time : null;
       try { return await evaluatePair(driver, passenger, candidate.id, seatsAvailable, desiredTime, routingBaseUrl, routeCache, searchRoute); }
-      catch { return null; }
+      catch (error) {
+        evaluationFailures += 1;
+        console.error('corridor candidate evaluation failed', { candidateId: candidate.id, error });
+        return null;
+      }
     });
+    if (ranked.length > 0 && evaluationFailures === ranked.length) {
+      return reply({ error: 'routing temporarily unavailable' }, 502);
+    }
     const matches = evaluated.filter((item): item is MatchResult => Boolean(item))
       .sort((a, b) => b.evaluation.score - a.evaluation.score)
       .slice(0, MAX_RESULTS);

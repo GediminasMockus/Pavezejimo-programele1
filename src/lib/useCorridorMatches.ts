@@ -22,6 +22,7 @@ export type CorridorMatch = {
 export function useCorridorMatches(role: TripRole, filters: FilterState) {
   const [matches, setMatches] = useState<CorridorMatch[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fromLocation = filters.fromLocation.trim();
@@ -29,12 +30,14 @@ export function useCorridorMatches(role: TripRole, filters: FilterState) {
     if (!fromLocation || !toLocation) {
       setMatches([]);
       setLoading(false);
+      setError(false);
       return;
     }
 
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setLoading(true);
+      setError(false);
       const { data, error } = await supabase.functions.invoke('corridor-match', {
         body: {
           action: 'search', role, fromLocation, toLocation, date: filters.date || null,
@@ -43,6 +46,7 @@ export function useCorridorMatches(role: TripRole, filters: FilterState) {
       });
       if (!cancelled) {
         setMatches(error || !Array.isArray(data?.matches) ? [] : data.matches as CorridorMatch[]);
+        setError(Boolean(error));
         setLoading(false);
       }
     }, 350);
@@ -53,5 +57,5 @@ export function useCorridorMatches(role: TripRole, filters: FilterState) {
     };
   }, [role, filters.fromLocation, filters.toLocation, filters.date, filters.minSeats]);
 
-  return { matches, loading };
+  return { matches, loading, error };
 }

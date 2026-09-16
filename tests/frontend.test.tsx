@@ -64,11 +64,12 @@ describe('data helpers', () => {
    expect(findBestMatches({ ...passenger, seats: 1 },[trip])).toHaveLength(1);
    expect(applyFilters([trip],{ ...emptyFilters, maxPrice: '10,5' })).toHaveLength(1);
  });
- it('accepts only nearby, forward and low-detour road corridors', () => {
+ it('accepts forward road corridors with a practical total detour', () => {
    const valid = { pickupDistanceKm: 4, dropoffDistanceKm: 6, pickupProgress: 0.25, dropoffProgress: 0.75,
      detourKm: 12, detourPct: 12, passageTimeDifferenceMinutes: 45, seatsAvailable: 3, seatsNeeded: 2 };
    expect(evaluateCorridor(valid).qualifies).toBe(true);
-   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 15.1 }).qualifies).toBe(false);
+   expect(evaluateCorridor({ ...valid, pickupDistanceKm: 60.2, dropoffDistanceKm: 4.4, detourKm: 34.2, detourPct: 13.1 }).qualifies).toBe(true);
+   expect(evaluateCorridor({ ...valid, detourKm: 45.1 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, pickupProgress: 0.8, dropoffProgress: 0.3 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, detourPct: 20.1 }).qualifies).toBe(false);
    expect(evaluateCorridor({ ...valid, passageTimeDifferenceMinutes: 91 }).qualifies).toBe(false);

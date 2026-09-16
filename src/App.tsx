@@ -343,7 +343,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     || filters.radiusKm > 0,
   );
   const hasRouteSearch = Boolean(filters.fromLocation.trim() || filters.toLocation.trim());
-  const { matches: rawCorridorMatches, loading: corridorLoading } = useCorridorMatches(role, filters);
+  const { matches: rawCorridorMatches, loading: corridorLoading, error: corridorError } = useCorridorMatches(role, filters);
   const corridorMatches = useMemo(
     () => rawCorridorMatches.filter(match =>
       !publicTripIds.has(match.trip.id)
@@ -977,6 +977,11 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 <Loader2 className="h-4 w-4 animate-spin" /> Tikrinami pakeleivingi maršrutai pagal realius kelius…
               </div>
             )}
+            {!corridorLoading && corridorError && hasRouteSearch && (
+              <div role="alert" className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-medium text-amber-900 shadow-sm">
+                Pakeleivingų maršrutų šiuo metu patikrinti nepavyko. Pabandykite paiešką dar kartą.
+              </div>
+            )}
             {!corridorLoading && corridorMatches.length > 0 && (
               <section className="mb-6 rounded-3xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-1 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-teal-900">
@@ -990,7 +995,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       <div className="mb-2 rounded-xl border border-teal-200 bg-white/80 px-3 py-2.5 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-900">Pravažiuoja netoli jūsų maršruto</p>
+                            <p className="text-sm font-semibold text-slate-900">Gali paimti su nedideliu apvažiavimu</p>
                             <p className="mt-1 text-xs leading-relaxed text-slate-600">{match.reasons.slice(0, 3).join(' · ')}</p>
                             <p className="mt-1.5 text-xs font-medium text-teal-800">Papildomai apie {Math.round(match.detourKm)} km · {match.detourPct.toFixed(0)} % maršruto</p>
                           </div>
