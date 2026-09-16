@@ -96,6 +96,16 @@ export function RequestCard({
           </span>
           <span className="text-xs text-slate-400">{formatDateTime(request.created_at)}</span>
         </div>
+        {request.status === 'accepted' && !request.completed_at && onCancel && (
+          <button
+            onClick={() => setShowCancelConfirmation(true)}
+            aria-label="Atšaukti kelionę"
+            className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-red-700 active:scale-[0.98]"
+          >
+            <X className="h-3.5 w-3.5" />
+            Atšaukti
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex items-center gap-2 text-slate-900">
@@ -223,7 +233,6 @@ export function RequestCard({
         </button>
       )}
 
-      {request.status === 'accepted' && !request.completed_at && onCancel && <button onClick={() => setShowCancelConfirmation(true)} className="mt-3 w-full py-2 text-sm text-red-600">Atšaukti kelionę</button>}
       {request.status === 'accepted' && (
         <div className="mt-3 flex gap-2">
           {onChat && (

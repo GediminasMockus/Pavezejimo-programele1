@@ -91,12 +91,6 @@ export function TripCard({
         highlight ? 'border-blue-400 ring-2 ring-blue-200/50 bg-gradient-to-br from-blue-50/50 to-white' : 'border-slate-200 hover:border-blue-300'
       }`}
     >
-      {expiryMessage && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-700" role="status">
-          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-          <span>{expiryMessage}</span>
-        </div>
-      )}
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
           <span
@@ -138,6 +132,13 @@ export function TripCard({
           )}
         </div>
       </div>
+
+      {expiryMessage && (
+        <div className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-700" role="status">
+          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+          <span>{expiryMessage}</span>
+        </div>
+      )}
 
       <div className="mt-1.5 text-xs text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
         {formatDateTime(trip.departure_time)}
