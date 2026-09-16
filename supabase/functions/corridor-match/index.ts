@@ -257,9 +257,14 @@ Deno.serve(async request => {
     if (candidatesError) throw candidatesError;
     const candidates = (candidatesData ?? []).filter(validCoordinates) as TripRow[];
     const ids = candidates.map(item => item.id);
-    const { data: publicData } = ids.length
-      ? await service.from('public_trips').select('*').in('id', ids)
-      : { data: [] };
+    let publicData: Record<string, unknown>[] = [];
+    if (ids.length) {
+      // public_trips deliberately requires auth.uid(). The service-role JWT has
+      // no user subject, so this sanitized projection must use the caller JWT.
+      const { data, error } = await userClient.from('public_trips').select('*').in('id', ids);
+      if (error) throw error;
+      publicData = data ?? [];
+    }
     const publicById = new Map((publicData ?? []).map(item => [item.id, item as PublicTrip]));
 
     const ranked = candidates
