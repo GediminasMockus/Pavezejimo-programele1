@@ -36,6 +36,7 @@ export function ChatDrawer({
   const [authorName, setAuthorName] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [requestStatus, setRequestStatus] = useState(request?.status ?? null);
   const [error, setError] = useState<string | null>(null);
   const [myConfirmed, setMyConfirmed] = useState(false);
   const [otherConfirmed, setOtherConfirmed] = useState(false);
@@ -53,6 +54,7 @@ export function ChatDrawer({
   const canConfirm = !!request && (isPassengerSide || isDriverSide);
   const bothConfirmed = myConfirmed && otherConfirmed;
   const matchId = activeMatch?.id ?? null;
+  const canSendMessages = requestStatus === 'accepted';
 
   const resolveMatch = useCallback(async () => {
     if (match) {
@@ -113,6 +115,7 @@ export function ChatDrawer({
       .single();
 
     if (freshRequest) {
+      setRequestStatus(freshRequest.status);
       if (isPassengerSide) {
         setMyConfirmed(freshRequest.passenger_confirmed);
         setOtherConfirmed(freshRequest.driver_confirmed);
@@ -126,8 +129,9 @@ export function ChatDrawer({
   useEffect(() => {
     completionNotified.current = false;
     setMessageLimit(50);
+    setRequestStatus(request?.status ?? null);
     setMyConfirmed(false); setOtherConfirmed(false); setRatingSubmitted(false);
-  }, [request?.id]);
+  }, [request?.id, request?.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,6 +176,7 @@ export function ChatDrawer({
           },
           (payload) => {
             const updatedRequest = payload.new as RideRequest;
+            setRequestStatus(updatedRequest.status);
             if (isPassengerSide) {
               setMyConfirmed(updatedRequest.passenger_confirmed);
               setOtherConfirmed(updatedRequest.driver_confirmed);
@@ -213,8 +218,15 @@ export function ChatDrawer({
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!request || !body.trim()) return;
+    if (!canSendMessages) {
+      setError(requestStatus === 'cancelled'
+        ? 'Ši kelionė atšaukta, todėl naujų žinučių siųsti nebegalima.'
+        : 'Žinutes galėsite siųsti, kai kelionė bus patvirtinta.');
+      return;
+    }
 
     setSending(true);
+    setError(null);
     const payload: NewMessage = {
       trip_id: trip.id,
       match_id: matchId,
@@ -450,18 +462,25 @@ export function ChatDrawer({
           onSubmit={handleSend}
           className="flex-shrink-0 border-t border-slate-100 p-3 sm:p-4 space-y-2"
         >
+          {!canSendMessages && request && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm font-medium text-amber-800" role="status">
+              {requestStatus === 'cancelled'
+                ? 'Pokalbis uždarytas, nes kelionė buvo atšaukta.'
+                : 'Pokalbis bus aktyvus, kai kelionė bus patvirtinta.'}
+            </p>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Rašykite žinutę…"
+              placeholder={canSendMessages ? 'Rašykite žinutę…' : 'Žinučių siuntimas negalimas'}
               className="form-input flex-1"
-              disabled={sending}
+              disabled={sending || !canSendMessages}
             />
             <button
               type="submit"
-              disabled={sending || !request || !body.trim() || !authorName.trim()}
+              disabled={sending || !request || !canSendMessages || !body.trim() || !authorName.trim()}
               className="flex-shrink-0 w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Siųsti"
             >

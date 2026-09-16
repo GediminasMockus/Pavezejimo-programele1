@@ -17,7 +17,7 @@ import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
-  request: { id: 'request', passenger_id: 'passenger', driver_confirmed: true, passenger_confirmed: true },
+  request: { id: 'request', passenger_id: 'passenger', status: 'accepted', driver_confirmed: true, passenger_confirmed: true },
   notifications: [] as unknown[],
 }));
 vi.mock('../src/lib/supabase', () => {
@@ -33,7 +33,7 @@ vi.mock('../src/lib/supabase', () => {
  return { supabase: { rpc: mock.rpc, from: mock.from, channel: () => channel, removeChannel: vi.fn(),
    auth: { getSession: () => Promise.resolve({ data: { session: { access_token: 'test' } } }) } } };
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); mock.notifications = []; });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); mock.notifications = []; mock.request = { ...mock.request, status: 'accepted' }; });
 const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver', seats: 2, available_seats: 2,
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
@@ -137,6 +137,19 @@ describe('user workflows', () => {
    view.rerender(<ChatDrawer trip={trip} request={request} userId="passenger" onClose={() => {}} onBothConfirmed={() => callback()} />);
    await new Promise(resolve=>setTimeout(resolve,30));
    expect(callback).toHaveBeenCalledTimes(1);
+ });
+ it('explains that messages cannot be sent after a ride is cancelled', async () => {
+   const cancelledRequest={
+     ...mock.request,
+     trip_id: trip.id,
+     status: 'cancelled',
+     request_type: 'passenger_request',
+   } as RideRequest;
+   mock.request = { ...mock.request, status: 'cancelled' };
+   render(<ChatDrawer trip={trip} request={cancelledRequest} userId="passenger" onClose={() => {}} />);
+   expect(await screen.findByText('Pokalbis uždarytas, nes kelionė buvo atšaukta.')).toBeTruthy();
+   expect((screen.getByPlaceholderText('Žinučių siuntimas negalimas') as HTMLInputElement).disabled).toBe(true);
+   mock.request = { ...mock.request, status: 'accepted' };
  });
  it('allows clearing the seat count before entering another value', () => {
    const view = render(<TripForm role="driver" userId="driver" onClose={() => {}} onSubmitted={() => {}} />);
