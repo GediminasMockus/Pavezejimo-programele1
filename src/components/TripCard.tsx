@@ -92,9 +92,9 @@ export function TripCard({
       }`}
     >
       <div className="flex flex-wrap items-start gap-2">
-        <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+        <div className="min-w-0 flex-1 flex items-start gap-1.5">
           <span
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold shadow-sm ${
+            className={`inline-flex flex-shrink-0 items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold shadow-sm ${
               isDriver
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
                 : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
@@ -104,9 +104,9 @@ export function TripCard({
             {isDriver ? 'Vairuotojas' : 'Keleivis'}
           </span>
           {expiryMessage && (
-            <span className="inline-flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold leading-relaxed text-red-700" role="status">
+            <span className="flex min-w-0 flex-1 items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold leading-relaxed text-red-700" role="status">
               <Clock className="mt-0.5 h-3 w-3 flex-shrink-0" />
-              <span>{expiryMessage}</span>
+              <span className="min-w-0 break-words">{expiryMessage}</span>
             </span>
           )}
           {trip.is_recurring && (
