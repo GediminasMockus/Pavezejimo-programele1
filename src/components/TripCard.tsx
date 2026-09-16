@@ -104,9 +104,9 @@ export function TripCard({
             {isDriver ? 'Vairuotojas' : 'Keleivis'}
           </span>
           {expiryMessage && (
-            <span className="flex min-w-0 flex-1 items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold leading-relaxed text-red-700" role="status">
-              <Clock className="mt-0.5 h-3 w-3 flex-shrink-0" />
-              <span className="min-w-0 break-words">{expiryMessage}</span>
+            <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold leading-normal text-red-700 whitespace-nowrap" role="status">
+              <Clock className="h-3 w-3 flex-shrink-0" />
+              <span>{expiryMessage}</span>
             </span>
           )}
           {trip.is_recurring && (

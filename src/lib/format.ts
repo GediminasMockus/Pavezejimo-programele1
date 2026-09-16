@@ -46,14 +46,14 @@ export function formatTripExpiryCountdown(departureTime: string, currentTime: nu
   if (!Number.isFinite(departureMs) || currentTime < departureMs) return null;
 
   const remainingMs = departureMs + NON_RECURRING_TRIP_RETENTION_MS - currentTime;
-  if (remainingMs <= 0) return 'Skelbimo galiojimas pasibaigė – bus netrukus pašalintas.';
+  if (remainingMs <= 0) return 'Liko 0 min.';
 
   const totalMinutes = Math.ceil(remainingMs / 60_000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) return `Iki automatinio ištrynimo liko ${minutes} min.`;
-  if (minutes === 0) return `Iki automatinio ištrynimo liko ${hours} val.`;
-  return `Iki automatinio ištrynimo liko ${hours} val. ${minutes} min.`;
+  if (hours === 0) return `Liko ${minutes} min.`;
+  if (minutes === 0) return `Liko ${hours} val.`;
+  return `Liko ${hours} val. ${minutes} min.`;
 }
 
 export function formatDistanceToNow(date: Date): string {

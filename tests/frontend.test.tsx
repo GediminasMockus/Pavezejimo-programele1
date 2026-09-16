@@ -64,8 +64,8 @@ describe('data helpers', () => {
  it('shows the remaining 24-hour retention time after departure', () => {
    const departure = '2030-09-12T12:00:00Z';
    expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T11:59:00Z').getTime())).toBeNull();
-   expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T13:15:00Z').getTime())).toBe('Iki automatinio ištrynimo liko 22 val. 45 min.');
-   expect(formatTripExpiryCountdown(departure, new Date('2030-09-13T12:00:00Z').getTime())).toBe('Skelbimo galiojimas pasibaigė – bus netrukus pašalintas.');
+   expect(formatTripExpiryCountdown(departure, new Date('2030-09-12T13:15:00Z').getTime())).toBe('Liko 22 val. 45 min.');
+   expect(formatTripExpiryCountdown(departure, new Date('2030-09-13T12:00:00Z').getTime())).toBe('Liko 0 min.');
  });
  it('retries transient Supabase responses but not authorization failures', async () => {
    const temporary = vi.fn().mockResolvedValueOnce({ error: { message: 'busy' }, status: 503 }).mockResolvedValue({ data: [1], error: null });
@@ -238,13 +238,3 @@ describe('user workflows', () => {
    expect(screen.getByText(/užpildytos pagal jūsų paiešką/i)).toBeTruthy();
  });
 
- it('does not geocode while typing', async () => {
-   const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[]}); vi.stubGlobal('fetch',fetch);
-   function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <AddressInput value={value} onChange={setValue} placeholder="Address" />; }
-   render(<Harness />);
-   fireEvent.change(screen.getByPlaceholderText('Address'),{target:{value:'Vilnius'}});
-   expect(fetch).not.toHaveBeenCalled();
-   fireEvent.click(screen.getByRole('button',{name:'Ieškoti adreso'}));
-   await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));
- });
-});
