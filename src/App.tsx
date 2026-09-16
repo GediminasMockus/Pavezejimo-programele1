@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Plus,
   Loader2,
-  Map as MapIcon,
   List,
   Grid,
   Bell,
@@ -31,7 +30,6 @@ import { TripForm } from '@/components/TripForm';
 import { TripCard } from '@/components/TripCard';
 import { ChatDrawer } from '@/components/ChatDrawer';
 import { DeleteReasonModal } from '@/components/DeleteReasonModal';
-import { MapView, type MapMarker } from '@/components/MapView';
 import { useGeolocation } from '@/lib/useGeolocation';
 import { RequestModal } from '@/components/RequestModal';
 import { RequestCard } from '@/components/RequestCard';
@@ -226,9 +224,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const [previewTrip, setPreviewTrip] = useState<Trip | null>(null);
   const [previewRequest, setPreviewRequest] = useState<RideRequest | null>(null);
   const [profileTarget, setProfileTarget] = useState<{ userId: string; name: string; trip: Trip } | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map' | 'grid'>(() => {
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
     const saved = localStorage.getItem('viewMode');
-    return (saved === 'list' || saved === 'map' || saved === 'grid') ? saved : 'list';
+    return saved === 'grid' ? 'grid' : 'list';
   });
   const loadVersion = useRef(0);
   const loadedOnce = useRef(false);
@@ -254,7 +252,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   useEffect(() => { setPublicLimit(100); }, [filters]);
   const [, setActionLoading] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const { position: userPos, status: gpsStatus } = useGeolocation();
+  const { position: userPos } = useGeolocation();
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -478,26 +476,6 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
   const rejectedDriverRequests = driverRequests.filter((r) => r.status === 'rejected');
 
-  const mapTrips = useMemo(() => {
-    const unique = new Map<string, Trip>();
-    for (const trip of filteredOtherTrips) unique.set(trip.id, trip);
-    for (const match of corridorMatches) unique.set(match.trip.id, match.trip);
-    return [...unique.values()];
-  }, [filteredOtherTrips, corridorMatches]);
-
-  const mapMarkers = useMemo<MapMarker[]>(() => {
-    const result: MapMarker[] = [];
-    for (const t of mapTrips) {
-      if (t.from_lat !== null && t.from_lng !== null) {
-        result.push({ trip: t, lat: t.from_lat, lng: t.from_lng, label: `Iš: ${t.from_location}`, isFrom: true });
-      }
-      if (t.to_lat !== null && t.to_lng !== null) {
-        result.push({ trip: t, lat: t.to_lat, lng: t.to_lng, label: `Į: ${t.to_location}`, isFrom: false });
-      }
-    }
-    return result;
-  }, [mapTrips]);
-
   async function updateRequestStatus(
     requestId: string,
     status: RequestStatus,
@@ -610,20 +588,11 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-4">
-        <div className="inline-flex rounded-full bg-slate-100 p-1 gap-1">
+      <div className="hidden sm:block max-w-2xl mx-auto px-4 sm:px-6 mt-4">
+        <div className="inline-flex rounded-full bg-slate-100 p-1 gap-1" aria-label="Skelbimų išdėstymas">
           <button
             onClick={() => setViewMode('list')}
-            className={`sm:hidden inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'list' || viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            Skelbimai
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
               viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -632,21 +601,12 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </button>
           <button
             onClick={() => setViewMode('grid')}
-            className={`hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
               viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             <Grid className="w-4 h-4" />
             Tinklelis
-          </button>
-          <button
-            onClick={() => setViewMode('map')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'map' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <MapIcon className="w-4 h-4" />
-            Žemėlapis
           </button>
         </div>
       </div>
@@ -812,28 +772,6 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mb-3" />
             <p className="text-sm">Įkeliama…</p>
-          </div>
-        ) : viewMode === 'map' ? (
-          <div className="flex flex-col gap-4">
-            <MapView
-              markers={mapMarkers}
-              userPos={userPos}
-              onTripClick={(t) => { setPreviewTrip(t); setPreviewRequest(null); }}
-            />
-            {gpsStatus === 'denied' && (
-              <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-amber-700 text-sm flex items-start gap-2">
-                <MapIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>
-                  Nepavyko nustatyti jūsų vietos. Leiskite prieigą prie vietos naršyklės nustatymuose, kad matytumėte savo poziciją žemėlapyje.
-                </span>
-              </div>
-            )}
-            {gpsStatus === 'loading' && (
-              <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Nustatoma jūsų vieta…
-              </div>
-            )}
           </div>
         ) : (
           <>
