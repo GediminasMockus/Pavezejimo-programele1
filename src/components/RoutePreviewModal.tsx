@@ -6,6 +6,7 @@ import type { Trip, RideRequest } from '@/lib/supabase';
 import { formatDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 import { fetchDrivingRoute, type DrivingRoute, type RoutePoint } from '@/lib/routing';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export function RoutePreviewModal({
   trip,
@@ -16,6 +17,8 @@ export function RoutePreviewModal({
   request?: RideRequest | null;
   onClose: () => void;
 }) {
+  useBodyScrollLock();
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [loading, setLoading] = useState(true);
@@ -179,7 +182,7 @@ export function RoutePreviewModal({
   const routingFailed = !loading && hasDriverCoords && !routeInfo.driverRoute;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center overscroll-none bg-slate-900/50 backdrop-blur-sm sm:p-4">
       <div className="w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-white sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         <div className="shrink-0 bg-white/95 backdrop-blur px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -197,7 +200,7 @@ export function RoutePreviewModal({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5">
           <div className="relative w-full h-[48dvh] min-h-[280px] max-h-[560px] sm:h-[52dvh] sm:min-h-[360px] sm:max-h-[620px] rounded-2xl overflow-hidden border border-slate-200">
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-[500]">
