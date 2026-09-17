@@ -15,6 +15,7 @@ import {
   Sparkles,
   Route,
   Settings as SettingsIcon,
+  Users,
 } from 'lucide-react';
 import {
   supabase,
@@ -81,6 +82,10 @@ function browserStateWith(navigation: AppHistoryState) {
   const current = window.history.state;
   const base = current && typeof current === 'object' ? current : {};
   return { ...base, [APP_HISTORY_KEY]: navigation };
+}
+
+function isCurrentRequest(request: RideRequest) {
+  return request.status === 'pending' || request.status === 'accepted';
 }
 
 export default function App() {
@@ -405,7 +410,6 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   }, [trips, allRequests, loadProfiles]);
 
   const isDriver = role === 'driver';
-  const ownLabel = isDriver ? 'Siūlau pavežėti' : 'Ieškau kelionės';
   const othersLabel = isDriver ? 'Keleivių skelbimai' : 'Vairuotojų pasiūlymai';
   const othersRole: TripRole = isDriver ? 'passenger' : 'driver';
 
@@ -487,9 +491,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const mySentOffers = allRequests.filter((r) => r.driver_id === clientId && r.request_type === 'driver_offer' && r.status !== 'cancelled');
   const mySentRequestTripIds = new Set(mySentRequests.map((r) => r.trip_id));
   const loadedTripIds = new Set(trips.map((trip) => trip.id));
-  const displayableMySentRequests = mySentRequests.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
-  const displayableMyReceivedOffers = myReceivedOffers.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
-  const displayableMySentOffers = mySentOffers.filter((r) => loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
+  const displayableMySentRequests = mySentRequests.filter((r) => isCurrentRequest(r) && loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
+  const displayableMyReceivedOffers = myReceivedOffers.filter((r) => isCurrentRequest(r) && loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
+  const displayableMySentOffers = mySentOffers.filter((r) => isCurrentRequest(r) && loadedTripIds.has(r.driver_trip_id ?? r.trip_id));
 
   const driverRequests = useMemo(() => {
     const ownTripIds = new Set(ownTrips.filter((t) => t.role === 'driver').map((t) => t.id));
@@ -498,9 +502,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
 
   const pendingDriverRequests = driverRequests.filter((r) => r.status === 'pending');
-  const pendingPassengerOffers = displayableMyReceivedOffers.filter((r) => r.status === 'pending');
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
-  const rejectedDriverRequests = driverRequests.filter((r) => r.status === 'rejected');
 
   async function updateRequestStatus(
     requestId: string,
@@ -575,7 +577,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   return (
     <div className="min-h-screen pb-12">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
           <button
             onClick={onBack}
             className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
@@ -583,18 +585,26 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">
-              {isDriver ? 'Aš Vairuotojas' : 'Aš Keleivis'}
-            </h1>
-            <p className="text-sm text-slate-500 truncate">{ownLabel} · {isDriver ? 'Siūlykite savo kelionę keleiviui' : 'Rinkitės vairuotoją arba laukite pasiūlymų'}</p>
+          <div className="grid min-w-0 flex-1 grid-cols-2 rounded-xl bg-slate-100 p-1" role="group" aria-label="Programėlės režimas">
+            <button
+              type="button"
+              aria-pressed={!isDriver}
+              onClick={() => isDriver && onOpenRole('passenger')}
+              className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${!isDriver ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Users className="mr-1 inline h-3.5 w-3.5" />
+              Keleivis
+            </button>
+            <button
+              type="button"
+              aria-pressed={isDriver}
+              onClick={() => !isDriver && onOpenRole('driver')}
+              className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${isDriver ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Car className="mr-1 inline h-3.5 w-3.5" />
+              Vairuotojas
+            </button>
           </div>
-          {((isDriver ? pendingDriverRequests.length : pendingPassengerOffers.length) > 0) && (
-            <div className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
-              <Bell className="w-3.5 h-3.5" />
-              {isDriver ? pendingDriverRequests.length : pendingPassengerOffers.length}
-            </div>
-          )}
           <button
             onClick={() => setShowNotifications(true)}
             className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors relative"
@@ -609,15 +619,15 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 text-white text-sm font-semibold shadow-md shadow-blue-600/25 hover:bg-blue-700 active:scale-95 transition-all"
+            className="flex-shrink-0 inline-flex h-10 w-10 items-center justify-center gap-2 rounded-full bg-blue-600 text-white text-sm font-semibold shadow-md shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
+            aria-label="Pridėti skelbimą"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Pridėti skelbimą</span>
-            <span className="sm:hidden">Pridėti</span>
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+            className="hidden flex-shrink-0 w-10 h-10 rounded-full sm:flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
             aria-label="Parametrai"
           >
             <SettingsIcon className="w-5 h-5" />
@@ -820,11 +830,11 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         ) : (
           <>
             {/* Driver: incoming requests */}
-            {isDriver && driverRequests.length > 0 && (
+            {isDriver && (pendingDriverRequests.length > 0 || acceptedDriverRequests.length > 0) && (
               <section className="mb-6 rounded-3xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-amber-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Inbox className="h-4 w-4" /></span>
-                  Gautos užklausos ({driverRequests.length})
+                  {pendingDriverRequests.length > 0 ? 'Reikia jūsų veiksmo' : 'Patvirtintos kelionės'} ({pendingDriverRequests.length + acceptedDriverRequests.length})
                 </h2>
 
                 {pendingDriverRequests.length > 0 && (
@@ -875,16 +885,6 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                   </div>
                 )}
 
-                {rejectedDriverRequests.length > 0 && (
-                  <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                    <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-red-500 uppercase tracking-wide' : 'text-xs font-semibold text-red-500 uppercase tracking-wide'}>Atmestos</p>
-                    {rejectedDriverRequests.map((r) => {
-                      const t = findTripById(r.driver_trip_id ?? r.trip_id);
-                      if (!t) return null;
-                      return <RequestCard key={r.id} request={r} trip={t} isDriverView />;
-                    })}
-                  </div>
-                )}
               </section>
             )}
 
@@ -893,7 +893,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Car className="h-4 w-4" /></span>
-                  Mano pasiūlymai keleiviams ({displayableMySentOffers.length})
+                  Mano aktyvūs pasiūlymai ({displayableMySentOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {displayableMySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id)!; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
@@ -906,7 +906,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               <section className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-emerald-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Car className="h-4 w-4" /></span>
-                  Vairuotojų pasiūlymai ({displayableMyReceivedOffers.length})
+                  Nauji pasiūlymai ir kelionės ({displayableMyReceivedOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {displayableMyReceivedOffers.map((r) => {
@@ -928,7 +928,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
                 <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Inbox className="h-4 w-4" /></span>
-                  Mano užklausos ({displayableMySentRequests.length})
+                  Mano aktyvios užklausos ({displayableMySentRequests.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {displayableMySentRequests.map((r) => {

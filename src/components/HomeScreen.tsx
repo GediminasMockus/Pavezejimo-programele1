@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/useLanguage';
 import { AdminLogs } from './AdminLogs';
 import { SettingsModal } from './SettingsModal';
 import { NotificationDrawer } from './NotificationDrawer';
+import { AddressInput, type AddressValue } from './AddressInput';
 
 export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenChat }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenChat?: (requestId: string) => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
@@ -15,8 +16,8 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
   const [isAdmin, setIsAdmin] = useState(false);
   const unreadCount = useUnreadCount(userId);
   const [mode, setMode] = useState<TripRole>('passenger');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState<AddressValue>({ display_name: '', lat: null, lng: null });
+  const [to, setTo] = useState<AddressValue>({ display_name: '', lat: null, lng: null });
   const [date, setDate] = useState('');
   const [searchError, setSearchError] = useState('');
   const { isEnglish } = useLanguage();
@@ -54,8 +55,8 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedFrom = from.trim();
-    const normalizedTo = to.trim();
+    const normalizedFrom = from.display_name.trim();
+    const normalizedTo = to.display_name.trim();
 
     if (!normalizedFrom || !normalizedTo) {
       setSearchError(text.routeRequired);
@@ -97,16 +98,16 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
         />
       )}
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 pb-10">
-        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-7 lg:gap-12 items-center min-h-[calc(100vh-7rem)]">
-          <section className="text-center lg:text-left">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 lg:pt-24 pb-10">
+        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-7 lg:gap-12 items-center lg:min-h-[calc(100vh-7rem)]">
+          <section className="hidden text-center lg:block lg:text-left">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/85 border border-slate-200 px-3 py-1.5 shadow-sm mb-4"><span className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{text.badge}</span></div>
             <div className="flex justify-center lg:justify-start mb-4"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 flex items-center justify-center"><Route className="w-6 h-6 sm:w-7 sm:h-7 text-white" strokeWidth={2.2} /></div></div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-[1.06]">{text.title1}<span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{text.title2}</span></h1>
             <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">{text.intro}</p>
           </section>
 
-          <section className="w-full max-w-xl lg:ml-auto" aria-label={text.start}>
+          <section className="w-full max-w-xl mx-auto lg:mr-0" aria-label={text.start}>
             <form onSubmit={submit} className="bg-white/95 backdrop-blur rounded-[24px] sm:rounded-[28px] border border-slate-200 shadow-xl shadow-slate-900/10 overflow-hidden">
               <div className="p-4 sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{text.need}</p>
@@ -118,8 +119,8 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
                 </div>
 
                 <div className="space-y-3 mt-5">
-                  <label className="block" htmlFor="ride-from-location"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.from}</span><input id="ride-from-location" name="ride-from-location" autoComplete="section-origin address-level2" value={from} onChange={e => { setFrom(e.target.value); if (searchError) setSearchError(''); }} aria-invalid={Boolean(searchError && !from.trim())} placeholder={text.fromPlaceholder} className={`form-input min-h-12 text-base ${searchError && !from.trim() ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''}`} /></label>
-                  <label className="block" htmlFor="ride-to-location"><span className="block text-sm font-semibold text-slate-700 mb-1.5">{text.to}</span><input id="ride-to-location" name="ride-to-location" autoComplete="section-destination address-level2" value={to} onChange={e => { setTo(e.target.value); if (searchError) setSearchError(''); }} aria-invalid={Boolean(searchError && !to.trim())} placeholder={text.toPlaceholder} className={`form-input min-h-12 text-base ${searchError && !to.trim() ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : ''}`} /></label>
+                  <div><label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="ride-from-location">{text.from}</label><AddressInput id="ride-from-location" value={from} onChange={value => { setFrom(value); if (searchError) setSearchError(''); }} placeholder={text.fromPlaceholder} /></div>
+                  <div><label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="ride-to-location">{text.to}</label><AddressInput id="ride-to-location" value={to} onChange={value => { setTo(value); if (searchError) setSearchError(''); }} placeholder={text.toPlaceholder} /></div>
                   <label className="block"><span className="flex items-center justify-between text-sm font-semibold text-slate-700 mb-1.5"><span>{text.when}</span><span className="text-xs font-normal text-slate-500">{text.optional}</span></span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="form-input min-h-12 text-base" /></label>
                 </div>
 

@@ -13,6 +13,7 @@ import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import { NotificationDrawer } from '../src/components/NotificationDrawer';
 import { RequestCard } from '../src/components/RequestCard';
+import { FilterBar } from '../src/components/FilterBar';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
@@ -238,3 +239,23 @@ describe('user workflows', () => {
    expect(screen.getByText(/užpildytos pagal jūsų paiešką/i)).toBeTruthy();
  });
 
+ it('does not geocode while typing', async () => {
+   const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[]}); vi.stubGlobal('fetch',fetch);
+   function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <AddressInput value={value} onChange={setValue} placeholder="Address" />; }
+   render(<Harness />);
+   fireEvent.change(screen.getByPlaceholderText('Address'),{target:{value:'Vilnius'}});
+   expect(fetch).not.toHaveBeenCalled();
+   fireEvent.click(screen.getByRole('button',{name:'Ieškoti adreso'}));
+   await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));
+ });
+
+ it('applies filters only after confirming them', () => {
+   const onChange = vi.fn();
+   render(<FilterBar filters={emptyFilters} onChange={onChange} resultCount={3} />);
+   fireEvent.click(screen.getByRole('button', { name: /filtruoti/i }));
+   fireEvent.change(screen.getByPlaceholderText('pvz. Vilnius'), { target: { value: 'Šiauliai' } });
+   expect(onChange).not.toHaveBeenCalled();
+   fireEvent.click(screen.getByRole('button', { name: 'Rodyti rezultatus' }));
+   expect(onChange).toHaveBeenCalledWith({ ...emptyFilters, fromLocation: 'Šiauliai' });
+ });
+});

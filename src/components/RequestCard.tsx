@@ -259,9 +259,9 @@ export function RequestCard({
       {onPreviewRoute && (
         <button
           onClick={onPreviewRoute}
-          className="mt-2 w-full inline-flex items-center justify-center gap-2 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 active:scale-[0.98] transition-all"
+          className="mt-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
         >
-          <MapIcon className="w-4 h-4" />
+          <MapIcon className="w-3.5 h-3.5" />
           Peržiūrėti maršrutą
         </button>
       )}

@@ -213,7 +213,7 @@ export function TripCard({
 
       {trip.notes && <p className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5 break-words">{trip.notes}</p>}
 
-      {onPreviewRoute && (
+      {onPreviewRoute && !onSelect && (
         <button
           onClick={onPreviewRoute}
           className="mt-2 w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 text-xs font-semibold hover:from-slate-200 hover:to-slate-300 active:scale-[0.98] transition-all shadow-sm hover:shadow-md"
@@ -236,14 +236,27 @@ export function TripCard({
       )}
 
       {onSelect && (
-        <button
-          onClick={onSelect}
-          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-semibold hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all shadow-lg shadow-indigo-500/30 animate-gradient-x"
-          aria-label={`${selectLabel ?? 'Pasirinkti šį skelbimą'}: ${trip.from_location} → ${trip.to_location}`}
-        >
-          <Hand className="w-3.5 h-3.5" />
-          {selectLabel ?? 'Pasirinkti šį skelbimą'}
-        </button>
+        <div className="mt-2 flex gap-2">
+          {onPreviewRoute && (
+            <button
+              type="button"
+              onClick={onPreviewRoute}
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+              aria-label={`Peržiūrėti maršrutą žemėlapyje: ${trip.from_location} → ${trip.to_location}`}
+            >
+              <MapIcon className="h-3.5 w-3.5" />
+              Maršrutas
+            </button>
+          )}
+          <button
+            onClick={onSelect}
+            className="inline-flex min-h-10 flex-[1.6] items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-3 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 active:scale-[0.98] animate-gradient-x"
+            aria-label={`${selectLabel ?? 'Pasirinkti šį skelbimą'}: ${trip.from_location} → ${trip.to_location}`}
+          >
+            <Hand className="w-3.5 h-3.5" />
+            {selectLabel ?? 'Pasirinkti'}
+          </button>
+        </div>
       )}
 
       {pendingCount !== undefined && pendingCount > 0 && (
