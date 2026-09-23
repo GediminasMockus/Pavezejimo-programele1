@@ -141,4 +141,25 @@ assert.equal((await query('SELECT count(*)::int AS count FROM public.notificatio
 assert.equal((await query('SELECT count(*)::int AS count FROM public.notifications WHERE id=$1',[otherOldNotification.id])).rows[0].count,1,"another user's notification is protected");
 console.log('Booking, capacity, authorization, privacy, validation, chat, history, completion, rating and geocoder tests passed.');
 
+// Date filtering must include local midnight and exclude the following midnight.
+const dateTrip = await asUser(ids[0], () => rpc('create_my_trip', [payload('driver')]));
+for (const [day, start, end] of [
+ ['2035-09-12', '2035-09-11T21:00:00Z', '2035-09-12T21:00:00Z'],
+ ['2035-01-12', '2035-01-11T22:00:00Z', '2035-01-12T22:00:00Z'],
+ ['2035-03-25', '2035-03-24T22:00:00Z', '2035-03-25T21:00:00Z'],
+ ['2035-10-28', '2035-10-27T21:00:00Z', '2035-10-28T22:00:00Z'],
+]) {
+ for (const [instant, expected] of [[Date.parse(start)-1,false],[Date.parse(start),true],[Date.parse(end)-1,true],[Date.parse(end),false]]) {
+  await query('UPDATE public.trips SET departure_time=$1 WHERE id=$2',[new Date(instant).toISOString(),dateTrip.id]);
+  for (const filters of [{date:day,dateFrom:start,dateTo:end},{date:day}]) {
+   const found=await asUser(ids[1],()=>query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[JSON.stringify(filters),dateTrip.id]));
+   assert.equal(found.rows.length,expected?1:0,'local date boundary '+day+' '+new Date(instant).toISOString());
+  }
+ }
+}
+// Explicit browser boundaries also work for users outside Lithuania.
+await query('UPDATE public.trips SET departure_time=$1 WHERE id=$2',['2035-09-12T06:00:00Z',dateTrip.id]);
+const outside=await asUser(ids[1],()=>query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[JSON.stringify({date:'2035-09-12',dateFrom:'2035-09-12T07:00:00Z',dateTo:'2035-09-13T07:00:00Z'}),dateTrip.id]));
+assert.equal(outside.rows.length,0);
+console.log('Local date boundaries, summer/winter time and DST tests passed.');
 await db.close();

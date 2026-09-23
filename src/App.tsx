@@ -36,7 +36,7 @@ import { RequestModal } from '@/components/RequestModal';
 import { RequestCard } from '@/components/RequestCard';
 import { OfferModal } from '@/components/OfferModal';
 import { FilterBar } from '@/components/FilterBar';
-import { applyFilters, emptyFilters, findBestMatches, type FilterState } from '@/lib/tripFilters';
+import { applyFilters, isDiscoverableTrip, emptyFilters, findBestMatches, type FilterState } from '@/lib/tripFilters';
 import { fetchAllRows } from '@/lib/pagination';
 import { navigationUrl } from '@/lib/navigation';
 import { RoutePreviewModal } from '@/components/RoutePreviewModal';
@@ -414,12 +414,12 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const othersRole: TripRole = isDriver ? 'passenger' : 'driver';
 
   const visibleTrips = useMemo(
-    () => trips.filter((t) => (t.status === 'active' && (t.created_by === clientId || new Date(t.departure_time).getTime() > now - 24 * 60 * 60 * 1000)) || t.created_by === clientId),
+    () => trips.filter((t) => isDiscoverableTrip(t, now) || t.created_by === clientId),
     [trips, clientId, now],
   );
 
   const ownTrips = useMemo(() => visibleTrips.filter((t) => t.role === role && t.created_by === clientId).map(t => ({ ...t, available_seats: t.seats - allRequests.filter(r => (r.driver_trip_id ?? r.trip_id) === t.id && r.status === "accepted").reduce((sum, r) => sum + r.seats_needed, 0) })), [visibleTrips, role, clientId, allRequests]);
-  const otherTrips = useMemo(() => visibleTrips.filter((t) => publicTripIds.has(t.id) && t.role === othersRole && t.created_by !== clientId && t.status === 'active' && !t.deleted_at && new Date(t.departure_time).getTime() > now - 24 * 60 * 60 * 1000), [visibleTrips, publicTripIds, othersRole, clientId, now]);
+  const otherTrips = useMemo(() => visibleTrips.filter((t) => publicTripIds.has(t.id) && t.role === othersRole && t.created_by !== clientId && isDiscoverableTrip(t, now)), [visibleTrips, publicTripIds, othersRole, clientId, now]);
   const filteredOtherTrips = useMemo(
     () => applyFilters(otherTrips, { ...filters, fromLocation: '', toLocation: '' }, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
     [otherTrips, filters, userPos],

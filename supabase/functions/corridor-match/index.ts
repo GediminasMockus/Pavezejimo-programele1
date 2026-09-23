@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { evaluateCorridor, type CorridorEvaluation } from '../_shared/corridor.ts';
+import { rankCandidates } from '../_shared/candidates.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -289,11 +290,18 @@ Deno.serve(async request => {
     }
 
     const oppositeRole: Role = subject.role === 'driver' ? 'passenger' : 'driver';
-    const { data: candidatesData, error: candidatesError } = await service.from('trips')
-      .select('*').eq('role', oppositeRole).eq('status', 'active').is('deleted_at', null)
-      .neq('created_by', user.id).gt('departure_time', new Date().toISOString()).limit(100);
-    if (candidatesError) throw candidatesError;
-    const candidates = (candidatesData ?? []).filter(validCoordinates) as TripRow[];
+    const cutoff = new Date().toISOString();
+    const candidates = await rankCandidates<TripRow>(
+      (from, to) => service.from('trips')
+        .select('*').eq('role', oppositeRole).eq('status', 'active').is('deleted_at', null)
+        .neq('created_by', user.id).gt('departure_time', cutoff).order('id').range(from, to),
+      candidate => validCoordinates(candidate) && (!requestedDate || localDate(candidate.departure_time) === requestedDate),
+      candidate => approximatePairDistance(
+        subject.role === 'driver' ? subject : candidate,
+        subject.role === 'passenger' ? subject : candidate,
+      ),
+      MAX_CANDIDATES,
+    );
     const ids = candidates.map(item => item.id);
     const acceptedSeatsByTrip = new Map<string, number>();
     if (ids.length) {
@@ -319,20 +327,9 @@ Deno.serve(async request => {
       return [candidate.id, toPublicTrip(candidate, availableSeats)];
     }));
 
-    const ranked = candidates
-      .filter(candidate => !requestedDate || localDate(candidate.departure_time) === requestedDate)
-      .map(candidate => {
-        const driver = subject.role === 'driver' ? subject : candidate;
-        const passenger = subject.role === 'passenger' ? subject : candidate;
-        return { candidate, distance: approximatePairDistance(driver, passenger) };
-      })
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, MAX_CANDIDATES)
-      .map(item => item.candidate);
-
     const routeCache = new Map<string, Promise<RoadRoute>>();
     let evaluationFailures = 0;
-    const evaluated = await mapWithConcurrency(ranked, 3, async candidate => {
+    const evaluated = await mapWithConcurrency(candidates, 3, async candidate => {
       const driver = subject.role === 'driver' ? subject : candidate;
       const passenger = subject.role === 'passenger' ? subject : candidate;
       const driverPublic = publicById.get(driver.id);
@@ -345,7 +342,7 @@ Deno.serve(async request => {
         return null;
       }
     });
-    if (ranked.length > 0 && evaluationFailures === ranked.length) {
+    if (candidates.length > 0 && evaluationFailures === candidates.length) {
       return reply({ error: 'routing temporarily unavailable' }, 502);
     }
     const matches = evaluated.filter((item): item is MatchResult => Boolean(item))

@@ -19,6 +19,11 @@ export const emptyFilters: FilterState = {
   radiusKm: 0,
 };
 
+export function isDiscoverableTrip(trip: Trip, now: number): boolean {
+  return trip.status === 'active' && !trip.deleted_at
+    && (trip.is_recurring || new Date(trip.departure_time).getTime() > now - 24 * 60 * 60 * 1000);
+}
+
 export function applyFilters(trips: Trip[], filters: FilterState, userLat?: number | null, userLng?: number | null): Trip[] {
   return trips.filter(t => {
     if (filters.fromLocation && !locationMatches(t.from_location, filters.fromLocation)) return false;

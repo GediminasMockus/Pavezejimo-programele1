@@ -1,3 +1,4 @@
+import { rankCandidates } from '../supabase/functions/_shared/candidates';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
@@ -5,7 +6,7 @@ import { withRetry } from '../src/lib/retry';
 import { fetchAllRows } from '../src/lib/pagination';
 import { mapPopup } from '../src/lib/mapPopup';
 import { navigationUrl } from '../src/lib/navigation';
-import { applyFilters, emptyFilters, findBestMatches } from '../src/lib/tripFilters';
+import { applyFilters, isDiscoverableTrip, emptyFilters, findBestMatches } from '../src/lib/tripFilters';
 import { HomeScreen } from '../src/components/HomeScreen';
 import { ChatDrawer } from '../src/components/ChatDrawer';
 import { RequestModal } from '../src/components/RequestModal';
@@ -42,6 +43,24 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('keeps old recurring listings visible but hides expired, deleted and completed listings', () => {
+   const now = Date.parse('2030-09-15T12:00:00Z');
+   expect(isDiscoverableTrip({ ...trip, is_recurring: true }, now)).toBe(true);
+   expect(isDiscoverableTrip({ ...trip, is_recurring: false }, now)).toBe(false);
+   expect(isDiscoverableTrip({ ...trip, is_recurring: true, deleted_at: '2030-09-14T12:00:00Z' }, now)).toBe(false);
+   expect(isDiscoverableTrip({ ...trip, is_recurring: true, status: 'completed' }, now)).toBe(false);
+   expect(isDiscoverableTrip({ ...trip, departure_time: '2030-09-15T11:00:00Z' }, now)).toBe(true);
+ });
+ it('ranks matching trips beyond the first 100 rows and propagates later page failures', async () => {
+   const rows = Array.from({ length: 251 }, (_, i) => ({ id: String(i).padStart(3, '0'), day: i < 100 ? 'other' : 'wanted', distance: 251 - i }));
+   const page = vi.fn((from: number, to: number) => Promise.resolve({ data: rows.slice(from, to + 1), error: null }));
+   const result = await rankCandidates(page, row => row.day === 'wanted', row => row.distance, 12);
+   expect(result.map(row => row.id)).toEqual(rows.slice(-12).reverse().map(row => row.id));
+   expect(page).toHaveBeenCalledTimes(3);
+   await expect(rankCandidates((from, to) => Promise.resolve(from === 0
+     ? { data: rows.slice(from, to + 1), error: null }
+     : { data: null, error: new Error('page failed') }), () => true, () => 0, 12)).rejects.toThrow('page failed');
+ });
  it('calculates an ordered road route through every confirmed waypoint', async () => {
    const fetchMock = vi.fn().mockResolvedValue({
      ok: true,
