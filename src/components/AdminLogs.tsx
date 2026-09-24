@@ -5,6 +5,7 @@ import { supabase, type Trip, type RideRequest, type UserProfile, type Rating } 
 import { formatDateTime } from '@/lib/format';
 
 type AdminTab = 'completed' | 'users' | 'trips' | 'requests' | 'stats' | 'feedback';
+type FeedbackFilter = 'all' | FeedbackEntry['status'];
 type FeedbackEntry = {
   id: string; user_id: string; category: 'problem' | 'suggestion' | 'rating';
   message: string; rating: number | null; screen: string; role: string | null;
@@ -24,7 +25,8 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [tab, setTab] = useState<AdminTab>('completed');
+  const [tab, setTab] = useState<AdminTab>('feedback');
+  const [feedbackFilter, setFeedbackFilter] = useState<FeedbackFilter>('all');
 
   useEffect(() => {
     async function load() {
@@ -136,101 +138,92 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   }
 
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
+  const newFeedbackCount = feedback.filter(entry => entry.status === 'new').length;
+  const visibleFeedback = feedbackFilter === 'all' ? feedback : feedback.filter(entry => entry.status === feedbackFilter);
+  const tabs: { id: AdminTab; label: string; count?: number }[] = [
+    { id: 'feedback', label: 'Atsiliepimai', count: newFeedbackCount },
+    { id: 'stats', label: 'Statistika' },
+    { id: 'users', label: 'Vartotojai', count: profiles.length },
+    { id: 'trips', label: 'Skelbimai', count: allTrips.length },
+    { id: 'requests', label: 'Užklausos', count: allRequests.length },
+    { id: 'completed', label: 'Užbaigtos', count: completedTrips.length },
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
-      {loadError && <p role="alert" className="p-3 text-danger-700">{loadError}</p>}
-      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="AdminLogs-title">
-        <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-neutral-700" />
-            <h2 id="AdminLogs-title" className="text-lg font-bold text-neutral-900">Administravimas</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/60 backdrop-blur-sm sm:p-4">
+      <div className="modal-panel admin-panel bg-surface shadow-overlay" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="AdminLogs-title">
+        <div className="flex flex-none items-center justify-between gap-3 border-b border-neutral-200 bg-surface px-4 pb-4 pt-5 sm:px-7 sm:py-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-primary-100 text-primary-700"><Shield className="h-5 w-5" /></span>
+            <div className="min-w-0">
+              <h2 id="AdminLogs-title" className="text-lg font-bold text-neutral-900 sm:text-xl">Administravimas</h2>
+              <p className="hidden text-xs text-neutral-500 sm:block">Atsiliepimai ir programėlės duomenys vienoje vietoje</p>
+            </div>
           </div>
           <button
             data-dialog-close onClick={onClose}
-            className="ui-button px-4 py-2 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold hover:bg-neutral-200"
+            className="ui-button flex-none rounded-xl bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-200"
           >
             Uždaryti
           </button>
         </div>
 
-        <div className="px-5 sm:px-6 pt-4">
-          <div className="inline-flex rounded-full bg-neutral-100 p-1 gap-1 flex-wrap">
-            <button
-              onClick={() => setTab('stats')}
-              className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                tab === 'stats' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              Statistika
-            </button>
-            <button
-              onClick={() => setTab('completed')}
-              className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                tab === 'completed' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              Užbaigtos
-            </button>
-            <button
-              onClick={() => setTab('users')}
-              className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                tab === 'users' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              Vartotojai ({profiles.length})
-            </button>
-            <button
-              onClick={() => setTab('trips')}
-              className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                tab === 'trips' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              Skelbimai ({allTrips.length})
-            </button>
-            <button
-              onClick={() => setTab('requests')}
-              className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                tab === 'requests' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
-              }`}
-            >
-              Užklausos ({allRequests.length})
-            </button>
-            <button onClick={() => setTab('feedback')} className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${tab === 'feedback' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>
-              Atsiliepimai ({feedback.filter(entry => entry.status === 'new').length})
-            </button>
-          </div>
-        </div>
+        <nav aria-label="Administravimo skyriai" className="admin-tabs flex flex-none gap-2 overflow-x-auto border-b border-neutral-200 bg-neutral-50 px-4 py-3 sm:px-7">
+          {tabs.map(item => <button
+            key={item.id}
+            type="button"
+            aria-pressed={tab === item.id}
+            onClick={() => setTab(item.id)}
+            className={`ui-button flex flex-none items-center gap-2 whitespace-nowrap rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors ${tab === item.id ? 'border-primary-500 bg-primary-600 text-on-primary shadow-sm' : 'border-neutral-200 bg-surface text-neutral-600 hover:border-primary-300 hover:text-primary-700'}`}
+          >{item.label}{item.count !== undefined && <span className={`rounded-full px-2 py-0.5 text-xs ${tab === item.id ? 'bg-surface/20 text-on-primary' : 'bg-neutral-100 text-neutral-600'}`}>{item.count}</span>}</button>)}
+        </nav>
 
-        <div className="p-5 sm:p-6">
+        <div className="admin-content min-h-0 flex-1 overflow-y-auto overscroll-contain bg-neutral-50/50 px-4 py-5 sm:px-7 sm:py-6">
+          {loadError && <p role="alert" className="mb-4 rounded-xl border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700">{loadError}</p>}
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="text-xl font-bold text-neutral-900">{tabs.find(item => item.id === tab)?.label}</h3>
+              {tab === 'feedback' && <p className="mt-1 text-sm text-neutral-600">Vartotojų problemos, pasiūlymai ir programėlės vertinimai.</p>}
+            </div>
+          </div>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-10 text-neutral-500">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
               <p className="text-sm">Įkeliama…</p>
             </div>
           ) : tab === 'feedback' ? (
-            <div className="space-y-3">
-              {feedback.length === 0 && <p className="text-sm text-neutral-600">Atsiliepimų kol kas nėra.</p>}
-              {feedback.map(entry => <article key={entry.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <strong className="text-neutral-900">{entry.category === 'problem' ? 'Problema' : entry.category === 'suggestion' ? 'Pasiūlymas' : 'Programėlės vertinimas'}{entry.rating ? ` · ${entry.rating}/5 ★` : ''}</strong>
-                  <time className="text-xs text-neutral-500" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time>
-                </div>
-                {entry.message && <p className="mt-2 whitespace-pre-wrap break-words text-neutral-800">{entry.message}</p>}
-                <details className="mt-2 text-xs text-neutral-600"><summary className="cursor-pointer">Techninė informacija</summary>
-                  <p className="mt-2 break-all">Vartotojas: {entry.user_id}</p>
-                  <p>Ekranas: {entry.screen} · {entry.role ?? '–'} · {entry.app_version}</p>
-                  <p className="break-all">{entry.page_url}</p><p className="break-all">{entry.user_agent}</p>
-                </details>
-                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-neutral-700">Būsena
-                  <select aria-label="Atsiliepimo būsena" className="form-input !min-h-10 !w-auto !py-1" value={entry.status} disabled={actionLoading === entry.id} onChange={event => void updateFeedbackStatus(entry.id, event.target.value as FeedbackEntry['status'])}>
-                    <option value="new">Naujas</option><option value="reviewed">Peržiūrėtas</option><option value="fixed">Ištaisytas</option>
-                  </select>
-                </label>
-              </article>)}
+            <div>
+              <div aria-label="Atsiliepimų filtras" className="mb-5 flex flex-wrap gap-2">
+                {([['all', 'Visi'], ['new', 'Nauji'], ['reviewed', 'Peržiūrėti'], ['fixed', 'Ištaisyti']] as const).map(([value, label]) =>
+                  <button key={value} type="button" aria-pressed={feedbackFilter === value} onClick={() => setFeedbackFilter(value)} className={`ui-button rounded-full border px-3.5 py-2 text-xs font-semibold ${feedbackFilter === value ? 'border-primary-400 bg-primary-100 text-primary-800' : 'border-neutral-200 bg-surface text-neutral-600 hover:border-primary-300'}`}>{label}{value === 'new' ? ` (${newFeedbackCount})` : ''}</button>
+                )}
+              </div>
+              {visibleFeedback.length === 0 ? <p className="rounded-2xl border border-neutral-200 bg-surface px-5 py-10 text-center text-sm text-neutral-600">{feedback.length === 0 ? 'Atsiliepimų kol kas nėra.' : 'Šios būsenos atsiliepimų nėra.'}</p> : null}
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                {visibleFeedback.map(entry => <article key={entry.id} className="min-w-0 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-800">{entry.category === 'problem' ? 'Problema' : entry.category === 'suggestion' ? 'Pasiūlymas' : 'Programėlės vertinimas'}</span>
+                      {entry.rating && <span className="text-sm font-semibold text-primary-700">★ {entry.rating}/5</span>}
+                    </div>
+                    <time className="text-xs text-neutral-500" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time>
+                  </div>
+                  {entry.message && <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-neutral-800">{entry.message}</p>}
+                  <details className="mt-4 border-t border-neutral-100 pt-3 text-xs text-neutral-600"><summary className="cursor-pointer font-medium text-primary-700">Techninė informacija</summary>
+                    <p className="mt-2 break-all">Vartotojas: {entry.user_id}</p>
+                    <p>Ekranas: {entry.screen} · {entry.role ?? '–'} · {entry.app_version}</p>
+                    <p className="break-all">{entry.page_url}</p><p className="break-all">{entry.user_agent}</p>
+                  </details>
+                  <label className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-neutral-100 pt-3 text-sm font-semibold text-neutral-700">Būsena
+                    <select aria-label="Atsiliepimo būsena" className="form-input !min-h-11 !w-auto !py-2" value={entry.status} disabled={actionLoading === entry.id} onChange={event => void updateFeedbackStatus(entry.id, event.target.value as FeedbackEntry['status'])}>
+                      <option value="new">Naujas</option><option value="reviewed">Peržiūrėtas</option><option value="fixed">Ištaisytas</option>
+                    </select>
+                  </label>
+                </article>)}
+              </div>
             </div>
           ) : tab === 'stats' ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Car className="w-5 h-5 text-neutral-600" />
@@ -263,7 +256,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                 <p className="text-3xl font-bold text-neutral-900">{completedTrips.length}</p>
                 <p className="text-xs text-neutral-600 mt-1">Sėkmingai įvykdytos</p>
               </div>
-              <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4 col-span-2">
+              <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4 sm:col-span-2">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="w-5 h-5 text-neutral-600" />
                   <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">Vertinimai</span>
@@ -278,7 +271,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-xs text-neutral-600 mt-1">Visi pateikti vertinimai</p>
               </div>
-              <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4 col-span-2">
+              <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4 sm:col-span-2">
                 <div className="flex items-center gap-2 mb-2">
                   <MapPin className="w-5 h-5 text-neutral-600" />
                   <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">Populiariausi maršrutai</span>
@@ -307,7 +300,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                 Kol kas nėra užbaigtų kelionių.
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
                 {completedTrips.map((t) => {
                   const req = completedRequests.find((r) => r.trip_id === t.id);
                   const profile = t.created_by ? profileMap.get(t.created_by) : null;
@@ -359,7 +352,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
               </div>
             )
           ) : tab === 'users' ? (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
               {profiles.length === 0 ? (
                 <p className="text-center text-sm text-neutral-500 py-10">
                   Kol kas nėra registruotų vartotojų.
@@ -430,7 +423,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
               )}
             </div>
           ) : tab === 'trips' ? (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
               {allTrips.length === 0 ? (
                 <p className="text-center text-sm text-neutral-500 py-10">
                   Kol kas nėra skelbimų.
@@ -477,7 +470,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
               )}
             </div>
           ) : tab === 'requests' ? (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
               {allRequests.length === 0 ? (
                 <p className="text-center text-sm text-neutral-500 py-10">
                   Kol kas nėra užklausų.
