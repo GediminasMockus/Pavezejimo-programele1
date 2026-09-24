@@ -110,8 +110,8 @@ export function AuthScreen() {
 
       <div className="w-full max-w-sm">
         {notice && <p role="status" className="p-3 mb-3 bg-primary-50 text-primary-700 rounded-xl">{notice}</p>}
-        <div className="bg-surface rounded-3xl shadow-card border border-neutral-200 p-6 sm:p-8">
-          <div className="flex rounded-xl bg-neutral-100 p-1 mb-6">
+        <div className="auth-card bg-surface rounded-3xl shadow-card border border-primary-200 p-6 sm:p-8">
+          <div className="auth-toggle flex rounded-xl border border-primary-200 bg-primary-100 p-1 mb-6">
             <button
               onClick={() => { setMode('signin'); setError(null); setNotice(''); }}
               className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
