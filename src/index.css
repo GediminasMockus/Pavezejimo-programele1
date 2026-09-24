@@ -5,7 +5,7 @@
 @layer base {
   :root {
     color-scheme: light;
-    --canvas: 245 247 250;
+    --canvas: 239 244 252;
     --surface: 255 255 255;
     --on-primary: 255 255 255;
     --overlay: 15 23 42;
@@ -75,7 +75,7 @@
   }
   .dark {
     color-scheme: dark;
-    --canvas: 15 23 36;
+    --canvas: 14 24 42;
     --surface: 23 34 51;
     --neutral-50: 28 41 60;
     --neutral-100: 36 50 71;
@@ -179,13 +179,14 @@
   .surface-card { @apply border border-neutral-200 bg-surface shadow-card; border-radius: var(--radius-card); }
   .badge { @apply inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs font-medium leading-none text-neutral-600; max-width: 100%; }
   .badge > svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
+  .badge-driver { @apply border-primary-200 bg-primary-50 text-primary-700; }
   .badge-warning { @apply border-warning-200 bg-warning-50 text-warning-800; }
   .trip-card { @apply surface-card min-w-0 p-4 sm:p-5; overflow-wrap: anywhere; }
   .trip-card-highlight { @apply border-primary-300 ring-1 ring-primary-200; }
-  .trip-route { @apply mt-4 text-base font-semibold leading-snug text-neutral-900; }
+  .trip-route { @apply mt-4 rounded-xl bg-primary-50/70 p-3 text-base font-semibold leading-snug text-neutral-900; }
   .trip-route-stop { @apply flex min-w-0 items-start gap-3; }
   .trip-route-stop > svg { @apply mt-0.5 h-4 w-4 shrink-0 text-primary-600; }
-  .trip-route-line { @apply my-1 ml-[7px] h-4 border-l border-dashed border-neutral-300; }
+  .trip-route-line { @apply my-1 ml-[7px] h-4 border-l border-dashed border-primary-300; }
   .trip-actions { @apply mt-4 flex flex-wrap gap-2 border-t border-neutral-100 pt-4; }
   .trip-actions > button { @apply min-w-0; flex: 1 1 9rem; }
   .request-card { overflow-wrap: anywhere; }
@@ -201,15 +202,17 @@
   .notification-row { @apply block w-full border-l-2 border-transparent p-4 text-left transition-colors hover:bg-neutral-50; overflow-wrap: anywhere; border-radius: 0; }
   .notification-row:focus-visible { outline-offset: -3px; }
   .notification-row-unread { @apply border-l-primary-500 bg-primary-50/50; }
-  .app-nav { @apply sticky top-0 z-10 border-b border-neutral-200 bg-surface/95 backdrop-blur-md; }
+  .app-nav { @apply sticky top-0 z-10 border-b border-primary-200 bg-surface/95 backdrop-blur-md; }
+  .app-nav button[aria-pressed='true'] { @apply bg-primary-600 text-on-primary shadow-sm; }
   .home-toolbar { @apply mx-auto flex max-w-6xl items-center justify-end gap-2 px-4 py-4 sm:px-6; }
   .home-layout { @apply mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 sm:pt-12 lg:pt-16; }
   .home-hero { @apply text-left; }
+  .home-hero > div:first-child { @apply rounded-full border border-primary-200 bg-primary-100/70 px-3 py-1.5; }
   .home-hero h1 { @apply text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl; }
-  .home-search { @apply surface-card overflow-visible; }
-  .home-mode { @apply grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1; }
+  .home-search { @apply surface-card overflow-visible border-primary-200; border-top: 4px solid rgb(var(--primary-500)); }
+  .home-mode { @apply grid grid-cols-2 gap-1 rounded-xl bg-primary-50 p-1; }
   .home-mode button { @apply border-0 text-sm font-medium; }
-  .home-mode button[aria-pressed='true'] { @apply bg-surface text-primary-700 shadow-sm; }
+  .home-mode button[aria-pressed='true'] { @apply bg-primary-600 text-on-primary shadow-sm; }
   .home-mode button[aria-pressed='false'] { @apply bg-transparent text-neutral-600; }
   .leaflet-container { font-family: inherit; }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(var(--surface)); color: rgb(var(--neutral-900)); }

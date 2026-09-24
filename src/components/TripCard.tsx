@@ -86,7 +86,7 @@ export function TripCard({
     <article className={`trip-card animate-fade-in ${highlight ? 'trip-card-highlight' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <span className="badge">
+          <span className={`badge ${isDriver ? 'badge-driver' : ''}`}>
             {isDriver ? <Car /> : <Users />}
             {isDriver ? 'Vairuotojas' : 'Keleivis'}
           </span>
