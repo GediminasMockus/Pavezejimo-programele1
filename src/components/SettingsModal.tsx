@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { useEffect, useState } from 'react';
 import { Settings, User, Phone, Car, Users, Bell, LogOut, Loader2, Check, Moon, Sun, Globe } from 'lucide-react';
 import { supabase, type UserProfile, type TripRole } from '@/lib/supabase';
@@ -22,6 +23,7 @@ function loadPrefs(): NotificationPrefs {
 }
 
 export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; onClose: () => void; onSignOut: () => void }) {
+  const dialogRef = useDialogFocus();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
@@ -109,21 +111,21 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Settings className="w-5 h-5 text-slate-700" /><h2 className="text-lg font-bold text-slate-900">{text.settings}</h2></div>
-          <button onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200">{text.close}</button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
+      <div className="modal-panel w-full sm:max-w-md bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="SettingsModal-title">
+        <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-100 flex items-center justify-between">
+          <div className="flex items-center gap-2"><Settings className="w-5 h-5 text-neutral-700" /><h2 id="SettingsModal-title" className="text-lg font-bold text-neutral-900">{text.settings}</h2></div>
+          <button data-dialog-close onClick={onClose} className="ui-button px-4 py-2 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold hover:bg-neutral-200">{text.close}</button>
         </div>
 
-        {loading ? <div className="flex flex-col items-center justify-center py-16 text-slate-400"><Loader2 className="w-6 h-6 animate-spin mb-2" /><p className="text-sm">{text.loading}</p></div> : (
+        {loading ? <div className="flex flex-col items-center justify-center py-16 text-neutral-500"><Loader2 className="w-6 h-6 animate-spin mb-2" /><p className="text-sm">{text.loading}</p></div> : (
           <div className="p-5 sm:p-6 space-y-6">
             <section>
               <h3 className="section-title"><User className="w-3.5 h-3.5" /> {text.account}</h3>
               <div className="space-y-3">
                 <label className="block"><span className="field-label">{text.name}</span><input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder={text.namePlaceholder} className="form-input" /></label>
-                <label className="block"><span className="field-label">{text.phone}</span><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+370 6XX XXXXX" className="form-input pl-10" /></div></label>
-                {profile?.email && <label className="block"><span className="field-label">{text.email}</span><input value={profile.email} disabled className="form-input bg-slate-50 text-slate-400" /></label>}
+                <label className="block"><span className="field-label">{text.phone}</span><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" /><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+370 6XX XXXXX" className="form-input pl-10" /></div></label>
+                {profile?.email && <label className="block"><span className="field-label">{text.email}</span><input value={profile.email} disabled className="form-input bg-neutral-50 text-neutral-500" /></label>}
               </div>
             </section>
 
@@ -131,7 +133,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
               <h3 className="section-title">{text.defaultRole}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <RoleButton active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label={text.driver} />
-                <RoleButton active={defaultRole === 'passenger'} passenger onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
+                <RoleButton active={defaultRole === 'passenger'} onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
               </div>
             </section>
 
@@ -158,14 +160,14 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
             <section>
               <h3 className="section-title">{text.appearance}</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3">{isDark ? <Moon className="w-5 h-5 text-slate-600" /> : <Sun className="w-5 h-5 text-amber-500" />}<div><p className="text-sm font-medium text-slate-700">{text.darkMode}</p><p className="text-xs text-slate-400">{text.experimental}</p></div></div><button aria-label={text.darkToggle} onClick={toggleDarkMode} className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} /></button></div>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200"><div className="flex items-center gap-3 mb-3"><Globe className="w-5 h-5 text-slate-600" /><div><p className="text-sm font-medium text-slate-700">{text.language}</p><p className="text-xs text-slate-400">{text.languageDesc}</p></div></div><div className="grid grid-cols-2 gap-2"><button onClick={() => setLanguage('lt')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'lt' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{text.lithuanian}</button><button onClick={() => setLanguage('en')} className={`py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'en' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>{text.english}</button></div></div>
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-neutral-50 border border-neutral-200"><div className="flex items-center gap-3">{isDark ? <Moon className="w-5 h-5 text-neutral-600" /> : <Sun className="w-5 h-5 text-neutral-500" />}<div><p className="text-sm font-medium text-neutral-700">{text.darkMode}</p><p className="text-xs text-neutral-500">{text.experimental}</p></div></div><button role="switch" aria-checked={isDark} aria-label={text.darkToggle} onClick={toggleDarkMode} className={`ui-switch relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-neutral-700' : 'bg-neutral-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-surface shadow-sm transition-transform ${isDark ? 'translate-x-5' : ''}`} /></button></div>
+                <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200"><div className="flex items-center gap-3 mb-3"><Globe className="w-5 h-5 text-neutral-600" /><div><p className="text-sm font-medium text-neutral-700">{text.language}</p><p className="text-xs text-neutral-500">{text.languageDesc}</p></div></div><div className="grid grid-cols-2 gap-2"><button onClick={() => setLanguage('lt')} className={`ui-button py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'lt' ? 'bg-primary-600 text-on-primary' : 'bg-surface text-neutral-600 border border-neutral-200'}`}>{text.lithuanian}</button><button onClick={() => setLanguage('en')} className={`ui-button py-2.5 px-4 rounded-xl text-sm font-semibold ${language === 'en' ? 'bg-primary-600 text-on-primary' : 'bg-surface text-neutral-600 border border-neutral-200'}`}>{text.english}</button></div></div>
               </div>
             </section>
 
-            {saveError && <div role="alert" className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 break-words">{saveError}</div>}
-            <button onClick={handleSave} disabled={saving} className="w-full py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {text.saving}</> : saved ? <><Check className="w-4 h-4" /> {text.saved}</> : text.save}</button>
-            <div className="pt-2 border-t border-slate-100"><button onClick={onSignOut} className="w-full py-3 rounded-2xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 flex items-center justify-center gap-2"><LogOut className="w-4 h-4" /> {text.signOut}</button></div>
+            {saveError && <div role="alert" className="rounded-2xl bg-danger-50 border border-danger-200 px-4 py-3 text-sm text-danger-700 break-words">{saveError}</div>}
+            <button onClick={handleSave} disabled={saving} className="ui-button w-full py-3 rounded-xl bg-primary-600 text-on-primary font-semibold hover:bg-primary-700 disabled:opacity-60 flex items-center justify-center gap-2">{saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {text.saving}</> : saved ? <><Check className="w-4 h-4" /> {text.saved}</> : text.save}</button>
+            <div className="pt-2 border-t border-neutral-100"><button onClick={onSignOut} className="ui-button w-full py-3 rounded-xl bg-neutral-100 text-neutral-700 font-semibold hover:bg-neutral-200 flex items-center justify-center gap-2"><LogOut className="w-4 h-4" /> {text.signOut}</button></div>
           </div>
         )}
       </div>
@@ -173,10 +175,10 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   );
 }
 
-function RoleButton({ active, passenger, onClick, icon, label }: { active: boolean; passenger?: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return <button onClick={onClick} className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${active ? (passenger ? 'border-emerald-500 bg-emerald-50' : 'border-blue-500 bg-blue-50') : 'border-slate-200 bg-white hover:border-slate-300'}`}><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? (passenger ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white') : 'bg-slate-100 text-slate-400'}`}>{icon}</div><span className={`text-sm font-semibold ${active ? (passenger ? 'text-emerald-700' : 'text-blue-700') : 'text-slate-600'}`}>{label}</span></button>;
+function RoleButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return <button aria-pressed={active} onClick={onClick} className={`ui-button flex min-w-0 flex-col sm:flex-row items-center gap-2 p-3 rounded-xl border transition-all ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-surface hover:border-neutral-300'}`}><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? 'bg-primary-600 text-on-primary' : 'bg-neutral-100 text-neutral-500'}`}>{icon}</div><span className={`text-sm font-semibold ${active ? 'text-primary-700' : 'text-neutral-600'}`}>{label}</span></button>;
 }
 
 function ToggleRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: () => void }) {
-  return <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50"><div className="flex-1 min-w-0 mr-3"><p className="text-sm font-medium text-slate-700">{label}</p><p className="text-xs text-slate-400 mt-0.5">{description}</p></div><button aria-label={label} onClick={onChange} className={`relative w-11 h-6 rounded-full flex-shrink-0 ${checked ? 'bg-blue-600' : 'bg-slate-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm ${checked ? 'translate-x-5' : ''}`} /></button></div>;
+  return <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-neutral-50"><div className="flex-1 min-w-0 mr-3"><p className="text-sm font-medium text-neutral-700">{label}</p><p className="text-xs text-neutral-500 mt-0.5">{description}</p></div><button role="switch" aria-checked={checked} aria-label={label} onClick={onChange} className={`ui-switch relative w-11 h-6 rounded-full flex-shrink-0 ${checked ? 'bg-primary-600' : 'bg-neutral-300'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-surface shadow-sm ${checked ? 'translate-x-5' : ''}`} /></button></div>;
 }

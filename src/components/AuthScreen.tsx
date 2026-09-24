@@ -92,16 +92,16 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <Background />
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-600 to-emerald-500 shadow-lg shadow-blue-500/30 mb-4">
-          <Route className="w-8 h-8 text-white" strokeWidth={2.2} />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 shadow-card mb-4">
+          <Route className="w-8 h-8 text-on-primary" strokeWidth={2.2} />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
           Priemiesčio Pavežėjimai
         </h1>
-        <p className="mt-2 text-slate-500 text-sm">
+        <p className="mt-2 text-neutral-500 text-sm">
           {mode === 'signin'
             ? (isEnglish ? 'Sign in to continue' : 'Prisijunkite, kad tęstumėte')
             : (isEnglish ? 'Create an account to get started' : 'Sukurkite paskyrą, kad pradėtumėte')}
@@ -109,21 +109,21 @@ export function AuthScreen() {
       </div>
 
       <div className="w-full max-w-sm">
-        {notice && <p role="status" className="p-3 mb-3 bg-blue-50 text-blue-700 rounded-xl">{notice}</p>}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
-          <div className="flex rounded-full bg-slate-100 p-1 mb-6">
+        {notice && <p role="status" className="p-3 mb-3 bg-primary-50 text-primary-700 rounded-xl">{notice}</p>}
+        <div className="bg-surface rounded-3xl shadow-card border border-neutral-200 p-6 sm:p-8">
+          <div className="flex rounded-xl bg-neutral-100 p-1 mb-6">
             <button
               onClick={() => { setMode('signin'); setError(null); setNotice(''); }}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${
-                mode === 'signin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                mode === 'signin' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
               }`}
             >
               {isEnglish ? 'Sign in' : 'Prisijungti'}
             </button>
             <button
               onClick={() => { setMode('signup'); setError(null); setNotice(''); }}
-              className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${
-                mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                mode === 'signup' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
               }`}
             >
               {isEnglish ? 'Register' : 'Registruotis'}
@@ -134,8 +134,8 @@ export function AuthScreen() {
             {mode === 'signup' && (
               <>
                 <label className="block">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-                    <User className="w-4 h-4 text-slate-400" />
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">
+                    <User className="w-4 h-4 text-neutral-500" />
                     {isEnglish ? 'Name' : 'Vardas'}
                   </span>
                   <input
@@ -149,8 +149,8 @@ export function AuthScreen() {
                 </label>
 
                 <label className="block">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-                    <Phone className="w-4 h-4 text-slate-400" />
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">
+                    <Phone className="w-4 h-4 text-neutral-500" />
                     {isEnglish ? 'Phone number' : 'Telefono numeris'}
                   </span>
                   <input
@@ -168,8 +168,8 @@ export function AuthScreen() {
             )}
 
             <label className="block">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-                <Mail className="w-4 h-4 text-slate-400" />
+              <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">
+                <Mail className="w-4 h-4 text-neutral-500" />
                 {isEnglish ? 'Email' : 'El. paštas'}
               </span>
               <input
@@ -184,8 +184,8 @@ export function AuthScreen() {
             </label>
 
             <label className="block">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">
-                <Lock className="w-4 h-4 text-slate-400" />
+              <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">
+                <Lock className="w-4 h-4 text-neutral-500" />
                 {isEnglish ? 'Password' : 'Slaptažodis'}
               </span>
               <input
@@ -202,13 +202,13 @@ export function AuthScreen() {
             </label>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full py-3.5 rounded-2xl bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              className="ui-button mt-2 w-full py-3.5 rounded-xl bg-primary-600 text-on-primary font-semibold shadow-card hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -226,13 +226,13 @@ export function AuthScreen() {
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-xs text-neutral-500">
           {mode === 'signin'
             ? (isEnglish ? "Don't have an account? " : 'Neturite paskyros? ')
             : (isEnglish ? 'Already have an account? ' : 'Turite paskyrą? ')}
           <button
             onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setNotice(''); }}
-            className="text-blue-600 font-semibold hover:underline"
+            className="ui-button text-primary-700 font-semibold hover:underline"
           >
             {mode === 'signin'
               ? (isEnglish ? 'Register' : 'Registruokitės')

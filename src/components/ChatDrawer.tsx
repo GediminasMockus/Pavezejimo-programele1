@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { navigationUrl } from '@/lib/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare, Send, X, Loader2, Check, CheckCheck, Star, Navigation } from 'lucide-react';
@@ -27,6 +28,7 @@ export function ChatDrawer({
   onClose: () => void;
   onBothConfirmed?: () => void;
 }) {
+  const dialogRef = useDialogFocus();
   const [messageLimit, setMessageLimit] = useState(50);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const completionNotified = useRef(false);
@@ -261,7 +263,11 @@ export function ChatDrawer({
     const { data, error: confirmError } = await supabase.rpc('confirm_ride', { p_request_id: request.id });
     setConfirming(false);
     if (confirmError || !data) {
-      setError(confirmError?.message === 'ride is not accepted' ? 'Ši kelionė dar nepatvirtinta vairuotojo.' : 'Nepavyko patvirtinti kelionės.');
+      setError(confirmError?.message === 'trip has not started'
+        ? 'Kelionę galėsite patvirtinti po išvykimo laiko.'
+        : confirmError?.message === 'ride is not accepted'
+          ? 'Ši kelionė dar nepatvirtinta vairuotojo.'
+          : 'Nepavyko patvirtinti kelionės.');
       return;
     }
 
@@ -299,14 +305,14 @@ export function ChatDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl h-[85vh] sm:h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
+      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay h-[90dvh] sm:h-[min(85dvh,800px)] flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="ChatDrawer-title">
+        <div className="modal-header flex-wrap">
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-slate-900 truncate">
+            <h2 id="ChatDrawer-title" className="text-base font-bold text-neutral-900 truncate">
               {trip.from_location} → {trip.to_location}
             </h2>
-            <p className="text-xs text-slate-500 truncate">
+            <p className="text-xs text-neutral-500 truncate">
               {formatDateTime(trip.departure_time)}
               {priceStr && ` · ${priceStr}`}
             </p>
@@ -314,7 +320,7 @@ export function ChatDrawer({
           <div className="flex items-center gap-2">
             <button
               onClick={openGoogleMapsNavigation}
-              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 active:scale-95 transition-all shadow-md shadow-blue-500/30"
+              className="ui-button flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold active:scale-95 transition-all shadow-md "
               aria-label="Google Maps navigacija"
               title="Atidaryti Google Maps"
             >
@@ -322,8 +328,8 @@ export function ChatDrawer({
               Navigacija
             </button>
             <button
-              onClick={onClose}
-              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+              data-dialog-close onClick={onClose}
+              className="ui-button flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-neutral-100 transition-colors"
               aria-label="Uždaryti"
             >
               <X className="w-5 h-5" />
@@ -331,26 +337,26 @@ export function ChatDrawer({
           </div>
         </div>
 
-        {hasOlderMessages && <button className="p-2 text-blue-600 text-sm" disabled={loading} onClick={() => setMessageLimit(limit => limit + 50)}>Įkelti ankstesnes žinutes</button>}
+        {hasOlderMessages && <button className="ui-button p-2 text-primary-700 text-sm" disabled={loading} onClick={() => setMessageLimit(limit => limit + 50)}>Įkelti ankstesnes žinutes</button>}
         {canConfirm && (
-          <div className="flex-shrink-0 px-4 sm:px-5 py-3 bg-slate-50 border-b border-slate-100">
+          <div className="flex-shrink-0 px-4 sm:px-5 py-3 bg-neutral-50 border-b border-neutral-100">
             {bothConfirmed ? (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-semibold">
+                <div className="flex items-center justify-center gap-2 text-success-700 text-sm font-semibold">
                   <CheckCheck className="w-5 h-5" />
                   Abi pusės patvirtino — kelionė baigta!
                 </div>
                 {!ratingSubmitted && (
                   <button
                     onClick={() => setShowRateForm(!showRateForm)}
-                    className="text-sm text-blue-600 hover:underline flex items-center justify-center gap-1"
+                    className="ui-button text-sm text-primary-700 hover:underline flex items-center justify-center gap-1"
                   >
                     <Star className="w-4 h-4" />
                     Įvertinti {isPassengerSide ? 'vairuotoją' : 'keleivį'}
                   </button>
                 )}
                 {showRateForm && (
-                  <div className="rounded-xl bg-white border border-slate-200 p-3 flex flex-col gap-2">
+                  <div className="rounded-xl bg-surface border border-neutral-200 p-3 flex flex-col gap-2">
                     <div className="flex items-center justify-center">
                       <StarPicker value={rateScore} onChange={setRateScore} />
                     </div>
@@ -364,38 +370,38 @@ export function ChatDrawer({
                     <button
                       onClick={submitRating}
                       disabled={rateSubmitting}
-                      className="py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60"
+                      className="ui-button py-2.5 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold hover:bg-primary-700 disabled:opacity-60"
                     >
                       {rateSubmitting ? 'Siunčiama…' : 'Pateikti vertinimą'}
                     </button>
                   </div>
                 )}
                 {ratingSubmitted && (
-                  <p className="text-center text-sm text-emerald-600 font-medium">
+                  <p className="text-center text-sm text-success-700 font-medium">
                     Ačiū už vertinimą!
                   </p>
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 {request?.status !== 'accepted' ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success-100 text-success-700 text-xs font-semibold">
                       <CheckCheck className="w-4 h-4" />
                       Kelionė patvirtinta
                     </span>
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        myConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                        myConfirmed ? 'bg-success-100 text-success-700' : 'bg-neutral-200 text-neutral-500'
                       }`}>
                         <Check className="w-3.5 h-3.5" />
                         Jūs {myConfirmed ? 'patvirtinote' : 'nepatvirtinote'}
                       </span>
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        otherConfirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                        otherConfirmed ? 'bg-success-100 text-success-700' : 'bg-neutral-200 text-neutral-500'
                       }`}>
                         <Check className="w-3.5 h-3.5" />
                         Kita pusė {otherConfirmed ? 'patvirtino' : 'laukia'}
@@ -405,7 +411,7 @@ export function ChatDrawer({
                       <button
                         onClick={handleConfirm}
                         disabled={confirming}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-60"
+                        className="ui-button flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold hover:bg-primary-700 active:scale-95 transition-all disabled:opacity-60"
                       >
                         {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         Kelionė įvyko
@@ -418,16 +424,16 @@ export function ChatDrawer({
           </div>
         )}
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-3">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 space-y-3">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-10 text-neutral-500">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
               <p className="text-sm">Įkeliama…</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-10">
-              <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">
+              <MessageSquare className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <p className="text-sm text-neutral-500">
                 Kol kas nėra žinučių. Parašykite pirmas — derėkite dėl kainos!
               </p>
             </div>
@@ -437,15 +443,15 @@ export function ChatDrawer({
               return (
                 <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                    className={`max-w-[85%] min-w-0 rounded-2xl px-4 py-2.5 ${
                       isOwn
-                        ? 'bg-blue-600 text-white rounded-br-md'
-                        : 'bg-slate-100 text-slate-800 rounded-bl-md'
+                        ? 'bg-primary-600 text-on-primary rounded-br-md'
+                        : 'bg-neutral-100 text-neutral-800 rounded-bl-md'
                     }`}
                   >
-                    <p className="text-xs font-semibold mb-0.5 opacity-70">{msg.author_name}</p>
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
-                    <p className={`text-[10px] mt-1 ${isOwn ? 'text-blue-200' : 'text-slate-400'}`}>
+                    <p className="text-xs font-semibold mb-0.5">{msg.author_name}</p>
+                    <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{msg.body}</p>
+                    <p className={`text-[10px] mt-1 ${isOwn ? 'text-on-primary/90' : 'text-neutral-500'}`}>
                       {formatTime(msg.created_at)}
                     </p>
                   </div>
@@ -454,16 +460,16 @@ export function ChatDrawer({
             })
           )}
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 text-center">{error}</p>
+            <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2 text-center">{error}</p>
           )}
         </div>
 
         <form
           onSubmit={handleSend}
-          className="flex-shrink-0 border-t border-slate-100 p-3 sm:p-4 space-y-2"
+          className="flex-shrink-0 border-t border-neutral-100 p-3 sm:p-4 space-y-2"
         >
           {!canSendMessages && request && (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm font-medium text-amber-800" role="status">
+            <p className="rounded-xl border border-warning-200 bg-warning-50 px-3 py-2 text-center text-sm font-medium text-warning-800" role="status">
               {requestStatus === 'cancelled'
                 ? 'Pokalbis uždarytas, nes kelionė buvo atšaukta.'
                 : 'Pokalbis bus aktyvus, kai kelionė bus patvirtinta.'}
@@ -481,7 +487,7 @@ export function ChatDrawer({
             <button
               type="submit"
               disabled={sending || !request || !canSendMessages || !body.trim() || !authorName.trim()}
-              className="flex-shrink-0 w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="ui-button flex-shrink-0 w-11 h-11 rounded-xl bg-primary-600 text-on-primary flex items-center justify-center hover:bg-primary-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Siųsti"
             >
               {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}

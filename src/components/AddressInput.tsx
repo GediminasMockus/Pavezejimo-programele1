@@ -39,13 +39,13 @@ export function AddressInput({ id, value, onChange, placeholder }: {
       }} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void search(); } }}
         placeholder={placeholder} className="form-input" autoComplete="off" maxLength={160} />
       <button type="button" onClick={() => void search()} disabled={loading} aria-label="Ieškoti adreso"
-        className="px-3 rounded-xl bg-blue-50 text-blue-700">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}</button>
+        className="icon-button border border-neutral-200 bg-neutral-50 text-primary-700">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}</button>
     </div>
-    {error && <p role="status" className="text-xs text-amber-700 mt-1">{error}</p>}
-    {suggestions.length > 0 && <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-slate-200 shadow-lg max-h-60 overflow-y-auto">
+    {error && <p role="status" className="text-xs text-warning-700 mt-1">{error}</p>}
+    {suggestions.length > 0 && <div className="absolute z-50 mt-1 w-full bg-surface rounded-xl border border-neutral-200 shadow-card max-h-60 overflow-y-auto">
       {suggestions.map((item, index) => <button key={index} type="button" onClick={() => {
         onChange({ display_name: item.display_name.slice(0, 160), lat: Number(item.lat), lng: Number(item.lon), area: item.area }); setSuggestions([]);
-      }} className="w-full text-left p-3 text-sm hover:bg-blue-50 flex gap-2"><MapPin className="w-4 h-4 shrink-0" />{item.display_name}</button>)}
+      }} className="ui-button w-full text-left p-3 text-sm hover:bg-primary-50 flex gap-2 [overflow-wrap:anywhere]"><MapPin className="w-4 h-4 shrink-0" />{item.display_name}</button>)}
     </div>}
   </div>;
 }

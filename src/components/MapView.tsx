@@ -4,14 +4,14 @@ import { MapPin, Crosshair, Loader2 } from 'lucide-react';
 import type { Trip } from '@/lib/supabase';
 
 function createIcon(role: 'driver' | 'passenger', active: boolean) {
-  const color = role === 'driver' ? '#2563eb' : '#059669';
+  const color = role === 'driver' ? 'rgb(var(--primary-600))' : 'rgb(var(--neutral-500))';
   const size = active ? 36 : 28;
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`;
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"></div>`;
   return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size] });
 }
 
 function createUserIcon() {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#dc2626;border:3px solid white;box-shadow:0 0 0 4px rgba(220,38,38,0.25),0 2px 6px rgba(0,0,0,0.3);"></div>`;
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgb(var(--primary-600));border:3px solid white;box-shadow:0 0 0 4px rgb(var(--primary-500) / 0.2),var(--shadow-sm);"></div>`;
   return L.divIcon({ html, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
 }
 
@@ -83,10 +83,10 @@ export function MapView({ markers, userPos, onTripClick }: {
       title.style.cssText = 'font-weight:600;font-size:14px;margin-bottom:4px;';
       title.textContent = m.trip.role === 'driver' ? '🚗 Vairuotojas' : '👤 Keleivis';
       const label = document.createElement('div');
-      label.style.cssText = 'font-size:13px;color:#475569;';
+      label.style.cssText = 'font-size:13px;color:rgb(var(--neutral-600));';
       label.textContent = m.label;
       const route = document.createElement('div');
-      route.style.cssText = 'font-size:12px;color:#64748b;margin-top:4px;';
+      route.style.cssText = 'font-size:12px;color:rgb(var(--neutral-500));margin-top:4px;';
       route.textContent = `${m.trip.from_location} → ${m.trip.to_location}`;
       popup.append(title, label, route);
       marker.bindPopup(popup);
@@ -128,14 +128,14 @@ export function MapView({ markers, userPos, onTripClick }: {
     <div className="relative left-1/2 w-[calc(100vw-1rem)] max-w-[1600px] -translate-x-1/2 sm:w-[calc(100vw-2rem)] lg:w-[calc(100vw-3rem)]">
       <div
         ref={mapRef}
-        className="w-full h-[calc(100dvh-15rem)] min-h-[360px] max-h-[820px] sm:h-[calc(100dvh-13rem)] rounded-2xl overflow-hidden border border-slate-200 shadow-sm z-0"
+        className="w-full h-[calc(100dvh-15rem)] min-h-[360px] max-h-[820px] sm:h-[calc(100dvh-13rem)] rounded-2xl overflow-hidden border border-neutral-200 shadow-sm z-0"
       />
-      <button onClick={locateUser} disabled={locating} className="absolute bottom-4 right-4 z-[1000] inline-flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-sm font-semibold shadow-lg border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-60">
-        {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crosshair className="w-4 h-4 text-blue-500" />}
+      <button onClick={locateUser} disabled={locating} className="ui-button absolute bottom-4 right-4 z-[1000] inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-surface text-neutral-700 text-sm font-semibold shadow-card border border-neutral-200 hover:bg-neutral-50 active:scale-95 transition-all disabled:opacity-60">
+        {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crosshair className="w-4 h-4 text-primary-500" />}
         <span className="hidden sm:inline">Mano vieta</span>
       </button>
-      {gpsError && <div className="absolute top-3 left-3 right-3 z-[1000] bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 text-center">{gpsError}</div>}
-      {markers.length === 0 && !userPos && <div className="absolute top-3 left-3 z-[1000] bg-white/90 backdrop-blur rounded-xl px-3 py-2 text-xs text-slate-500 flex items-center gap-1.5 shadow-sm"><MapPin className="w-3.5 h-3.5" />Žemėlapyje matysis vieši skelbimų taškai</div>}
+      {gpsError && <div className="absolute top-3 left-3 right-3 z-[1000] bg-danger-50 border border-danger-200 rounded-xl px-3 py-2 text-xs text-danger-700 text-center">{gpsError}</div>}
+      {markers.length === 0 && !userPos && <div className="absolute top-3 left-3 z-[1000] bg-surface/90 backdrop-blur rounded-xl px-3 py-2 text-xs text-neutral-500 flex items-center gap-1.5 shadow-sm"><MapPin className="w-3.5 h-3.5" />Žemėlapyje matysis vieši skelbimų taškai</div>}
     </div>
   );
 }

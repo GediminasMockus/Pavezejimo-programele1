@@ -20,10 +20,10 @@ import { formatDateTime } from '@/lib/format';
 import { CancelRequestModal } from '@/components/CancelRequestModal';
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
-  pending: { label: 'Laukia patvirtinimo', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
-  accepted: { label: 'Patvirtinta', bg: 'bg-emerald-100', text: 'text-emerald-700', icon: Check },
-  rejected: { label: 'Atmesta', bg: 'bg-red-100', text: 'text-red-700', icon: X },
-  cancelled: { label: 'Atšaukta', bg: 'bg-slate-100', text: 'text-slate-500', icon: AlertCircle },
+  pending: { label: 'Laukia patvirtinimo', bg: 'bg-warning-100', text: 'text-warning-700', icon: Clock },
+  accepted: { label: 'Patvirtinta', bg: 'bg-success-100', text: 'text-success-700', icon: Check },
+  rejected: { label: 'Atmesta', bg: 'bg-danger-100', text: 'text-danger-700', icon: X },
+  cancelled: { label: 'Atšaukta', bg: 'bg-neutral-100', text: 'text-neutral-500', icon: AlertCircle },
 };
 
 export function RequestCard({
@@ -87,20 +87,20 @@ export function RequestCard({
   const isPending = request.status === 'pending';
 
   return (
-    <div className={`rounded-2xl bg-white border border-slate-200 p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`surface-card request-card min-w-0 p-4 sm:p-5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${status.bg} ${status.text}`}>
+          <span className={`badge ${status.bg} ${status.text}`}>
             <StatusIcon className="w-3.5 h-3.5" />
             {isOffer && request.status === 'accepted' ? 'Pasiūlymas priimtas' : isOffer && request.status === 'pending' ? 'Laukia jūsų atsakymo' : status.label}
           </span>
-          <span className="text-xs text-slate-400">{formatDateTime(request.created_at)}</span>
+          <span className="text-xs text-neutral-500">{formatDateTime(request.created_at)}</span>
         </div>
         {request.status === 'accepted' && !request.completed_at && onCancel && (
           <button
             onClick={() => setShowCancelConfirmation(true)}
             aria-label="Atšaukti kelionę"
-            className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-red-700 active:scale-[0.98]"
+            className="ui-button flex-shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-danger-50 px-3 py-2 text-xs font-semibold text-danger-700 shadow-sm transition-all hover:bg-danger-100 active:scale-[0.98]"
           >
             <X className="h-3.5 w-3.5" />
             Atšaukti
@@ -108,20 +108,20 @@ export function RequestCard({
         )}
       </div>
 
-      <div className="mt-3 flex items-center gap-2 text-slate-900">
+      <div className="mt-3 flex items-center gap-2 text-neutral-900">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 flex-shrink-0 text-emerald-500" />
-            <span className="font-semibold truncate text-sm">{request.pickup_location}</span>
+            <MapPin className="w-4 h-4 flex-shrink-0 text-neutral-500" />
+            <span className="min-w-0 font-semibold break-words text-sm">{request.pickup_location}</span>
           </div>
-          <div className="ml-2 border-l-2 border-dashed border-slate-300 h-4 my-0.5" />
+          <div className="ml-2 border-l-2 border-dashed border-neutral-300 h-4 my-0.5" />
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 flex-shrink-0 text-emerald-600" />
-            <span className="font-semibold truncate text-sm">{request.dropoff_location}</span>
+            <MapPin className="w-4 h-4 flex-shrink-0 text-primary-700" />
+            <span className="min-w-0 font-semibold break-words text-sm">{request.dropoff_location}</span>
           </div>
         </div>
         {passengerDist !== null && (
-          <div className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
+          <div className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-600">
             <Route className="w-3.5 h-3.5" />
             <span className="text-xs font-medium">{formatDistance(passengerDist)}</span>
           </div>
@@ -129,20 +129,20 @@ export function RequestCard({
       </div>
 
       {isOffer && request.driver_name && (
-        <div className="mt-3 rounded-xl bg-blue-50 border border-blue-200 p-3">
-          <div className="text-sm font-semibold text-blue-900">Vairuotojo pasiūlymas</div>
-          <div className="mt-1 text-sm text-blue-800">{request.driver_name}</div>
-          {request.driver_phone && <a href={`tel:${request.driver_phone}`} className="text-xs text-blue-700 hover:underline">{request.driver_phone}</a>}
+        <div className="mt-3 rounded-xl bg-primary-50 border border-primary-200 p-3">
+          <div className="text-sm font-semibold text-primary-900">Vairuotojo pasiūlymas</div>
+          <div className="mt-1 text-sm text-primary-800">{request.driver_name}</div>
+          {request.driver_phone && <a href={`tel:${request.driver_phone}`} className="text-xs text-primary-700 hover:underline">{request.driver_phone}</a>}
         </div>
       )}
 
       {isDriverView && !isOffer && detour && (
         <div className={`mt-3 rounded-xl p-3 text-sm ${
           detour.detour < 5
-            ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+            ? 'bg-neutral-50 border border-neutral-200 text-neutral-700'
             : detour.detour < 15
-              ? 'bg-amber-50 border border-amber-200 text-amber-700'
-              : 'bg-red-50 border border-red-200 text-red-700'
+              ? 'bg-warning-50 border border-warning-200 text-warning-700'
+              : 'bg-danger-50 border border-danger-200 text-danger-700'
         }`}>
           <div className="flex items-center gap-1.5 font-semibold mb-1">
             <Route className="w-4 h-4" />
@@ -156,19 +156,19 @@ export function RequestCard({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-600">
         <span className="inline-flex items-center gap-1.5">
-          <User className="w-3.5 h-3.5 text-slate-400" />
+          <User className="w-3.5 h-3.5 text-neutral-500" />
           {isOffer ? (isDriverView ? request.passenger_name : 'Jūsų skelbimas') : request.passenger_name}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5 text-slate-400" />
+          <Users className="w-3.5 h-3.5 text-neutral-500" />
           {request.seats_needed} {request.seats_needed === 1 ? 'keleivis' : 'keleiviai'}
         </span>
         {request.passenger_phone && (
           <a
             href={`tel:${request.passenger_phone}`}
-            className="inline-flex items-center gap-1.5 text-blue-600 hover:underline"
+            className="inline-flex items-center gap-1.5 text-primary-700 hover:underline"
           >
             <Phone className="w-3.5 h-3.5" />
             {request.passenger_phone}
@@ -176,42 +176,42 @@ export function RequestCard({
         )}
         {request.baggage && (
           <span className="inline-flex items-center gap-1.5">
-            <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+            <Briefcase className="w-3.5 h-3.5 text-neutral-500" />
             {request.baggage}
           </span>
         )}
       </div>
 
       {request.notes && (
-        <p className="mt-2 text-sm text-slate-500 bg-slate-50 rounded-lg px-3 py-2">{request.notes}</p>
+        <p className="mt-2 text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2">{request.notes}</p>
       )}
 
       {request.driver_message && (
-        <p className="mt-2 text-sm text-slate-600 bg-blue-50 rounded-lg px-3 py-2">
+        <p className="mt-2 text-sm text-neutral-600 bg-primary-50 rounded-lg px-3 py-2">
           <span className="font-semibold">Vairuotojo atsakymas: </span>
           {request.driver_message}
         </p>
       )}
 
       {isOffer && !isDriverView && isPending && (
-        <div className="mt-3 flex gap-2">
-          <button onClick={onReject} className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100"><X className="w-4 h-4 inline mr-1" />Atmesti</button>
-          <button onClick={onAccept} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"><Check className="w-4 h-4 inline mr-1" />Priimti pasiūlymą</button>
+        <div className="request-actions mt-4">
+          <button onClick={onReject} className="ui-button flex-1 py-2.5 rounded-xl bg-danger-50 text-danger-700 text-sm font-semibold hover:bg-danger-100"><X className="w-4 h-4 inline mr-1" />Atmesti</button>
+          <button onClick={onAccept} className="ui-button flex-1 py-2.5 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold hover:bg-primary-700"><Check className="w-4 h-4 inline mr-1" />Priimti pasiūlymą</button>
         </div>
       )}
 
       {isDriverView && !isOffer && isPending && (
-        <div className="mt-3 flex gap-2">
+        <div className="request-actions mt-3">
           <button
             onClick={onReject}
-            className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+            className="ui-button flex-1 py-2.5 rounded-xl bg-danger-50 text-danger-700 text-sm font-semibold hover:bg-danger-100 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
           >
             <X className="w-4 h-4" />
             Atmesti
           </button>
           <button
             onClick={onAccept}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+            className="ui-button flex-1 py-2.5 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
           >
             <Check className="w-4 h-4" />
             Patvirtinti
@@ -220,13 +220,13 @@ export function RequestCard({
       )}
 
       {isOffer && isDriverView && isPending && onCancel && (
-        <button onClick={() => setShowCancelConfirmation(true)} className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200"><X className="w-4 h-4 inline mr-1" />Atšaukti pasiūlymą</button>
+        <button onClick={() => setShowCancelConfirmation(true)} className="ui-button mt-3 w-full py-2.5 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold hover:bg-neutral-200"><X className="w-4 h-4 inline mr-1" />Atšaukti pasiūlymą</button>
       )}
 
       {!isDriverView && !isOffer && isPending && (
         <button
           onClick={() => setShowCancelConfirmation(true)}
-          className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+          className="ui-button mt-3 w-full py-2.5 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold hover:bg-neutral-200 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
         >
           <X className="w-4 h-4" />
           Atšaukti užklausą
@@ -234,11 +234,11 @@ export function RequestCard({
       )}
 
       {request.status === 'accepted' && (
-        <div className="mt-3 flex gap-2">
+        <div className="request-actions mt-3">
           {onChat && (
             <button
               onClick={onChat}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 active:scale-[0.98] transition-all"
+              className="ui-button flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary-50 text-primary-700 text-sm font-semibold hover:bg-primary-100 active:scale-[0.98] transition-all"
             >
               <MessageSquare className="w-4 h-4" />
               Susisiekti
@@ -247,7 +247,7 @@ export function RequestCard({
           {onNavigation && (
             <button
               onClick={onNavigation}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 active:scale-95 transition-all shadow-md shadow-blue-500/30"
+              className="ui-button flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold active:scale-95 transition-all shadow-md "
             >
               <Navigation className="w-4 h-4" />
               Navigacija
@@ -259,7 +259,7 @@ export function RequestCard({
       {onPreviewRoute && (
         <button
           onClick={onPreviewRoute}
-          className="mt-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          className="ui-button mt-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
         >
           <MapIcon className="w-3.5 h-3.5" />
           Peržiūrėti maršrutą

@@ -19,13 +19,13 @@ export function RatingStars({
           key={n}
           className={`${starSize} ${
             n <= Math.round(score)
-              ? 'text-amber-400 fill-amber-400'
-              : 'text-slate-200 fill-slate-200'
+              ? 'text-primary-400 fill-primary-400'
+              : 'text-neutral-200 fill-neutral-200'
           }`}
         />
       ))}
       {showNumber && (
-        <span className="ml-1 text-sm font-semibold text-slate-600">
+        <span className="ml-1 text-sm font-semibold text-neutral-600">
           {score.toFixed(1)}
         </span>
       )}
@@ -51,14 +51,16 @@ export function StarPicker({
         <button
           key={n}
           type="button"
+          aria-label={`${n} / 5`}
+          aria-pressed={value === n}
           onClick={() => onChange(n)}
-          className="transition-transform hover:scale-110 active:scale-95"
+          className="ui-button transition-transform hover:scale-110 active:scale-95"
         >
           <Star
             className={`${starSize} ${
               n <= value
-                ? 'text-amber-400 fill-amber-400'
-                : 'text-slate-300 fill-slate-100'
+                ? 'text-primary-400 fill-primary-400'
+                : 'text-neutral-300 fill-neutral-100'
             }`}
           />
         </button>

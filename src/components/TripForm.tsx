@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { useEffect, useState } from 'react';
 import {
   MapPin,
@@ -21,7 +22,6 @@ import {
 } from '@/lib/supabase';
 import { AddressInput, type AddressValue } from '@/components/AddressInput';
 import { toLocalInput } from '@/lib/format';
-import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export function TripForm({
   role,
@@ -38,7 +38,7 @@ export function TripForm({
   onClose: () => void;
   onSubmitted: (trip?: Trip) => void;
 }) {
-  useBodyScrollLock();
+  const dialogRef = useDialogFocus();
   const isDriver = role === 'driver';
 
   const [fromAddr, setFromAddr] = useState<AddressValue>({
@@ -189,10 +189,10 @@ export function TripForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-none bg-slate-900/60 backdrop-blur-md px-0 sm:px-4">
-      <div className="w-full sm:max-w-lg bg-gradient-to-br from-white to-slate-50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[92vh] overflow-hidden flex flex-col">
-        <div className="relative z-20 flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between shadow-lg">
-          <h2 className="text-lg font-bold text-white">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-none bg-overlay/50 backdrop-blur-md px-0 sm:px-4">
+      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-hidden flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="TripForm-title">
+        <div className="modal-header">
+          <h2 id="TripForm-title" className="text-lg font-semibold text-neutral-900">
             {editTrip
               ? 'Redaguoti skelbimą'
               : isDriver
@@ -200,8 +200,8 @@ export function TripForm({
                 : 'Ieškoti kelionės'}
           </h2>
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20 transition-colors"
+            data-dialog-close onClick={onClose}
+            className="icon-button"
             aria-label="Uždaryti"
           >
             <X className="w-5 h-5" />
@@ -326,8 +326,8 @@ export function TripForm({
 
           {isDriver ? (
             <div>
-              <div className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-2">
-                <Car className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-2">
+                <Car className="w-4 h-4 text-neutral-500" />
                 Automobilio informacija (privaloma)
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -389,29 +389,29 @@ export function TripForm({
             />
           </Field>
 
-          <label className="flex items-center gap-2.5 cursor-pointer rounded-xl bg-slate-50 p-3.5">
+          <label className="flex items-center gap-2.5 cursor-pointer rounded-xl bg-neutral-50 p-3.5">
             <input
               type="checkbox"
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-neutral-300 text-primary-700 focus:ring-primary-500"
             />
-            <span className="text-sm text-slate-600 flex items-center gap-1.5">
-              <Repeat className="w-4 h-4 text-blue-500" />
+            <span className="text-sm text-neutral-600 flex items-center gap-1.5">
+              <Repeat className="w-4 h-4 text-primary-500" />
               Pasikartojantis maršrutas (kasdien / reguliariai)
             </span>
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="text-sm">Išvykimo vieta (vieša)<input className="form-input" value={fromArea} onChange={e => setFromArea(e.target.value)} maxLength={100} /></label><label className="text-sm">Atvykimo vieta (vieša)<input className="form-input" value={toArea} onChange={e => setToArea(e.target.value)} maxLength={100} /></label></div>
-          <p className="text-xs text-slate-500">Automatiškai įrašoma gatvė, rajonas ir miestas be namo numerio. Jei norite, viešą vietą galite dar labiau sutrumpinti. Tikslų adresą ir kontaktus matys tik patvirtintos kelionės dalyviai.</p>
+          <p className="text-xs text-neutral-500">Automatiškai įrašoma gatvė, rajonas ir miestas be namo numerio. Jei norite, viešą vietą galite dar labiau sutrumpinti. Tikslų adresą ir kontaktus matys tik patvirtintos kelionės dalyviai.</p>
           {formError && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>
+            <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2">{formError}</p>
           )}
 
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 animate-gradient-x"
+            className="ui-button mt-2 w-full py-3.5 rounded-xl bg-primary-600 text-on-primary font-semibold shadow-card hover:shadow-card active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 "
           >
             {submitting ? (
               <>
@@ -443,7 +443,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={inputId} className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-2">
+      <label htmlFor={inputId} className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-2">
         {icon}
         {label}
       </label>

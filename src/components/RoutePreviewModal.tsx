@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { mapPopup } from '@/lib/mapPopup';
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
@@ -6,7 +7,6 @@ import type { Trip, RideRequest } from '@/lib/supabase';
 import { formatDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 import { fetchDrivingRoute, type DrivingRoute, type RoutePoint } from '@/lib/routing';
-import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export function RoutePreviewModal({
   trip,
@@ -17,7 +17,7 @@ export function RoutePreviewModal({
   request?: RideRequest | null;
   onClose: () => void;
 }) {
-  useBodyScrollLock();
+  const dialogRef = useDialogFocus();
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
@@ -108,7 +108,7 @@ export function RoutePreviewModal({
 
         if (driverRouteData) {
           L.polyline(driverRouteData.coordinates, {
-            color: '#2563eb',
+            color: 'rgb(var(--primary-600))',
             weight: 4,
             opacity: 0.5,
             dashArray: '10 8',
@@ -116,7 +116,7 @@ export function RoutePreviewModal({
         } else {
           L.polyline(
             [[trip.from_lat!, trip.from_lng!], [trip.to_lat!, trip.to_lng!]],
-            { color: '#2563eb', weight: 4, opacity: 0.5, dashArray: '10 8' },
+            { color: 'rgb(var(--primary-600))', weight: 4, opacity: 0.5, dashArray: '10 8' },
           ).addTo(map);
         }
 
@@ -135,7 +135,7 @@ export function RoutePreviewModal({
 
         if (fullRouteData) {
           L.polyline(fullRouteData.coordinates, {
-            color: '#059669',
+            color: 'rgb(var(--neutral-500))',
             weight: 5,
             opacity: 0.85,
           }).addTo(map);
@@ -147,7 +147,7 @@ export function RoutePreviewModal({
               [request!.dropoff_lat!, request!.dropoff_lng!],
               [trip.to_lat!, trip.to_lng!],
             ],
-            { color: '#059669', weight: 5, opacity: 0.85 },
+            { color: 'rgb(var(--neutral-500))', weight: 5, opacity: 0.85 },
           ).addTo(map);
         }
 
@@ -182,18 +182,18 @@ export function RoutePreviewModal({
   const routingFailed = !loading && hasDriverCoords && !routeInfo.driverRoute;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center overscroll-none bg-slate-900/50 backdrop-blur-sm sm:p-4">
-      <div className="w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-white sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="shrink-0 bg-white/95 backdrop-blur px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center overscroll-none bg-overlay/50 backdrop-blur-sm sm:p-4">
+      <div className="modal-panel w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-surface sm:rounded-3xl shadow-overlay overflow-hidden flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RoutePreviewModal-title">
+        <div className="shrink-0 bg-surface/95 backdrop-blur px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-slate-900">Maršruto peržiūra</h2>
-            <p className="text-xs text-slate-500 mt-0.5 truncate">
+            <h2 id="RoutePreviewModal-title" className="text-lg font-bold text-neutral-900">Maršruto peržiūra</h2>
+            <p className="text-xs text-neutral-500 mt-0.5 truncate">
               {trip.from_location} → {trip.to_location} · {formatDateTime(trip.departure_time)}
             </p>
           </div>
           <button
-            onClick={onClose}
-            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100"
+            data-dialog-close onClick={onClose}
+            className="ui-button shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-neutral-100"
             aria-label="Uždaryti maršruto peržiūrą"
           >
             <X className="w-5 h-5" />
@@ -201,10 +201,10 @@ export function RoutePreviewModal({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5">
-          <div className="relative w-full h-[48dvh] min-h-[280px] max-h-[560px] sm:h-[52dvh] sm:min-h-[360px] sm:max-h-[620px] rounded-2xl overflow-hidden border border-slate-200">
+          <div className="relative w-full h-[48dvh] min-h-[280px] max-h-[560px] sm:h-[52dvh] sm:min-h-[360px] sm:max-h-[620px] rounded-2xl overflow-hidden border border-neutral-200">
             {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-[500]">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              <div className="absolute inset-0 flex items-center justify-center bg-neutral-50 z-[500]">
+                <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />
               </div>
             )}
             <div ref={mapRef} className="w-full h-full" />
@@ -212,16 +212,16 @@ export function RoutePreviewModal({
 
           <div className="mt-4 space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
             {hasDriverCoords && (
-              <div className="rounded-xl bg-blue-50 border border-blue-200 p-3">
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-blue-900 mb-1">
-                  <span className="w-4 h-1 rounded bg-blue-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #2563eb 0 6px, transparent 6px 12px)' }} />
+              <div className="rounded-xl bg-primary-50 border border-primary-200 p-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-primary-900 mb-1">
+                  <span className="w-4 h-1 rounded bg-primary-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgb(var(--primary-600)) 0 6px, transparent 6px 12px)' }} />
                   Tiesioginis vairuotojo maršrutas
                 </div>
-                <div className="text-sm text-blue-800">
+                <div className="text-sm text-primary-800">
                   {trip.from_location} → {trip.to_location}
                 </div>
                 {driverDist !== null && (
-                  <div className="flex items-center gap-1.5 text-sm text-blue-700 mt-1">
+                  <div className="flex items-center gap-1.5 text-sm text-primary-700 mt-1">
                     <RouteIcon className="w-3.5 h-3.5" />
                     {formatDistance(driverDist)}
                   </div>
@@ -230,16 +230,16 @@ export function RoutePreviewModal({
             )}
 
             {hasRequestCoords && (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900 mb-1">
-                  <span className="w-4 h-1 rounded bg-emerald-500" />
+              <div className="rounded-xl bg-primary-50 border border-primary-200 p-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-primary-900 mb-1">
+                  <span className="w-4 h-1 rounded bg-primary-500" />
                   Keleivio atkarpa
                 </div>
-                <div className="text-sm text-emerald-800">
+                <div className="text-sm text-primary-800">
                   {request!.pickup_location} → {request!.dropoff_location}
                 </div>
                 {passengerDist !== null && (
-                  <div className="flex items-center gap-1.5 text-sm text-emerald-700 mt-1">
+                  <div className="flex items-center gap-1.5 text-sm text-primary-700 mt-1">
                     <RouteIcon className="w-3.5 h-3.5" />
                     {formatDistance(passengerDist)}
                   </div>
@@ -248,15 +248,15 @@ export function RoutePreviewModal({
             )}
 
             {hasDriverCoords && hasRequestCoords && fullDist !== null && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50 p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-teal-900">
-                  <span className="h-1 w-4 rounded bg-teal-600" />
+              <div className="rounded-xl border border-primary-200 bg-primary-50 p-3">
+                <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-primary-900">
+                  <span className="h-1 w-4 rounded bg-primary-600" />
                   Visas patvirtintas maršrutas
                 </div>
-                <div className="text-sm text-teal-800">
+                <div className="text-sm text-primary-800">
                   Vairuotojo pradžia → keleivio paėmimas → keleivio išlaipinimas → vairuotojo tikslas
                 </div>
-                <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-teal-700">
+                <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-primary-700">
                   <RouteIcon className="h-3.5 w-3.5" />
                   {formatDistance(fullDist)}
                 </div>
@@ -266,10 +266,10 @@ export function RoutePreviewModal({
             {routeInfo.detour !== undefined && routeInfo.detour > 0 && (
               <div className={`rounded-xl p-3 text-sm ${
                 routeInfo.detour < 5
-                  ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                  ? 'bg-warning-50 border border-warning-200 text-warning-700'
                   : routeInfo.detour < 15
-                    ? 'bg-amber-50 border border-amber-200 text-amber-700'
-                    : 'bg-red-50 border border-red-200 text-red-700'
+                    ? 'bg-warning-50 border border-warning-200 text-warning-700'
+                    : 'bg-danger-50 border border-danger-200 text-danger-700'
               }`}>
                 <div className="flex items-center gap-1.5 font-semibold">
                   <MapPin className="w-4 h-4" />
@@ -279,13 +279,13 @@ export function RoutePreviewModal({
             )}
 
             {routingFailed && (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="status">
+              <p className="rounded-xl border border-warning-200 bg-warning-50 p-3 text-sm text-warning-800" role="status">
                 Kelio atstumo apskaičiuoti nepavyko. Tiesios linijos kilometrai nerodomi, nes jie neatitiktų realaus važiavimo.
               </p>
             )}
 
             {!hasDriverCoords && (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-neutral-500">
                 Vairuotojas nenurodė tikslių koordinačių, todėl maršrutas žemėlapyje nerodomas.
               </p>
             )}
@@ -297,11 +297,11 @@ export function RoutePreviewModal({
 }
 
 function bluePin(label: string): L.DivIcon {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:#2563eb;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:rgb(var(--primary-600));transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
   return L.divIcon({ html, className: '', iconSize: [30, 30], iconAnchor: [15, 30] });
 }
 
 function greenPin(label: string): L.DivIcon {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:#059669;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:rgb(var(--neutral-500));transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
   return L.divIcon({ html, className: '', iconSize: [30, 30], iconAnchor: [15, 30] });
 }

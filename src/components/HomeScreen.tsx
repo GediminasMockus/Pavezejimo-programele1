@@ -70,12 +70,12 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 flex items-center gap-1.5">
-        <button onClick={() => setShowNotifications(true)} className="touch-target relative rounded-xl bg-white/90 border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label={text.notifications}><Bell className="w-5 h-5" />{unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}</button>
-        <button onClick={() => setShowSettings(true)} className="touch-target rounded-xl bg-white/90 border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label={text.settings}><SettingsIcon className="w-5 h-5" /></button>
-        {isAdmin && <button onClick={() => setShowAdmin(true)} className="touch-target rounded-xl bg-white/90 border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label={text.admin}><Shield className="w-5 h-5" /></button>}
-        <button onClick={onSignOut} className="touch-target rounded-xl bg-white/90 border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-red-600 hover:bg-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" aria-label={text.signOut}><LogOut className="w-5 h-5" /></button>
+    <div className="min-h-screen relative">
+      <div className="home-toolbar">
+        <button onClick={() => setShowNotifications(true)} className="ui-button touch-target relative rounded-xl bg-surface/90 border border-neutral-200 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={text.notifications}><Bell className="w-5 h-5" />{unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary-600 text-on-primary text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? '9+' : unreadCount}</span>}</button>
+        <button onClick={() => setShowSettings(true)} className="ui-button touch-target rounded-xl bg-surface/90 border border-neutral-200 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={text.settings}><SettingsIcon className="w-5 h-5" /></button>
+        {isAdmin && <button onClick={() => setShowAdmin(true)} className="ui-button touch-target rounded-xl bg-surface/90 border border-neutral-200 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={text.admin}><Shield className="w-5 h-5" /></button>}
+        <button onClick={onSignOut} className="ui-button touch-target rounded-xl bg-surface/90 border border-neutral-200 shadow-sm flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" aria-label={text.signOut}><LogOut className="w-5 h-5" /></button>
       </div>
       {showSettings && <SettingsModal userId={userId} onClose={() => setShowSettings(false)} onSignOut={onSignOut} />}
       {showAdmin && <AdminLogs onClose={() => setShowAdmin(false)} />}
@@ -98,43 +98,43 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
         />
       )}
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 lg:pt-24 pb-10">
-        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-7 lg:gap-12 items-center lg:min-h-[calc(100vh-7rem)]">
-          <section className="hidden text-center lg:block lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/85 border border-slate-200 px-3 py-1.5 shadow-sm mb-4"><span className="w-2 h-2 rounded-full bg-emerald-500" /><span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{text.badge}</span></div>
-            <div className="flex justify-center lg:justify-start mb-4"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 flex items-center justify-center"><Route className="w-6 h-6 sm:w-7 sm:h-7 text-white" strokeWidth={2.2} /></div></div>
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-[1.06]">{text.title1}<span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{text.title2}</span></h1>
-            <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">{text.intro}</p>
+      <main className="home-layout">
+        <div className="grid items-center gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+          <section className="home-hero">
+            <div className="mb-4 inline-flex items-center gap-2 text-primary-700"><span className="w-2 h-2 rounded-full bg-primary-500" /><span className="text-xs font-semibold tracking-wide text-primary-700">{text.badge}</span></div>
+            <div className="hidden lg:flex mb-6"><div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary-600 shadow-card flex items-center justify-center"><Route className="w-6 h-6 sm:w-7 sm:h-7 text-on-primary" strokeWidth={2.2} /></div></div>
+            <h1 className="text-neutral-900">{text.title1}<span className="block text-primary-700 ">{text.title2}</span></h1>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-600 sm:text-base">{text.intro}</p>
           </section>
 
           <section className="w-full max-w-xl mx-auto lg:mr-0" aria-label={text.start}>
-            <form onSubmit={submit} className="bg-white/95 backdrop-blur rounded-[24px] sm:rounded-[28px] border border-slate-200 shadow-xl shadow-slate-900/10 overflow-hidden">
-              <div className="p-4 sm:p-6">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{text.need}</p>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">{text.start}</h2>
+            <form onSubmit={submit} className="home-search">
+              <div className="p-5 sm:p-7">
+                <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">{text.need}</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">{text.start}</h2>
 
-                <div className="grid grid-cols-2 gap-2 mt-4" role="group" aria-label={text.need}>
-                  <button type="button" aria-pressed={mode === 'passenger'} onClick={() => { setMode('passenger'); setSearchError(''); }} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'passenger' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Users className="w-4 h-4 inline mr-1.5" />{text.looking}</button>
-                  <button type="button" aria-pressed={mode === 'driver'} onClick={() => { setMode('driver'); setSearchError(''); }} className={`min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${mode === 'driver' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}><Car className="w-4 h-4 inline mr-1.5" />{text.driving}</button>
+                <div className="home-mode mt-5" role="group" aria-label={text.need}>
+                  <button type="button" aria-pressed={mode === 'passenger'} onClick={() => { setMode('passenger'); setSearchError(''); }} className={`ui-button min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${mode === 'passenger' ? 'bg-primary-600 border-primary-600 text-on-primary shadow-md' : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}><Users className="w-4 h-4 inline mr-1.5" />{text.looking}</button>
+                  <button type="button" aria-pressed={mode === 'driver'} onClick={() => { setMode('driver'); setSearchError(''); }} className={`ui-button min-h-12 px-3 py-3 rounded-xl text-sm font-bold transition border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${mode === 'driver' ? 'bg-primary-600 border-primary-600 text-on-primary shadow-md' : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:bg-neutral-100'}`}><Car className="w-4 h-4 inline mr-1.5" />{text.driving}</button>
                 </div>
 
-                <div className="space-y-3 mt-5">
-                  <div><label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="ride-from-location">{text.from}</label><AddressInput id="ride-from-location" value={from} onChange={value => { setFrom(value); if (searchError) setSearchError(''); }} placeholder={text.fromPlaceholder} /></div>
-                  <div><label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="ride-to-location">{text.to}</label><AddressInput id="ride-to-location" value={to} onChange={value => { setTo(value); if (searchError) setSearchError(''); }} placeholder={text.toPlaceholder} /></div>
-                  <label className="block"><span className="flex items-center justify-between text-sm font-semibold text-slate-700 mb-1.5"><span>{text.when}</span><span className="text-xs font-normal text-slate-500">{text.optional}</span></span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="form-input min-h-12 text-base" /></label>
+                <div className="space-y-4 mt-6">
+                  <div><label className="block text-sm font-semibold text-neutral-700 mb-1.5" htmlFor="ride-from-location">{text.from}</label><AddressInput id="ride-from-location" value={from} onChange={value => { setFrom(value); if (searchError) setSearchError(''); }} placeholder={text.fromPlaceholder} /></div>
+                  <div><label className="block text-sm font-semibold text-neutral-700 mb-1.5" htmlFor="ride-to-location">{text.to}</label><AddressInput id="ride-to-location" value={to} onChange={value => { setTo(value); if (searchError) setSearchError(''); }} placeholder={text.toPlaceholder} /></div>
+                  <label className="block"><span className="flex items-center justify-between text-sm font-semibold text-neutral-700 mb-1.5"><span>{text.when}</span><span className="text-xs font-normal text-neutral-500">{text.optional}</span></span><input type="date" value={date} onChange={e => setDate(e.target.value)} className="form-input min-h-12 text-base" /></label>
                 </div>
 
-                {searchError && <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{searchError}</span></div>}
+                {searchError && <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-danger-200 bg-danger-50 px-3 py-2.5 text-sm text-danger-700"><AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{searchError}</span></div>}
 
-                <button type="submit" className="mt-5 w-full min-h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-5 font-extrabold text-base shadow-lg shadow-blue-500/20 transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 flex items-center justify-center gap-2">{mode === 'passenger' ? <Search className="w-5 h-5" /> : <Car className="w-5 h-5" />}{mode === 'passenger' ? text.findRide : text.continueRide}<ArrowRight className="w-5 h-5" /></button>
-                <p className="text-center text-xs text-slate-500 mt-2.5">{text.hint}</p>
+                <button type="submit" className="ui-button mt-5 w-full min-h-14 rounded-xl bg-primary-600 hover:bg-primary-700 text-on-primary py-3.5 px-5 font-bold text-base shadow-card transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30 flex items-center justify-center gap-2">{mode === 'passenger' ? <Search className="w-5 h-5" /> : <Car className="w-5 h-5" />}{mode === 'passenger' ? text.findRide : text.continueRide}<ArrowRight className="w-5 h-5" /></button>
+                <p className="text-center text-xs text-neutral-500 mt-2.5">{text.hint}</p>
 
-                <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span className="text-sm text-slate-500">{mode === 'passenger' ? text.browseRidesHint : text.browseRequestsHint}</span>
+                <div className="mt-6 border-t border-neutral-100 pt-5 flex flex-col gap-3">
+                  <span className="text-sm text-neutral-500">{mode === 'passenger' ? text.browseRidesHint : text.browseRequestsHint}</span>
                   <button
                     type="button"
                     onClick={() => openResults(mode, emptyFilters)}
-                    className="min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="ui-button min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-neutral-700 bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   >
                     <List className="w-4 h-4" />
                     {mode === 'passenger' ? text.browseRides : text.browseRequests}

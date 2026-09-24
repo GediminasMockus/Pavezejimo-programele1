@@ -1,3 +1,4 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { useEffect, useState } from 'react';
 import { MapPin, User, Phone, Users, Briefcase, X, Loader2, Send, Route } from 'lucide-react';
 import { supabase, type Trip, type NewRideRequest } from '@/lib/supabase';
@@ -7,6 +8,7 @@ import { formatDateTime, formatPrice } from '@/lib/format';
 import type { CorridorSearchRoute } from '@/lib/useCorridorMatches';
 
 export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClose, onSubmitted }: { trip: Trip; passengerTrip?: Trip | null; initialRoute?: CorridorSearchRoute | null; userId: string; onClose: () => void; onSubmitted: () => void }) {
+  const dialogRef = useDialogFocus();
   const [passengerName, setPassengerName] = useState(passengerTrip?.name ?? '');
   const [phone, setPhone] = useState(passengerTrip?.phone ?? '');
   const [seats, setSeats] = useState(passengerTrip?.seats ?? 1);
@@ -109,21 +111,21 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md px-0 sm:px-4">
-      <div className="w-full sm:max-w-lg bg-gradient-to-br from-white to-slate-50 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-emerald-500 to-teal-600 px-5 sm:px-6 pt-5 pb-4 flex items-center justify-between shadow-lg">
-          <div><h2 className="text-lg font-bold text-white">Siųsti užklausą</h2><p className="text-xs text-emerald-100 mt-0.5">{trip.from_location} → {trip.to_location} · {formatDateTime(trip.departure_time)}</p></div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/20 transition-colors" aria-label="Uždaryti"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-md px-0 sm:px-4">
+      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RequestModal-title">
+        <div className="modal-header">
+          <div><h2 id="RequestModal-title" className="text-lg font-semibold text-neutral-900">Siųsti užklausą</h2><p className="text-xs text-neutral-500 mt-0.5">{trip.from_location} → {trip.to_location} · {formatDateTime(trip.departure_time)}</p></div>
+          <button data-dialog-close onClick={onClose} className="icon-button" aria-label="Uždaryti"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 flex flex-col gap-4">
-          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-sm text-blue-700"><p className="font-semibold mb-1">Vairuotojo maršrutas</p><p>{trip.from_location} → {trip.to_location}</p>{trip.price !== null && <p className="mt-1 text-blue-600">Kaina: {formatPrice(trip)}</p>}</div>
+          <div className="rounded-xl bg-primary-50 border border-primary-200 p-3.5 text-sm text-primary-700"><p className="font-semibold mb-1">Vairuotojo maršrutas</p><p>{trip.from_location} → {trip.to_location}</p>{trip.price !== null && <p className="mt-1 text-primary-700">Kaina: {formatPrice(trip)}</p>}</div>
           {passengerTrip ? (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5">
-              <p className="text-sm font-semibold text-emerald-800">Jūsų skelbimo duomenys užpildyti automatiškai</p>
-              <div className="mt-2 text-sm text-slate-700">
+            <div className="rounded-xl bg-primary-50 border border-primary-200 p-3.5">
+              <p className="text-sm font-semibold text-primary-800">Jūsų skelbimo duomenys užpildyti automatiškai</p>
+              <div className="mt-2 text-sm text-neutral-700">
                 <p className="font-medium">{passengerTrip.from_location} → {passengerTrip.to_location}</p>
-                <p className="mt-1 text-xs text-slate-500">{formatDateTime(passengerTrip.departure_time)}</p>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-neutral-500">{formatDateTime(passengerTrip.departure_time)}</p>
+                <p className="mt-1 text-xs text-neutral-600">
                   {passengerTrip.seats} {passengerTrip.seats === 1 ? 'keleivis' : 'keleiviai'}
                   {passengerTrip.baggage ? ` · Bagažas: ${passengerTrip.baggage}` : ''}
                 </p>
@@ -131,10 +133,10 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
             </div>
           ) : (
             <>
-              {initialRoute && <div className="rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm font-medium text-teal-800">Paėmimo ir išlaipinimo vietos užpildytos pagal jūsų paiešką. Jei reikia, galite jas patikslinti.</div>}
+              {initialRoute && <div className="rounded-xl border border-primary-200 bg-primary-50 p-3 text-sm font-medium text-primary-800">Paėmimo ir išlaipinimo vietos užpildytos pagal jūsų paiešką. Jei reikia, galite jas patikslinti.</div>}
               <Field label="Iš kur (paėmimo vieta)" icon={<MapPin className="w-4 h-4" />}><AddressInput value={pickupAddr} onChange={setPickupAddr} placeholder="pvz. Vilnius, stotis" /></Field>
               <Field label="Į kur (išlaipinimo vieta)" icon={<MapPin className="w-4 h-4" />}><AddressInput value={dropoffAddr} onChange={setDropoffAddr} placeholder="pvz. Trakai, pilis" /></Field>
-              {detour && <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-2.5"><Route className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" /><div className="text-sm text-amber-800"><p className="font-semibold">Preliminarus papildomas atstumas tiesia linija</p><p className="mt-0.5">Vairuotojo maršrutas: {formatDistance(detour.originalDistance)} → {formatDistance(detour.newDistance)} <span className="font-semibold">(+{formatDistance(detour.detour)})</span></p>{directDist !== null && <p className="text-xs text-amber-600 mt-0.5">Jūsų kelionės atstumas: {formatDistance(directDist)}</p>}</div></div>}
+              {detour && <div className="rounded-xl bg-warning-50 border border-warning-200 p-3.5 flex items-start gap-2.5"><Route className="w-5 h-5 text-warning-700 flex-shrink-0 mt-0.5" /><div className="text-sm text-warning-800"><p className="font-semibold">Preliminarus papildomas atstumas tiesia linija</p><p className="mt-0.5">Vairuotojo maršrutas: {formatDistance(detour.originalDistance)} → {formatDistance(detour.newDistance)} <span className="font-semibold">(+{formatDistance(detour.detour)})</span></p>{directDist !== null && <p className="text-xs text-warning-700 mt-0.5">Jūsų kelionės atstumas: {formatDistance(directDist)}</p>}</div></div>}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Jūsų vardas" icon={<User className="w-4 h-4" />}><input type="text" value={passengerName} onChange={(e) => setPassengerName(e.target.value)} placeholder="pvz. Jonas" maxLength={80} className="form-input" /></Field>
                 <Field label="Telefonas (nebūtina)" icon={<Phone className="w-4 h-4" />}><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+370 ..." maxLength={30} className="form-input" /></Field>
@@ -146,8 +148,8 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
             </>
           )}
           <Field label="Žinutė vairuotojui (nebūtina)"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Jei norite, parašykite vairuotojui žinutę" rows={2} maxLength={500} className="form-input resize-none" /></Field>
-          {formError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>}
-          <button type="submit" disabled={submitting || profileLoading} className="mt-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">{submitting ? <><Loader2 className="w-5 h-5 animate-spin" /><span>Siunčiama…</span></> : <><Send className="w-5 h-5" /><span>{profileLoading ? 'Tikrinama…' : 'Siųsti užklausą vairuotojui'}</span></>}</button>
+          {formError && <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2">{formError}</p>}
+          <button type="submit" disabled={submitting || profileLoading} className="ui-button mt-2 w-full py-3.5 rounded-xl bg-primary-600 text-on-primary font-semibold shadow-card hover:shadow-card active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">{submitting ? <><Loader2 className="w-5 h-5 animate-spin" /><span>Siunčiama…</span></> : <><Send className="w-5 h-5" /><span>{profileLoading ? 'Tikrinama…' : 'Siųsti užklausą vairuotojui'}</span></>}</button>
         </form>
       </div>
     </div>
@@ -155,5 +157,5 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
 }
 
 function Field({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return <label className="block"><span className="flex items-center gap-1.5 text-sm font-medium text-slate-600 mb-1.5">{icon && <span className="text-slate-400">{icon}</span>}{label}</span>{children}</label>;
+  return <label className="block"><span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">{icon && <span className="text-neutral-500">{icon}</span>}{label}</span>{children}</label>;
 }

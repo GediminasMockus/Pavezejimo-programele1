@@ -141,9 +141,9 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
         <Background />
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
       </div>
     );
   }
@@ -190,7 +190,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen text-slate-800">
+    <div className="min-h-screen text-neutral-800">
       <Background />
       <ToastContainer toasts={toasts} onRemove={remove} />
       {screen === 'home' && (
@@ -576,21 +576,21 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
   return (
     <div className="min-h-screen pb-12">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-2xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
+      <header className="app-nav">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
           <button
             onClick={onBack}
-            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
+            className="ui-button flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-neutral-600 hover:bg-neutral-100 transition-colors"
             aria-label="Atgal"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="grid min-w-0 flex-1 grid-cols-2 rounded-xl bg-slate-100 p-1" role="group" aria-label="Programėlės režimas">
+          <div className="grid min-w-0 flex-1 grid-cols-2 rounded-xl bg-neutral-100 p-1" role="group" aria-label="Programėlės režimas">
             <button
               type="button"
               aria-pressed={!isDriver}
               onClick={() => isDriver && onOpenRole('passenger')}
-              className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${!isDriver ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`ui-button min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${!isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
             >
               <Users className="mr-1 inline h-3.5 w-3.5" />
               Keleivis
@@ -599,7 +599,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               type="button"
               aria-pressed={isDriver}
               onClick={() => !isDriver && onOpenRole('driver')}
-              className={`min-h-9 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${isDriver ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`ui-button min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
             >
               <Car className="mr-1 inline h-3.5 w-3.5" />
               Vairuotojas
@@ -607,19 +607,19 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </div>
           <button
             onClick={() => setShowNotifications(true)}
-            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors relative"
+            className="ui-button flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-neutral-100 transition-colors relative"
             aria-label="Pranešimai"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary-600 text-on-primary text-xs rounded-full flex items-center justify-center font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex-shrink-0 inline-flex h-10 w-10 items-center justify-center gap-2 rounded-full bg-blue-600 text-white text-sm font-semibold shadow-md shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-95 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
+            className="ui-button flex-shrink-0 inline-flex h-10 w-10 items-center justify-center gap-2 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold shadow-md transition-all hover:bg-primary-700 active:scale-95 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
             aria-label="Pridėti skelbimą"
           >
             <Plus className="w-4 h-4" />
@@ -627,7 +627,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            className="hidden flex-shrink-0 w-10 h-10 rounded-full sm:flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
+            className="ui-button hidden flex-shrink-0 w-10 h-10 rounded-xl sm:flex items-center justify-center text-neutral-500 hover:bg-neutral-100 transition-colors"
             aria-label="Parametrai"
           >
             <SettingsIcon className="w-5 h-5" />
@@ -635,12 +635,12 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         </div>
       </header>
 
-      <div className="hidden sm:block max-w-2xl mx-auto px-4 sm:px-6 mt-4">
-        <div className="inline-flex rounded-full bg-slate-100 p-1 gap-1" aria-label="Skelbimų išdėstymas">
+      <div className="hidden sm:block max-w-5xl mx-auto px-4 sm:px-6 mt-4">
+        <div className="inline-flex rounded-full bg-neutral-100 p-1 gap-1" aria-label="Skelbimų išdėstymas">
           <button
             onClick={() => setViewMode('list')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            className={`ui-button inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              viewMode === 'list' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}
           >
             <List className="w-4 h-4" />
@@ -648,8 +648,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </button>
           <button
             onClick={() => setViewMode('grid')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            className={`ui-button inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              viewMode === 'grid' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'
             }`}
           >
             <Grid className="w-4 h-4" />
@@ -658,7 +658,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         </div>
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 mt-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 mt-6">
         {showForm && (
           <TripForm
             role={role}
@@ -817,13 +817,13 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         )}
 
         {error && (
-          <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-red-700 text-sm mb-6">
+          <div className="rounded-2xl bg-danger-50 border border-danger-200 p-4 text-danger-700 text-sm mb-6">
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-20 text-neutral-500">
             <Loader2 className="w-8 h-8 animate-spin mb-3" />
             <p className="text-sm">Įkeliama…</p>
           </div>
@@ -831,9 +831,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           <>
             {/* Driver: incoming requests */}
             {isDriver && (pendingDriverRequests.length > 0 || acceptedDriverRequests.length > 0) && (
-              <section className="mb-6 rounded-3xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-amber-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><Inbox className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-warning-100 text-warning-700"><Inbox className="h-4 w-4" /></span>
                   {pendingDriverRequests.length > 0 ? 'Reikia jūsų veiksmo' : 'Patvirtintos kelionės'} ({pendingDriverRequests.length + acceptedDriverRequests.length})
                 </h2>
 
@@ -862,7 +862,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
                 {acceptedDriverRequests.length > 0 && (
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4' : 'flex flex-col gap-3 mb-4'}>
-                    <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-emerald-600 uppercase tracking-wide' : 'text-xs font-semibold text-emerald-600 uppercase tracking-wide'}>Patvirtintos</p>
+                    <p className={viewMode === 'grid' ? 'col-span-full text-xs font-semibold text-success-700 uppercase tracking-wide' : 'text-xs font-semibold text-success-700 uppercase tracking-wide'}>Patvirtintos</p>
                     {acceptedDriverRequests.map((r) => {
                       const t = findTripById(r.driver_trip_id ?? r.trip_id);
                       if (!t) return null;
@@ -890,9 +890,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Driver: offers sent to passengers */}
             {isDriver && displayableMySentOffers.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Car className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-100 text-primary-700"><Car className="h-4 w-4" /></span>
                   Mano aktyvūs pasiūlymai ({displayableMySentOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -903,9 +903,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Passenger: incoming driver offers */}
             {!isDriver && displayableMyReceivedOffers.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-emerald-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Car className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-100 text-neutral-700"><Car className="h-4 w-4" /></span>
                   Nauji pasiūlymai ir kelionės ({displayableMyReceivedOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -925,9 +925,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Passenger: my sent requests */}
             {!isDriver && displayableMySentRequests.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-sky-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Inbox className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-100 text-primary-700"><Inbox className="h-4 w-4" /></span>
                   Mano aktyvios užklausos ({displayableMySentRequests.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -955,9 +955,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Own trips */}
             {ownTrips.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-blue-200 bg-blue-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-blue-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><List className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-100 text-primary-700"><List className="h-4 w-4" /></span>
                   Mano skelbimai ({ownTrips.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
@@ -991,30 +991,30 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             {/* Best matches */}
             {!hasActiveFilters && bestMatches.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-violet-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700"><Sparkles className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-100 text-primary-700"><Sparkles className="h-4 w-4" /></span>
                   Geriausi atitikimai ({bestMatches.length})
                 </h2>
                 <div className="flex flex-col gap-3">
                   {bestMatches.map((match, idx) => (
                     <div key={match.trip.id} className="w-full min-w-0">
-                      <div className="mb-2 rounded-xl border border-indigo-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-violet-50 px-3 py-2.5 shadow-sm">
+                      <div className="mb-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2.5 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-start gap-2.5">
-                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+                            <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-on-primary shadow-sm ">
                               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                             </span>
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold leading-tight text-slate-900">
+                              <p className="text-sm font-semibold leading-tight text-neutral-900">
                                 {idx === 0 ? 'Geriausias atitikimas' : `Atitikimas Nr. ${idx + 1}`}
                               </p>
-                              <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                              <p className="mt-1 text-xs leading-relaxed text-neutral-600">
                                 {match.reasons.slice(0, 3).join(' · ')}
                               </p>
                             </div>
                           </div>
-                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-white px-2.5 py-1 text-xs font-bold text-indigo-700 shadow-sm ring-1 ring-inset ring-indigo-200">
+                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm ring-1 ring-inset ring-primary-200">
                             {match.score}%
                             <span className="ml-1 hidden sm:inline">atitikimas</span>
                           </span>
@@ -1047,33 +1047,33 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
             <div ref={resultsSectionRef} className="scroll-mt-24">
             {corridorLoading && hasRouteSearch && (
-              <div className="mb-6 flex min-h-20 items-center justify-center gap-2 rounded-3xl border border-teal-200 bg-teal-50/60 text-sm font-medium text-teal-800">
+              <div className="mb-6 flex min-h-20 items-center justify-center gap-2 rounded-3xl border border-primary-200 bg-primary-50/60 text-sm font-medium text-primary-800">
                 <Loader2 className="h-4 w-4 animate-spin" /> Tikrinami pakeleivingi maršrutai pagal realius kelius…
               </div>
             )}
             {!corridorLoading && corridorError && hasRouteSearch && (
-              <div role="alert" className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-medium text-amber-900 shadow-sm">
+              <div role="alert" className="mb-6 rounded-3xl border border-warning-200 bg-warning-50 px-4 py-4 text-sm font-medium text-warning-900 shadow-sm">
                 Pakeleivingų maršrutų šiuo metu patikrinti nepavyko. Pabandykite paiešką dar kartą.
               </div>
             )}
             {!corridorLoading && corridorMatches.length > 0 && (
-              <section className="mb-6 rounded-3xl border border-teal-200 bg-teal-50/60 p-4 shadow-sm sm:p-5">
-                <h2 className="mb-1 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-teal-900">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><Route className="h-4 w-4" /></span>
+              <section className="mb-8">
+                <h2 className="mb-1 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-100 text-primary-700"><Route className="h-4 w-4" /></span>
                   Pakeleivingi maršrutai ({corridorMatches.length})
                 </h2>
-                <p className="mb-4 ml-10 text-xs leading-relaxed text-teal-800">Vairuotojas važiuoja kitu maršrutu, tačiau gali paimti ir išlaipinti pakeliui.</p>
+                <p className="mb-4 ml-10 text-xs leading-relaxed text-primary-800">Vairuotojas važiuoja kitu maršrutu, tačiau gali paimti ir išlaipinti pakeliui.</p>
                 <div className="flex flex-col gap-4">
                   {corridorMatches.map((match) => (
                     <div key={match.trip.id} className="min-w-0">
-                      <div className="mb-2 rounded-xl border border-teal-200 bg-white/80 px-3 py-2.5 shadow-sm">
+                      <div className="mb-2 rounded-xl border border-primary-200 bg-surface/80 px-3 py-2.5 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-900">Gali paimti su nedideliu apvažiavimu</p>
-                            <p className="mt-1 text-xs leading-relaxed text-slate-600">{match.reasons.slice(0, 3).join(' · ')}</p>
-                            <p className="mt-1.5 text-xs font-medium text-teal-800">Papildomai apie {Math.round(match.detourKm)} km · {match.detourPct.toFixed(0)} % maršruto</p>
+                            <p className="text-sm font-semibold text-neutral-900">Gali paimti su nedideliu apvažiavimu</p>
+                            <p className="mt-1 text-xs leading-relaxed text-neutral-600">{match.reasons.slice(0, 3).join(' · ')}</p>
+                            <p className="mt-1.5 text-xs font-medium text-primary-800">Papildomai apie {Math.round(match.detourKm)} km · {match.detourPct.toFixed(0)} % maršruto</p>
                           </div>
-                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-800">{match.score}%</span>
+                          <span className="inline-flex flex-shrink-0 items-center rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-800">{match.score}%</span>
                         </div>
                       </div>
                       <TripCard
@@ -1096,11 +1096,11 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               </section>
             )}
 
-            {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="form-input mb-4">Įkelti daugiau skelbimų</button>}
+            {hasMoreTrips && <button onClick={() => setPublicLimit(limit => limit + 100)} className="ui-button form-input mb-4">Įkelti daugiau skelbimų</button>}
             {/* Other trips with filters */}
-            <section className={`${hasSearchResults ? '' : 'min-h-[calc(100svh-6rem)]'} rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm sm:p-5`}>
-              <h2 className="mb-4 flex items-center gap-2.5 text-sm font-bold uppercase tracking-wide text-slate-800">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{isDriver ? <Inbox className="h-4 w-4" /> : <Car className="h-4 w-4" />}</span>
+            <section className={`surface-card p-4 sm:p-6`}>
+              <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-neutral-900">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">{isDriver ? <Inbox className="h-4 w-4" /> : <Car className="h-4 w-4" />}</span>
                 {othersLabel} ({filteredOtherTrips.length})
               </h2>
               <FilterBar
@@ -1109,8 +1109,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 resultCount={totalSearchResults}
               />
               {!hasSearchResults ? (
-                <div className="flex min-h-[45svh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center sm:p-10">
-                  <p className="text-slate-500 text-sm">
+                <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/70 p-8 text-center sm:p-10">
+                  <p className="text-neutral-500 text-sm">
                     {hasActiveFilters
                       ? 'Pagal nurodytus kriterijus skelbimų nerasta.'
                       : 'Kol kas nėra skelbimų. Būkite pirmas, kuris pridės!'}
@@ -1119,7 +1119,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     <button
                       type="button"
                       onClick={() => setShowForm(true)}
-                      className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition-colors hover:bg-blue-700"
+                      className="ui-button mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-on-primary shadow-md transition-colors hover:bg-primary-700"
                     >
                       <Plus className="h-4 w-4" />
                       Sukurti keleivio skelbimą
@@ -1136,7 +1136,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       <div
                         key={t.id}
                         id={`trip-${t.id}`}
-                        className={isFocused ? 'rounded-2xl ring-4 ring-indigo-300 ring-offset-2' : ''}
+                        className={isFocused ? 'rounded-2xl ring-4 ring-primary-300 ring-offset-2' : ''}
                       >
                       <TripCard
                         trip={t}

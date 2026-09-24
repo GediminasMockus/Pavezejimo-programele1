@@ -1,8 +1,8 @@
+import { useDialogFocus } from '@/lib/useDialogFocus';
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, X, Check, Clock, Route, Car, Users } from 'lucide-react';
 import { supabase, type Notification, type TripRole } from '@/lib/supabase';
 import { formatDistanceToNow } from '@/lib/format';
-import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { isNotificationFresh, notificationCutoff } from '@/lib/notificationRetention';
 
 interface NotificationDrawerProps {
@@ -14,7 +14,7 @@ interface NotificationDrawerProps {
 }
 
 export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, onOpenChat }: NotificationDrawerProps) {
-  useBodyScrollLock();
+  const dialogRef = useDialogFocus();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -97,81 +97,82 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
   function getNotificationIcon(type: Notification['type']) {
     switch (type) {
       case 'request_accepted':
-        return <Check className="w-5 h-5 text-emerald-600" />;
+        return <Check className="w-5 h-5 text-success-700" />;
       case 'request_rejected':
       case 'request_cancelled':
-        return <X className="w-5 h-5 text-red-600" />;
+        return <X className="w-5 h-5 text-danger-700" />;
       case 'trip_reminder':
       case 'trip_expiry':
-        return <Clock className="w-5 h-5 text-amber-600" />;
+        return <Clock className="w-5 h-5 text-warning-700" />;
       case 'new_offer':
-        return <Car className="w-5 h-5 text-emerald-600" />;
+        return <Car className="w-5 h-5 text-primary-700" />;
       case 'new_request':
-        return <Users className="w-5 h-5 text-blue-600" />;
+        return <Users className="w-5 h-5 text-primary-700" />;
       case 'new_message':
-        return <Bell className="w-5 h-5 text-blue-600" />;
+        return <Bell className="w-5 h-5 text-primary-700" />;
       case 'auto_match':
       case 'auto_match_driver':
       case 'auto_match_passenger':
-        return <Route className="w-5 h-5 text-indigo-600" />;
+        return <Route className="w-5 h-5 text-primary-700" />;
       default:
-        return <Bell className="w-5 h-5 text-slate-600" />;
+        return <Bell className="w-5 h-5 text-neutral-600" />;
     }
   }
 
   function getNotificationBg(type: Notification['type']) {
     switch (type) {
       case 'request_accepted':
-        return 'bg-emerald-50 border-emerald-200';
+        return 'bg-success-50 border-success-200';
       case 'request_rejected':
       case 'request_cancelled':
-        return 'bg-red-50 border-red-200';
+        return 'bg-danger-50 border-danger-200';
       case 'trip_reminder':
       case 'trip_expiry':
-        return 'bg-amber-50 border-amber-200';
+        return 'bg-warning-50 border-warning-200';
       case 'new_offer':
-        return 'bg-emerald-50 border-emerald-200';
+        return 'bg-primary-50 border-primary-200';
       case 'new_request':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-primary-50 border-primary-200';
       case 'new_message':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-primary-50 border-primary-200';
       case 'auto_match':
       case 'auto_match_driver':
       case 'auto_match_passenger':
-        return 'bg-indigo-50 border-indigo-200';
+        return 'bg-primary-50 border-primary-200';
       default:
-        return 'bg-slate-50 border-slate-200';
+        return 'bg-neutral-50 border-neutral-200';
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end overscroll-none bg-black/20 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-start justify-end overscroll-none bg-overlay/50 backdrop-blur-sm p-2 sm:p-4">
+      <div className="notification-panel" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="notifications-title">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0">
-          <div className="flex items-center gap-3">
+        <div className="modal-header flex-wrap gap-2 px-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
             <div className="relative">
-              <Bell className="w-5 h-5 text-slate-700" />
+              <Bell className="w-5 h-5 text-neutral-700" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {unreadCount}
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-primary-600 text-on-primary text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </div>
-            <h2 className="text-lg font-bold text-slate-900">Pranešimai</h2>
+            <h2 id="notifications-title" className="text-base font-semibold text-neutral-900">Pranešimai</h2>
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="ui-button px-1 text-xs text-primary-700 hover:text-primary-800 font-medium"
               >
                 Pažymėti visus
               </button>
             )}
             <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+              data-dialog-close onClick={onClose}
+              aria-label="Uždaryti pranešimus"
+              className="ui-button w-11 h-11 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-neutral-100 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -179,19 +180,19 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
         </div>
 
         {/* Notifications list */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="notification-list">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
               <Bell className="w-6 h-6 animate-pulse mb-2" />
               <p className="text-sm">Įkeliama…</p>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
               <Bell className="w-8 h-8 mb-3 opacity-50" />
               <p className="text-sm">Naujų ar nesenų pranešimų nėra</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-neutral-100">
               {notifications.map((notification) => {
                 const matchedTripRole =
                   notification.type === 'auto_match_driver'
@@ -226,7 +227,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                 <button
                   type="button"
                   key={notification.id}
-                  className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${!notification.read ? 'bg-blue-50/50' : ''}`}
+                  className={`notification-row ${!notification.read ? 'notification-row-unread' : ''}`}
                   onClick={() => {
                     if (!notification.read) void markAsRead(notification.id);
                     if (canOpenChat && notification.related_request_id) {
@@ -245,18 +246,18 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+                        <p className="text-sm font-semibold text-neutral-900">{notification.title}</p>
                         {!notification.read && (
-                          <span className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                          <span className="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-1.5" />
                         )}
                       </div>
-                      <p className="text-sm text-slate-600 mt-1 line-clamp-2">{notification.message}</p>
-                      <div className="flex items-center justify-between gap-3 mt-2">
-                        <p className="text-xs text-slate-400">
+                      <p className="text-sm text-neutral-600 mt-1 line-clamp-2">{notification.message}</p>
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2">
+                        <p className="text-xs text-neutral-500">
                           {formatDistanceToNow(new Date(notification.created_at))}
                         </p>
                         {actionLabel && (canOpenChat || canOpenMatch || canOpenRole) && (
-                          <span className="text-xs font-semibold text-indigo-600">
+                          <span className="text-xs font-semibold text-primary-700">
                             {actionLabel} →
                           </span>
                         )}

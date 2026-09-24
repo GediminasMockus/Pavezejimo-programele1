@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLanguage } from '@/lib/useLanguage';
 
 const EN: Record<string, string> = {
+  'Kelionę galėsite patvirtinti po išvykimo laiko.': 'You can confirm the ride after its departure time.',
   'Atgal': 'Back', 'Pranešimai': 'Notifications', 'Parametrai': 'Settings', 'Pridėti skelbimą': 'Add listing', 'Pridėti': 'Add',
   'Kortelės': 'Cards', 'Sąrašas': 'List', 'Žemėlapis': 'Map', 'Įkeliama…': 'Loading…', 'Tikrinama…': 'Checking…', 'Siunčiama…': 'Sending…',
   'Aš Vairuotojas': 'I’m a driver', 'Aš Keleivis': 'I’m a passenger', 'Siūlau pavežėti': 'I offer a ride', 'Ieškau kelionės': 'I’m looking for a ride',
@@ -117,7 +118,9 @@ const patterns: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
 ];
 
 const originalText = new WeakMap<Text, string>();
+const renderedText = new WeakMap<Text, string>();
 const originalAttrs = new WeakMap<Element, Map<string, string>>();
+const renderedAttrs = new WeakMap<Element, Map<string, string>>();
 const attrs = ['placeholder', 'aria-label', 'title'];
 
 function translateValue(value: string): string {
@@ -131,38 +134,33 @@ function translateValue(value: string): string {
 }
 
 function updateText(node: Text, english: boolean) {
-  const raw = originalText.get(node) ?? node.nodeValue ?? '';
-  if (!originalText.has(node)) originalText.set(node, raw);
-  if (!english) {
-    if (node.nodeValue !== raw) node.nodeValue = raw;
-    return;
-  }
+  const current = node.nodeValue ?? '';
+  // React may reuse a text node for a new count, action or status.
+  // Only restore a saved source while our last rendered value is still present.
+  if (!originalText.has(node) || current !== renderedText.get(node)) originalText.set(node, current);
+  const raw = originalText.get(node) ?? current;
   const trimmed = raw.trim();
-  if (!trimmed) return;
-  const translated = translateValue(trimmed);
-  if (translated === trimmed) return;
-  const leading = raw.match(/^\s*/)?.[0] ?? '';
-  const trailing = raw.match(/\s*$/)?.[0] ?? '';
-  const next = `${leading}${translated}${trailing}`;
-  if (node.nodeValue !== next) node.nodeValue = next;
+  const translated = english ? translateValue(trimmed) : trimmed;
+  const next = translated === trimmed ? raw : `${raw.match(/^\s*/)?.[0] ?? ''}${translated}${raw.match(/\s*$/)?.[0] ?? ''}`;
+  renderedText.set(node, next);
+  if (current !== next) node.nodeValue = next;
 }
 
 function updateElement(el: Element, english: boolean) {
   let saved = originalAttrs.get(el);
-  if (!saved) {
-    saved = new Map<string, string>();
-    originalAttrs.set(el, saved);
-  }
+  let rendered = renderedAttrs.get(el);
+  if (!saved) { saved = new Map(); originalAttrs.set(el, saved); }
+  if (!rendered) { rendered = new Map(); renderedAttrs.set(el, rendered); }
   for (const attr of attrs) {
     const current = el.getAttribute(attr);
-    if (current !== null && !saved.has(attr)) saved.set(attr, current);
-    const original = saved.get(attr);
-    if (original === undefined) continue;
+    if (current === null) { saved.delete(attr); rendered.delete(attr); continue; }
+    if (!saved.has(attr) || current !== rendered.get(attr)) saved.set(attr, current);
+    const original = saved.get(attr) ?? current;
     const next = english ? translateValue(original) : original;
-    if (el.getAttribute(attr) !== next) el.setAttribute(attr, next);
+    rendered.set(attr, next);
+    if (current !== next) el.setAttribute(attr, next);
   }
 }
-
 function translateTree(root: Node, english: boolean) {
   if (root.nodeType === Node.TEXT_NODE) updateText(root as Text, english);
   if (root.nodeType === Node.ELEMENT_NODE) updateElement(root as Element, english);
@@ -179,7 +177,7 @@ export function useUiTranslation() {
   const { isEnglish } = useLanguage();
 
   useEffect(() => {
-    const observeOptions: MutationObserverInit = { childList: true, subtree: true, characterData: true };
+    const observeOptions: MutationObserverInit = { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: attrs };
     let stopped = false;
     let scheduled = false;
     const pending = new Set<Node>();
@@ -203,7 +201,7 @@ export function useUiTranslation() {
 
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === 'characterData') pending.add(mutation.target);
+        if (mutation.type === 'characterData' || mutation.type === 'attributes') pending.add(mutation.target);
         for (const node of mutation.addedNodes) pending.add(node);
       }
       if (!scheduled && pending.size > 0) {
