@@ -8,7 +8,7 @@ const EMAIL_CONFIRM_REDIRECT = 'https://pavezejimo-programele1.vercel.app/';
 
 export function AuthScreen() {
   const { isEnglish } = useLanguage();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -21,6 +21,21 @@ export function AuthScreen() {
     e.preventDefault();
     setError(null);
     setNotice('');
+
+    if (mode === 'forgot') {
+      if (!email.trim()) {
+        setError(isEnglish ? 'Enter your email.' : 'Įveskite el. paštą.');
+        return;
+      }
+      setLoading(true);
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: EMAIL_CONFIRM_REDIRECT,
+      });
+      setLoading(false);
+      if (resetError) setError(isEnglish ? 'Could not send the link. Try again later.' : 'Nepavyko išsiųsti nuorodos. Bandykite vėliau.');
+      else setNotice(isEnglish ? 'If this address has an account, you will receive a password reset link.' : 'Jei šiuo adresu yra paskyra, gausite slaptažodžio atkūrimo nuorodą.');
+      return;
+    }
 
     if (!email.trim() || !password.trim()) {
       setError(isEnglish ? 'Enter your email and password.' : 'Įveskite el. paštą ir slaptažodį.');
@@ -101,17 +116,20 @@ export function AuthScreen() {
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
           Priemiesčio Pavežėjimai
         </h1>
+        <span className="mt-2 inline-flex rounded-full bg-primary-100 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-primary-700">BETA</span>
         <p className="mt-2 text-neutral-500 text-sm">
           {mode === 'signin'
             ? (isEnglish ? 'Sign in to continue' : 'Prisijunkite, kad tęstumėte')
-            : (isEnglish ? 'Create an account to get started' : 'Sukurkite paskyrą, kad pradėtumėte')}
+            : mode === 'signup'
+              ? (isEnglish ? 'Create an account to get started' : 'Sukurkite paskyrą, kad pradėtumėte')
+              : (isEnglish ? 'Enter your email to reset your password' : 'Įveskite el. paštą slaptažodžiui atkurti')}
         </p>
       </div>
 
       <div className="w-full max-w-sm">
         {notice && <p role="status" className="p-3 mb-3 bg-primary-50 text-primary-700 rounded-xl">{notice}</p>}
         <div className="auth-card bg-surface rounded-3xl shadow-card border border-primary-200 p-6 sm:p-8">
-          <div className="auth-toggle flex rounded-xl border border-primary-200 bg-primary-100 p-1 mb-6">
+          {mode !== 'forgot' && <div className="auth-toggle flex rounded-xl border border-primary-200 bg-primary-100 p-1 mb-6">
             <button
               onClick={() => { setMode('signin'); setError(null); setNotice(''); }}
               className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -128,7 +146,7 @@ export function AuthScreen() {
             >
               {isEnglish ? 'Register' : 'Registruotis'}
             </button>
-          </div>
+          </div>}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'signup' && (
@@ -183,7 +201,7 @@ export function AuthScreen() {
               />
             </label>
 
-            <label className="block">
+            {mode !== 'forgot' && <label className="block">
               <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-600 mb-1.5">
                 <Lock className="w-4 h-4 text-neutral-500" />
                 {isEnglish ? 'Password' : 'Slaptažodis'}
@@ -199,7 +217,11 @@ export function AuthScreen() {
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 required
               />
-            </label>
+            </label>}
+
+            {mode === 'signin' && <button type="button" onClick={() => { setMode('forgot'); setError(null); setNotice(''); }} className="ui-button self-end text-sm font-semibold text-primary-700 hover:underline">
+              {isEnglish ? 'Forgot your password?' : 'Pamiršote slaptažodį?'}
+            </button>}
 
             {error && (
               <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2">{error}</p>
@@ -215,18 +237,20 @@ export function AuthScreen() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span>{mode === 'signin'
                     ? (isEnglish ? 'Signing in…' : 'Jungiamasi…')
-                    : (isEnglish ? 'Creating…' : 'Kuriama…')}</span>
+                    : mode === 'signup' ? (isEnglish ? 'Creating…' : 'Kuriama…') : (isEnglish ? 'Sending…' : 'Siunčiama…')}</span>
                 </>
               ) : (
                 <span>{mode === 'signin'
                   ? (isEnglish ? 'Sign in' : 'Prisijungti')
-                  : (isEnglish ? 'Register' : 'Registruotis')}</span>
+                  : mode === 'signup' ? (isEnglish ? 'Register' : 'Registruotis') : (isEnglish ? 'Send reset link' : 'Siųsti atkūrimo nuorodą')}</span>
               )}
             </button>
           </form>
         </div>
 
-        <p className="mt-6 text-center text-xs text-neutral-500">
+        {mode === 'forgot' ? <button type="button" onClick={() => { setMode('signin'); setError(null); setNotice(''); }} className="ui-button block mx-auto mt-6 text-sm font-semibold text-primary-700 hover:underline">
+          {isEnglish ? 'Back to sign in' : 'Grįžti į prisijungimą'}
+        </button> : <p className="mt-6 text-center text-xs text-neutral-500">
           {mode === 'signin'
             ? (isEnglish ? "Don't have an account? " : 'Neturite paskyros? ')
             : (isEnglish ? 'Already have an account? ' : 'Turite paskyrą? ')}
@@ -238,8 +262,53 @@ export function AuthScreen() {
               ? (isEnglish ? 'Register' : 'Registruokitės')
               : (isEnglish ? 'Sign in' : 'Prisijunkite')}
           </button>
-        </p>
+        </p>}
       </div>
     </div>
   );
+}
+
+export function PasswordRecoveryScreen({ onComplete }: { onComplete: () => void }) {
+  const { isEnglish } = useLanguage();
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleReset(event: React.FormEvent) {
+    event.preventDefault();
+    setError('');
+    if (password.length < 10) {
+      setError(isEnglish ? 'Password must be at least 10 characters.' : 'Slaptažodis turi būti bent 10 simbolių.');
+      return;
+    }
+    if (password !== confirmation) {
+      setError(isEnglish ? 'Passwords do not match.' : 'Slaptažodžiai nesutampa.');
+      return;
+    }
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (updateError) {
+      setError(isEnglish ? 'Could not change the password. Request a new link.' : 'Nepavyko pakeisti slaptažodžio. Paprašykite naujos nuorodos.');
+      return;
+    }
+    onComplete();
+  }
+
+  return <div className="min-h-screen flex items-center justify-center px-4 py-10">
+    <Background />
+    <form onSubmit={handleReset} className="relative w-full max-w-sm auth-card bg-surface rounded-3xl shadow-card border border-primary-200 p-6 sm:p-8 flex flex-col gap-4">
+      <h1 className="text-xl font-bold text-neutral-900">{isEnglish ? 'Set a new password' : 'Nustatykite naują slaptažodį'}</h1>
+      <label className="text-sm font-medium text-neutral-700">{isEnglish ? 'New password' : 'Naujas slaptažodis'}
+        <input type="password" autoComplete="new-password" minLength={10} required value={password} onChange={event => setPassword(event.target.value)} className="form-input mt-1.5" />
+      </label>
+      <label className="text-sm font-medium text-neutral-700">{isEnglish ? 'Confirm password' : 'Pakartokite slaptažodį'}
+        <input type="password" autoComplete="new-password" minLength={10} required value={confirmation} onChange={event => setConfirmation(event.target.value)} className="form-input mt-1.5" />
+      </label>
+      {error && <p role="alert" className="text-sm text-danger-700">{error}</p>}
+      <button type="submit" disabled={loading} className="ui-button min-h-12 rounded-xl bg-primary-600 text-on-primary font-semibold disabled:opacity-60">{loading ? (isEnglish ? 'Saving…' : 'Saugoma…') : (isEnglish ? 'Save password' : 'Išsaugoti slaptažodį')}</button>
+      <button type="button" onClick={async () => { await supabase.auth.signOut(); onComplete(); }} className="ui-button text-sm font-semibold text-primary-700">{isEnglish ? 'Back to sign in' : 'Grįžti į prisijungimą'}</button>
+    </form>
+  </div>;
 }

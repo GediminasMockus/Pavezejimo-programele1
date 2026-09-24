@@ -42,7 +42,8 @@ import { navigationUrl } from '@/lib/navigation';
 import { RoutePreviewModal } from '@/components/RoutePreviewModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
 import { HomeScreen } from '@/components/HomeScreen';
-import { AuthScreen } from '@/components/AuthScreen';
+import { AuthScreen, PasswordRecoveryScreen } from '@/components/AuthScreen';
+import { AppFeedback } from '@/components/AppFeedback';
 import { Background } from '@/components/Background';
 import { SettingsModal } from '@/components/SettingsModal';
 import { NotificationDrawer } from '@/components/NotificationDrawer';
@@ -98,6 +99,9 @@ export default function App() {
   const [chatRequestId, setChatRequestId] = useState<string | null>(initialNavigation?.chatRequestId ?? null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [recoveringPassword, setRecoveringPassword] = useState(() => {
+    try { return sessionStorage.getItem('pavezejimai_password_recovery') === '1'; } catch { return false; }
+  });
   const { toasts, success, error, info, warning, remove } = useToast();
 
   useEffect(() => {
@@ -105,7 +109,15 @@ export default function App() {
       setSession(data.session);
       setAuthLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveringPassword(true);
+        try { sessionStorage.setItem('pavezejimai_password_recovery', '1'); } catch { /* optional storage */ }
+      }
+      if (event === 'SIGNED_OUT') {
+        setRecoveringPassword(false);
+        try { sessionStorage.removeItem('pavezejimai_password_recovery'); } catch { /* optional storage */ }
+      }
       setSession(sess);
     });
     return () => listener.subscription.unsubscribe();
@@ -146,6 +158,13 @@ export default function App() {
         <Loader2 className="w-8 h-8 animate-spin text-neutral-500" />
       </div>
     );
+  }
+
+  if (recoveringPassword && session) {
+    return <PasswordRecoveryScreen onComplete={() => {
+      setRecoveringPassword(false);
+      try { sessionStorage.removeItem('pavezejimai_password_recovery'); } catch { /* optional storage */ }
+    }} />;
   }
 
   if (!session) {
@@ -193,6 +212,7 @@ export default function App() {
     <div className="min-h-screen text-neutral-800">
       <Background />
       <ToastContainer toasts={toasts} onRemove={remove} />
+      <AppFeedback screen={screen} role={screen === 'list' ? activeRole : null} />
       {screen === 'home' && (
         <HomeScreen
           userId={userId}

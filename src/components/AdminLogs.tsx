@@ -4,7 +4,13 @@ import { Shield, Loader2, Car, Users, CheckCircle2, Mail, Star, Calendar, Trash2
 import { supabase, type Trip, type RideRequest, type UserProfile, type Rating } from '@/lib/supabase';
 import { formatDateTime } from '@/lib/format';
 
-type AdminTab = 'completed' | 'users' | 'trips' | 'requests' | 'stats';
+type AdminTab = 'completed' | 'users' | 'trips' | 'requests' | 'stats' | 'feedback';
+type FeedbackEntry = {
+  id: string; user_id: string; category: 'problem' | 'suggestion' | 'rating';
+  message: string; rating: number | null; screen: string; role: string | null;
+  page_url: string; user_agent: string; app_version: string;
+  status: 'new' | 'reviewed' | 'fixed'; created_at: string;
+};
 
 export function AdminLogs({ onClose }: { onClose: () => void }) {
   const dialogRef = useDialogFocus();
@@ -14,6 +20,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [allTrips, setAllTrips] = useState<Trip[]>([]);
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -21,7 +28,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     async function load() {
-      const [tRes, rRes, pRes, ratRes, allTRes, allRRes] = await Promise.all([
+      const [tRes, rRes, pRes, ratRes, allTRes, allRRes, feedbackRes] = await Promise.all([
         supabase
           .from('trips')
           .select('*')
@@ -52,14 +59,16 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
           .select('*')
           .order('created_at', { ascending: false })
           .limit(100),
+        supabase.from('app_feedback').select('*').order('created_at', { ascending: false }).limit(100),
       ]);
-      if ([tRes,rRes,pRes,ratRes,allTRes,allRRes].some(result => result.error)) setLoadError("Nepavyko įkelti dalies administravimo duomenų.");
+      if ([tRes,rRes,pRes,ratRes,allTRes,allRRes,feedbackRes].some(result => result.error)) setLoadError("Nepavyko įkelti dalies administravimo duomenų.");
       if (tRes.data) setCompletedTrips(tRes.data);
       if (rRes.data) setCompletedRequests(rRes.data);
       if (pRes.data) setProfiles(pRes.data);
       if (ratRes.data) setRatings(ratRes.data);
       if (allTRes.data) setAllTrips(allTRes.data);
       if (allRRes.data) setAllRequests(allRRes.data);
+      if (feedbackRes.data) setFeedback(feedbackRes.data as FeedbackEntry[]);
       setLoading(false);
     }
     load();
@@ -76,6 +85,14 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
       setAllTrips(prev => prev.filter(t => t.id !== tripId));
       setCompletedTrips(prev => prev.filter(t => t.id !== tripId));
     }
+  }
+
+  async function updateFeedbackStatus(id: string, status: FeedbackEntry['status']) {
+    setActionLoading(id);
+    const { error } = await supabase.from('app_feedback').update({ status }).eq('id', id);
+    setActionLoading(null);
+    if (error) setLoadError('Nepavyko pakeisti atsiliepimo būsenos.');
+    else setFeedback(current => current.map(entry => entry.id === id ? { ...entry, status } : entry));
   }
 
   async function handleDeleteRequest(requestId: string) {
@@ -179,6 +196,9 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
             >
               Užklausos ({allRequests.length})
             </button>
+            <button onClick={() => setTab('feedback')} className={`ui-button px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${tab === 'feedback' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'}`}>
+              Atsiliepimai ({feedback.filter(entry => entry.status === 'new').length})
+            </button>
           </div>
         </div>
 
@@ -187,6 +207,27 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col items-center justify-center py-10 text-neutral-500">
               <Loader2 className="w-6 h-6 animate-spin mb-2" />
               <p className="text-sm">Įkeliama…</p>
+            </div>
+          ) : tab === 'feedback' ? (
+            <div className="space-y-3">
+              {feedback.length === 0 && <p className="text-sm text-neutral-600">Atsiliepimų kol kas nėra.</p>}
+              {feedback.map(entry => <article key={entry.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <strong className="text-neutral-900">{entry.category === 'problem' ? 'Problema' : entry.category === 'suggestion' ? 'Pasiūlymas' : 'Programėlės vertinimas'}{entry.rating ? ` · ${entry.rating}/5 ★` : ''}</strong>
+                  <time className="text-xs text-neutral-500" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time>
+                </div>
+                {entry.message && <p className="mt-2 whitespace-pre-wrap break-words text-neutral-800">{entry.message}</p>}
+                <details className="mt-2 text-xs text-neutral-600"><summary className="cursor-pointer">Techninė informacija</summary>
+                  <p className="mt-2 break-all">Vartotojas: {entry.user_id}</p>
+                  <p>Ekranas: {entry.screen} · {entry.role ?? '–'} · {entry.app_version}</p>
+                  <p className="break-all">{entry.page_url}</p><p className="break-all">{entry.user_agent}</p>
+                </details>
+                <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-neutral-700">Būsena
+                  <select aria-label="Atsiliepimo būsena" className="form-input !min-h-10 !w-auto !py-1" value={entry.status} disabled={actionLoading === entry.id} onChange={event => void updateFeedbackStatus(entry.id, event.target.value as FeedbackEntry['status'])}>
+                    <option value="new">Naujas</option><option value="reviewed">Peržiūrėtas</option><option value="fixed">Ištaisytas</option>
+                  </select>
+                </label>
+              </article>)}
             </div>
           ) : tab === 'stats' ? (
             <div className="grid grid-cols-2 gap-3">
