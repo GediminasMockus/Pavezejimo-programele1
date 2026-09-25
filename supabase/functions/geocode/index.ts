@@ -1,12 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-
-interface GeoResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-  area: string;
-}
+import { photonResults, type GeoResult } from '../_shared/geocode.ts';
 
 interface CachedResult {
   expiresAt: number;
@@ -28,7 +22,20 @@ const cache = new Map<string, CachedResult>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 200;
 const UPSTREAM_INTERVAL_MS = 1_100;
-let lastUpstreamRequestAt = 0;
+let nextUpstreamRequestAt = 0;
+
+async function fallbackSearch(query: string): Promise<GeoResult[] | null> {
+  try {
+    const endpoint = new URL('https://photon.komoot.io/api/');
+    endpoint.search = new URLSearchParams({ q: query, limit: '5', countrycode: 'LT' }).toString();
+    const response = await fetch(endpoint, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return photonResults(data.features ?? []);
+  } catch {
+    return null;
+  }
+}
 
 Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -53,11 +60,12 @@ Deno.serve(async request => {
   if (cached && cached.expiresAt > Date.now()) return reply(cached.results);
   if (cached) cache.delete(cacheKey);
 
-  const now = Date.now();
-  if (now - lastUpstreamRequestAt < UPSTREAM_INTERVAL_MS) {
+  const delay = Math.max(0, nextUpstreamRequestAt - Date.now());
+  if (delay > 10_000) {
     return reply({ error: 'rate limited' }, 429);
   }
-  lastUpstreamRequestAt = now;
+  nextUpstreamRequestAt = Date.now() + delay + UPSTREAM_INTERVAL_MS;
+  if (delay) await new Promise(resolve => setTimeout(resolve, delay));
 
   try {
     const endpoint = new URL(
@@ -78,7 +86,13 @@ Deno.serve(async request => {
         Accept: 'application/json',
       },
     });
-    if (!response.ok) return reply({ error: 'geocoding unavailable' }, 502);
+    if (!response.ok) {
+      console.warn('geocode primary upstream status', response.status);
+      const fallback = await fallbackSearch(query);
+      if (fallback === null) return reply({ error: 'geocoding unavailable' }, 502);
+      cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, results: fallback });
+      return reply(fallback);
+    }
 
     const raw = await response.json();
     const results: GeoResult[] = raw.map(
@@ -113,7 +127,11 @@ Deno.serve(async request => {
     cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, results });
 
     return reply(results);
-  } catch {
-    return reply({ error: 'geocoding unavailable' }, 502);
+  } catch (error) {
+    console.warn('geocode primary upstream error', error instanceof Error ? error.name : 'unknown');
+    const fallback = await fallbackSearch(query);
+    if (fallback === null) return reply({ error: 'geocoding unavailable' }, 502);
+    cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, results: fallback });
+    return reply(fallback);
   }
 });
