@@ -306,7 +306,7 @@ export function ChatDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay h-[90dvh] sm:h-[min(85dvh,800px)] flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="ChatDrawer-title">
+      <div className="modal-panel chat-panel ride-dialog w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay h-[90dvh] sm:h-[min(85dvh,800px)] flex flex-col" data-role={trip.role} ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="ChatDrawer-title">
         <div className="modal-header flex-wrap">
           <div className="flex-1 min-w-0">
             <h2 id="ChatDrawer-title" className="text-base font-bold text-neutral-900 truncate">
@@ -445,8 +445,8 @@ export function ChatDrawer({
                   <div
                     className={`max-w-[85%] min-w-0 rounded-2xl px-4 py-2.5 ${
                       isOwn
-                        ? 'bg-primary-600 text-on-primary rounded-br-md'
-                        : 'bg-neutral-100 text-neutral-800 rounded-bl-md'
+                        ? 'chat-message-own bg-primary-600 text-on-primary rounded-br-md'
+                        : 'chat-message-other bg-neutral-100 text-neutral-800 rounded-bl-md'
                     }`}
                   >
                     <p className="text-xs font-semibold mb-0.5">{msg.author_name}</p>

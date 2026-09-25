@@ -112,7 +112,7 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="modal-panel w-full sm:max-w-md bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="SettingsModal-title">
+      <div className="modal-panel settings-panel w-full sm:max-w-md bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="SettingsModal-title">
         <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur px-5 sm:px-6 pt-5 pb-3 border-b border-neutral-100 flex items-center justify-between">
           <div className="flex items-center gap-2"><Settings className="w-5 h-5 text-neutral-700" /><h2 id="SettingsModal-title" className="text-lg font-bold text-neutral-900">{text.settings}</h2></div>
           <button data-dialog-close onClick={onClose} className="ui-button px-4 py-2 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-semibold hover:bg-neutral-200">{text.close}</button>
@@ -132,8 +132,8 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
             <section>
               <h3 className="section-title">{text.defaultRole}</h3>
               <div className="grid grid-cols-2 gap-3">
-                <RoleButton active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label={text.driver} />
-                <RoleButton active={defaultRole === 'passenger'} onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
+                <RoleButton role="driver" active={defaultRole === 'driver'} onClick={() => setDefaultRole(defaultRole === 'driver' ? '' : 'driver')} icon={<Car className="w-5 h-5" />} label={text.driver} />
+                <RoleButton role="passenger" active={defaultRole === 'passenger'} onClick={() => setDefaultRole(defaultRole === 'passenger' ? '' : 'passenger')} icon={<Users className="w-5 h-5" />} label={text.passenger} />
               </div>
             </section>
 
@@ -175,8 +175,8 @@ export function SettingsModal({ userId, onClose, onSignOut }: { userId: string; 
   );
 }
 
-function RoleButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-  return <button aria-pressed={active} onClick={onClick} className={`ui-button flex min-w-0 flex-col sm:flex-row items-center gap-2 p-3 rounded-xl border transition-all ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-surface hover:border-neutral-300'}`}><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? 'bg-primary-600 text-on-primary' : 'bg-neutral-100 text-neutral-500'}`}>{icon}</div><span className={`text-sm font-semibold ${active ? 'text-primary-700' : 'text-neutral-600'}`}>{label}</span></button>;
+function RoleButton({ role, active, onClick, icon, label }: { role: 'driver' | 'passenger'; active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return <button data-role={role} aria-pressed={active} onClick={onClick} className={`ui-button settings-role flex min-w-0 flex-col sm:flex-row items-center gap-2 p-3 rounded-xl border transition-all ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-surface hover:border-neutral-300'}`}><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${active ? 'bg-primary-600 text-on-primary' : 'bg-neutral-100 text-neutral-500'}`}>{icon}</div><span className={`text-sm font-semibold ${active ? 'text-primary-700' : 'text-neutral-600'}`}>{label}</span></button>;
 }
 
 function ToggleRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: () => void }) {

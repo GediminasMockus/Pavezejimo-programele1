@@ -190,7 +190,7 @@ export function TripForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-none bg-overlay/50 backdrop-blur-md px-0 sm:px-4">
-      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-hidden flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="TripForm-title">
+      <div className="modal-panel ride-dialog w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-hidden flex flex-col" data-role={isDriver ? 'driver' : 'passenger'} ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="TripForm-title">
         <div className="modal-header">
           <h2 id="TripForm-title" className="text-lg font-semibold text-neutral-900">
             {editTrip

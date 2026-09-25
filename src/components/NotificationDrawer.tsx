@@ -105,14 +105,16 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
       case 'trip_expiry':
         return <Clock className="w-5 h-5 text-warning-700" />;
       case 'new_offer':
-        return <Car className="w-5 h-5 text-primary-700" />;
+        return <Car className="w-5 h-5 text-driver" />;
       case 'new_request':
-        return <Users className="w-5 h-5 text-primary-700" />;
+        return <Users className="w-5 h-5 text-passenger" />;
       case 'new_message':
         return <Bell className="w-5 h-5 text-primary-700" />;
-      case 'auto_match':
       case 'auto_match_driver':
+        return <Route className="w-5 h-5 text-driver" />;
       case 'auto_match_passenger':
+        return <Route className="w-5 h-5 text-passenger" />;
+      case 'auto_match':
         return <Route className="w-5 h-5 text-primary-700" />;
       default:
         return <Bell className="w-5 h-5 text-neutral-600" />;
@@ -130,14 +132,14 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
       case 'trip_expiry':
         return 'bg-warning-50 border-warning-200';
       case 'new_offer':
-        return 'bg-primary-50 border-primary-200';
+      case 'auto_match_driver':
+        return 'notice-driver';
       case 'new_request':
-        return 'bg-primary-50 border-primary-200';
+      case 'auto_match_passenger':
+        return 'notice-passenger';
       case 'new_message':
         return 'bg-primary-50 border-primary-200';
       case 'auto_match':
-      case 'auto_match_driver':
-      case 'auto_match_passenger':
         return 'bg-primary-50 border-primary-200';
       default:
         return 'bg-neutral-50 border-neutral-200';

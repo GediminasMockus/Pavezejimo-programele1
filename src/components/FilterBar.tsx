@@ -38,7 +38,7 @@ export function FilterBar({ filters, onChange, resultCount }: {
       </div>
 
       {open && (
-        <div id="trip-filters" className="mt-3 rounded-2xl bg-surface border border-neutral-200 p-4 shadow-sm flex flex-col gap-3">
+        <div id="trip-filters" className="filter-panel mt-3 rounded-2xl bg-surface border border-neutral-200 p-4 shadow-sm flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-neutral-700">Filtravimo kriterijai</h3>
             <button onClick={() => setOpen(false)} className="ui-button w-11 h-11 rounded-xl flex items-center justify-center text-neutral-500 hover:bg-neutral-100" aria-label="Uždaryti filtrus"><X className="w-5 h-5" /></button>

@@ -99,16 +99,17 @@ export function RoutePreviewModal({
       if (controller.signal.aborted) return;
 
       if (hasDriverCoords) {
-        L.marker([trip.from_lat!, trip.from_lng!], { icon: bluePin('Iš') })
+        const tripColor = trip.role === 'driver' ? 'rgb(var(--role-driver))' : 'rgb(var(--role-passenger))';
+        L.marker([trip.from_lat!, trip.from_lng!], { icon: tripPin('Iš', tripColor) })
           .addTo(map)
           .bindPopup(mapPopup('Išvykimas', trip.from_location));
-        L.marker([trip.to_lat!, trip.to_lng!], { icon: bluePin('Į') })
+        L.marker([trip.to_lat!, trip.to_lng!], { icon: tripPin('Į', tripColor) })
           .addTo(map)
           .bindPopup(mapPopup('Atvykimas', trip.to_location));
 
         if (driverRouteData) {
           L.polyline(driverRouteData.coordinates, {
-            color: 'rgb(var(--primary-600))',
+            color: tripColor,
             weight: 4,
             opacity: 0.5,
             dashArray: '10 8',
@@ -116,7 +117,7 @@ export function RoutePreviewModal({
         } else {
           L.polyline(
             [[trip.from_lat!, trip.from_lng!], [trip.to_lat!, trip.to_lng!]],
-            { color: 'rgb(var(--primary-600))', weight: 4, opacity: 0.5, dashArray: '10 8' },
+            { color: tripColor, weight: 4, opacity: 0.5, dashArray: '10 8' },
           ).addTo(map);
         }
 
@@ -126,16 +127,16 @@ export function RoutePreviewModal({
 
       let detour: number | undefined;
       if (hasDriverCoords && hasRequestCoords) {
-        L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: greenPin('A') })
+        L.marker([request!.pickup_lat!, request!.pickup_lng!], { icon: passengerPin('A') })
           .addTo(map)
           .bindPopup(mapPopup('Keleivio paėmimas', request!.pickup_location));
-        L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: greenPin('B') })
+        L.marker([request!.dropoff_lat!, request!.dropoff_lng!], { icon: passengerPin('B') })
           .addTo(map)
           .bindPopup(mapPopup('Keleivio išlaipinimas', request!.dropoff_location));
 
         if (fullRouteData) {
           L.polyline(fullRouteData.coordinates, {
-            color: 'rgb(var(--neutral-500))',
+            color: 'rgb(var(--role-passenger))',
             weight: 5,
             opacity: 0.85,
           }).addTo(map);
@@ -147,7 +148,7 @@ export function RoutePreviewModal({
               [request!.dropoff_lat!, request!.dropoff_lng!],
               [trip.to_lat!, trip.to_lng!],
             ],
-            { color: 'rgb(var(--neutral-500))', weight: 5, opacity: 0.85 },
+            { color: 'rgb(var(--role-passenger))', weight: 5, opacity: 0.85 },
           ).addTo(map);
         }
 
@@ -183,7 +184,7 @@ export function RoutePreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center overscroll-none bg-overlay/50 backdrop-blur-sm sm:p-4">
-      <div className="modal-panel w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-surface sm:rounded-3xl shadow-overlay overflow-hidden flex flex-col" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RoutePreviewModal-title">
+      <div className="modal-panel ride-dialog w-full h-[100dvh] sm:h-[min(92dvh,900px)] sm:max-w-3xl bg-surface sm:rounded-3xl shadow-overlay overflow-hidden flex flex-col" data-role={trip.role} ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RoutePreviewModal-title">
         <div className="shrink-0 bg-surface/95 backdrop-blur px-4 sm:px-6 py-3.5 sm:py-4 border-b border-neutral-100 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 id="RoutePreviewModal-title" className="text-lg font-bold text-neutral-900">Maršruto peržiūra</h2>
@@ -214,7 +215,7 @@ export function RoutePreviewModal({
             {hasDriverCoords && (
               <div className="rounded-xl bg-primary-50 border border-primary-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-primary-900 mb-1">
-                  <span className="w-4 h-1 rounded bg-primary-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgb(var(--primary-600)) 0 6px, transparent 6px 12px)' }} />
+                  <span className="w-4 h-1 rounded bg-primary-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgb(var(--role-driver)) 0 6px, transparent 6px 12px)' }} />
                   Tiesioginis vairuotojo maršrutas
                 </div>
                 <div className="text-sm text-primary-800">
@@ -296,12 +297,12 @@ export function RoutePreviewModal({
   );
 }
 
-function bluePin(label: string): L.DivIcon {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:rgb(var(--primary-600));transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
+function tripPin(label: string, color: string): L.DivIcon {
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
   return L.divIcon({ html, className: '', iconSize: [30, 30], iconAnchor: [15, 30] });
 }
 
-function greenPin(label: string): L.DivIcon {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:rgb(var(--neutral-500));transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
+function passengerPin(label: string): L.DivIcon {
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50% 50% 50% 0;background:rgb(var(--role-passenger));transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"><span style="transform:rotate(45deg);color:white;font-size:11px;font-weight:bold;">${label}</span></div>`;
   return L.divIcon({ html, className: '', iconSize: [30, 30], iconAnchor: [15, 30] });
 }

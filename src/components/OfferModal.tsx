@@ -73,7 +73,7 @@ export function OfferModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-sm px-0 sm:px-4">
-      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="OfferModal-title">
+      <div className="modal-panel ride-dialog w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" data-role="driver" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="OfferModal-title">
         <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
           <div>
             <h2 id="OfferModal-title" className="text-lg font-bold text-neutral-900">Siūlyti pavežėjimą</h2>

@@ -4,14 +4,14 @@ import { MapPin, Crosshair, Loader2 } from 'lucide-react';
 import type { Trip } from '@/lib/supabase';
 
 function createIcon(role: 'driver' | 'passenger', active: boolean) {
-  const color = role === 'driver' ? 'rgb(var(--primary-600))' : 'rgb(var(--neutral-500))';
+  const color = role === 'driver' ? 'rgb(var(--role-driver))' : 'rgb(var(--role-passenger))';
   const size = active ? 36 : 28;
   const html = `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);border:2px solid white;box-shadow:var(--shadow-sm);"></div>`;
   return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size] });
 }
 
 function createUserIcon() {
-  const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgb(var(--primary-600));border:3px solid white;box-shadow:0 0 0 4px rgb(var(--primary-500) / 0.2),var(--shadow-sm);"></div>`;
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgb(var(--accent-coral));border:3px solid white;box-shadow:0 0 0 4px rgb(var(--accent-coral) / 0.25),var(--shadow-sm);"></div>`;
   return L.divIcon({ html, className: '', iconSize: [20, 20], iconAnchor: [10, 10] });
 }
 

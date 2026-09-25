@@ -595,7 +595,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   }
 
   return (
-    <div className="min-h-screen pb-12">
+    <div className="ride-screen min-h-screen pb-12" data-role={role}>
       <header className="app-nav">
         <div className="max-w-5xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
           <button

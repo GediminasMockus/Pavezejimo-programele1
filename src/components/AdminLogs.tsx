@@ -229,7 +229,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ) : tab === 'stats' ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="admin-stats grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Car className="w-5 h-5 text-neutral-600" />

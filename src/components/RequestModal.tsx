@@ -112,7 +112,7 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay/50 backdrop-blur-md px-0 sm:px-4">
-      <div className="modal-panel w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RequestModal-title">
+      <div className="modal-panel ride-dialog w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl shadow-overlay max-h-[92dvh] overflow-y-auto" data-role="passenger" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="RequestModal-title">
         <div className="modal-header">
           <div><h2 id="RequestModal-title" className="text-lg font-semibold text-neutral-900">Siųsti užklausą</h2><p className="text-xs text-neutral-500 mt-0.5">{trip.from_location} → {trip.to_location} · {formatDateTime(trip.departure_time)}</p></div>
           <button data-dialog-close onClick={onClose} className="icon-button" aria-label="Uždaryti"><X className="w-5 h-5" /></button>

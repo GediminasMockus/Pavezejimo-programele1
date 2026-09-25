@@ -110,7 +110,7 @@ export function AuthScreen() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       <Background />
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 shadow-card mb-4">
+        <div className="auth-logo inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 shadow-card mb-4">
           <Route className="w-8 h-8 text-on-primary" strokeWidth={2.2} />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
@@ -131,6 +131,7 @@ export function AuthScreen() {
         <div className="auth-card bg-surface rounded-3xl shadow-card border border-primary-200 p-6 sm:p-8">
           {mode !== 'forgot' && <div className="auth-toggle flex rounded-xl border border-primary-200 bg-primary-100 p-1 mb-6">
             <button
+              aria-pressed={mode === 'signin'}
               onClick={() => { setMode('signin'); setError(null); setNotice(''); }}
               className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
                 mode === 'signin' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
@@ -139,6 +140,7 @@ export function AuthScreen() {
               {isEnglish ? 'Sign in' : 'Prisijungti'}
             </button>
             <button
+              aria-pressed={mode === 'signup'}
               onClick={() => { setMode('signup'); setError(null); setNotice(''); }}
               className={`ui-button flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
                 mode === 'signup' ? 'bg-surface text-neutral-900 shadow-sm' : 'text-neutral-500'
