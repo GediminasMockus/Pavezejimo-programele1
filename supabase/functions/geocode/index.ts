@@ -50,12 +50,14 @@ Deno.serve(async request => {
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) return reply({ error: 'unauthorized' }, 401);
 
-  const query = new URL(request.url).searchParams.get('q')?.trim();
+  const params = new URL(request.url).searchParams;
+  const query = params.get('q')?.trim();
+  const suggest = params.get('mode') === 'suggest';
   if (!query || query.length < 3 || query.length > 160) {
     return reply({ error: 'invalid query' }, 400);
   }
 
-  const cacheKey = query.toLocaleLowerCase('lt-LT');
+  const cacheKey = `${suggest ? 'suggest' : 'search'}:${query.toLocaleLowerCase('lt-LT')}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return reply(cached.results);
   if (cached) cache.delete(cacheKey);
@@ -66,6 +68,14 @@ Deno.serve(async request => {
   }
   nextUpstreamRequestAt = Date.now() + delay + UPSTREAM_INTERVAL_MS;
   if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+
+  if (suggest) {
+    // Nominatim does not permit autocomplete; Photon supports search-as-you-type.
+    const results = await fallbackSearch(query);
+    if (results === null) return reply({ error: 'geocoding unavailable' }, 502);
+    cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, results });
+    return reply(results);
+  }
 
   try {
     const endpoint = new URL(
