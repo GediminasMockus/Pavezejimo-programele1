@@ -194,6 +194,16 @@ export default function App() {
     showList(matchedTripRole === 'driver' ? 'passenger' : 'driver', emptyFilters, false, tripId);
   };
 
+  const openNotificationTrip = async (tripId: string) => {
+    const { data } = await supabase.rpc('get_accessible_trips').eq('id', tripId).maybeSingle();
+    const trip = data as Trip | null;
+    if (!trip) {
+      error('Ši kelionė jau pasibaigė arba skelbimas nebeprieinamas.');
+      return;
+    }
+    showList(trip.role, emptyFilters, false, tripId);
+  };
+
   const openRole = (role: TripRole) => {
     showList(role, emptyFilters, false, null);
   };
@@ -239,6 +249,7 @@ export default function App() {
             showList(role, searchFilters ?? emptyFilters, create, null);
           }}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenTrip={openNotificationTrip}
           onOpenChat={openNotificationChat}
           onOpenRequest={openNotificationRequest}
           onSignOut={() => supabase.auth.signOut()}
@@ -255,6 +266,7 @@ export default function App() {
           initialChatRequestId={chatRequestId}
           userId={userId}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenNotificationTrip={openNotificationTrip}
           onOpenRole={openRole}
           onOpenNotificationChat={openNotificationChat}
           onOpenNotificationRequest={openNotificationRequest}
@@ -274,7 +286,7 @@ export default function App() {
   );
 }
 
-function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, focusRequestId, initialChatRequestId, onOpenMatchedTrip, onOpenRole, onOpenNotificationChat, onOpenNotificationRequest }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; focusRequestId: string | null; initialChatRequestId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; onOpenNotificationChat: (requestId: string) => void; onOpenNotificationRequest: (requestId: string, role?: TripRole) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, focusRequestId, initialChatRequestId, onOpenMatchedTrip, onOpenRole, onOpenNotificationChat, onOpenNotificationRequest, onOpenNotificationTrip }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; focusRequestId: string | null; initialChatRequestId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; onOpenNotificationChat: (requestId: string) => void; onOpenNotificationRequest: (requestId: string, role?: TripRole) => void; onOpenNotificationTrip: (tripId: string) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [publicTripIds, setPublicTripIds] = useState<Set<string>>(new Set());
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
@@ -860,6 +872,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               else void onOpenNotificationChat(requestId);
             }}
             onOpenRequest={onOpenNotificationRequest}
+            onOpenTrip={onOpenNotificationTrip}
           />
         )}
 
@@ -1043,8 +1056,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     const tripRequests = requestsByTrip.get(t.id) ?? [];
                     const pendingCount = tripRequests.filter((r) => r.status === 'pending').length;
                     return (
+                      <div key={t.id} id={`trip-${t.id}`} className={t.id === focusTripId ? 'scroll-mt-24 rounded-2xl ring-4 ring-primary-300 ring-offset-2' : 'scroll-mt-24'}>
                       <TripCard
-                        key={t.id}
                         trip={t}
                         currentTime={now}
                         highlight
@@ -1061,6 +1074,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                         userRating={t.created_by ? getUserRating(t.created_by) : null}
                         showPrivateDetails
                       />
+                      </div>
                     );
                   })}
                 </div>

@@ -222,6 +222,17 @@ describe('user workflows', () => {
    fireEvent.click(screen.getByRole('button', { name: 'Visi' }));
    expect(screen.getByRole('button', { name: 'Senas įvykis' })).toBeTruthy();
  });
+ it('opens a trip reminder through its related trip, including after it was read', async () => {
+   const onOpenTrip = vi.fn();
+   mock.notifications = [{
+     id: 'reminder', user_id: 'driver', type: 'trip_reminder', title: 'Kelionės priminimas',
+     message: 'Artėja išvykimas', related_trip_id: 'own-trip-123', related_request_id: null,
+     read: true, created_at: new Date().toISOString(),
+   }];
+   render(<NotificationDrawer userId="driver" onClose={() => {}} onOpenTrip={onOpenTrip} />);
+   fireEvent.click(await screen.findByRole('button', { name: /kelionės priminimas.*peržiūrėti kelionę/i }));
+   expect(onOpenTrip).toHaveBeenCalledWith('own-trip-123');
+ });
  it('shows a recent home event that opens its request directly', async () => {
    const onOpenRequest = vi.fn();
    mock.notifications = [{

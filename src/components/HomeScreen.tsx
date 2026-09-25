@@ -10,7 +10,7 @@ import { SettingsModal } from './SettingsModal';
 import { NotificationDrawer } from './NotificationDrawer';
 import { AddressInput, type AddressValue } from './AddressInput';
 
-export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenChat, onOpenRequest }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenChat?: (requestId: string) => void; onOpenRequest?: (requestId: string, role?: TripRole) => void }) {
+export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenTrip, onOpenChat, onOpenRequest }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenTrip?: (tripId: string) => void; onOpenChat?: (requestId: string) => void; onOpenRequest?: (requestId: string, role?: TripRole) => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -71,6 +71,7 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
     else if (event.type === 'auto_match_driver' && event.related_trip_id && onOpenMatchedTrip) onOpenMatchedTrip(event.related_trip_id, 'driver');
     else if (event.type === 'auto_match_passenger' && event.related_trip_id && onOpenMatchedTrip) onOpenMatchedTrip(event.related_trip_id, 'passenger');
     else if (event.related_request_id && onOpenRequest) onOpenRequest(event.related_request_id);
+    else if (event.related_trip_id && onOpenTrip) onOpenTrip(event.related_trip_id);
     else setShowNotifications(true);
   };
 
@@ -130,6 +131,10 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
           onOpenRequest={(requestId, role) => {
             setShowNotifications(false);
             onOpenRequest?.(requestId, role);
+          }}
+          onOpenTrip={(tripId) => {
+            setShowNotifications(false);
+            onOpenTrip?.(tripId);
           }}
         />
       )}
