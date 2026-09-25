@@ -87,7 +87,7 @@ export function RequestCard({
   const isPending = request.status === 'pending';
 
   return (
-    <div className={`surface-card request-card min-w-0 p-4 sm:p-5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
+    <div data-status={request.status} className={`surface-card request-card min-w-0 p-4 sm:p-5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`badge ${status.bg} ${status.text}`}>

@@ -610,7 +610,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               type="button"
               aria-pressed={!isDriver}
               onClick={() => isDriver && onOpenRole('passenger')}
-              className={`ui-button min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${!isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+              className={`ui-button role-passenger min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${!isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
             >
               <Users className="mr-1 inline h-3.5 w-3.5" />
               Keleivis
@@ -619,7 +619,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               type="button"
               aria-pressed={isDriver}
               onClick={() => !isDriver && onOpenRole('driver')}
-              className={`ui-button min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
+              className={`ui-button role-driver min-h-11 rounded-lg px-2 text-xs font-semibold transition sm:text-sm ${isDriver ? 'bg-surface text-primary-700 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
             >
               <Car className="mr-1 inline h-3.5 w-3.5" />
               Vairuotojas

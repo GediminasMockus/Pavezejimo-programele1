@@ -108,7 +108,7 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
           </section>
 
           <section className="w-full max-w-xl mx-auto lg:mr-0" aria-label={text.start}>
-            <form onSubmit={submit} className="home-search">
+            <form onSubmit={submit} className="home-search" data-mode={mode}>
               <div className="p-5 sm:p-7">
                 <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">{text.need}</p>
                 <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mt-1">{text.start}</h2>
