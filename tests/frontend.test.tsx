@@ -208,6 +208,18 @@ describe('user workflows', () => {
    fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
    expect(onOpenRequest).toHaveBeenCalledTimes(2);
  });
+ it('shows a rejected request even after its trip is no longer available', () => {
+   const rejected = {
+     id: 'old-request', status: 'rejected', request_type: 'passenger_request',
+     pickup_location: 'Vilnius', dropoff_location: 'Kaunas', seats_needed: 1,
+     passenger_name: 'Keleivis', driver_message: 'Vietų nėra', created_at: '2030-09-12T10:00:00Z',
+     pickup_lat: null, pickup_lng: null, dropoff_lat: null, dropoff_lng: null,
+   } as RideRequest;
+   render(<RequestCard request={rejected} trip={null} isDriverView={false} highlighted />);
+   expect(screen.getByText('Atmesta')).toBeTruthy();
+   expect(screen.getByText('Vietų nėra')).toBeTruthy();
+   expect(screen.queryByRole('button', { name: /Atšaukti užklausą|Patvirtinti/i })).toBeNull();
+ });
  it('keeps read notifications in All while Unread only shows new items', async () => {
    mock.notifications = [
      { id: 'read', user_id: 'driver', type: 'trip_reminder', title: 'Senas įvykis', message: 'Perskaityta', read: true, created_at: new Date().toISOString() },

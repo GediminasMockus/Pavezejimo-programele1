@@ -575,6 +575,14 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
   const pendingDriverRequests = driverRequests.filter((r) => r.status === 'pending');
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
+  const focusedRequest = focusRequestId ? allRequests.find((request) => request.id === focusRequestId) : null;
+  const focusedRequestInActiveSections = focusedRequest && [
+    ...pendingDriverRequests, ...acceptedDriverRequests,
+    ...displayableMySentOffers, ...displayableMyReceivedOffers, ...displayableMySentRequests,
+  ].some((request) => request.id === focusedRequest.id);
+  const historicalRequest = !focusedRequestInActiveSections && focusedRequest
+    && focusedRequest.status !== 'pending'
+    ? focusedRequest : null;
 
   async function updateRequestStatus(
     requestId: string,
@@ -909,12 +917,21 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                   Ši kelionė jau pasibaigė arba skelbimas nebeprieinamas.
                 </div>
               )}
-            {focusRequestId && requestsLoaded && ![
-              ...pendingDriverRequests, ...acceptedDriverRequests,
-              ...displayableMySentOffers, ...displayableMyReceivedOffers, ...displayableMySentRequests,
-            ].some((request) => request.id === focusRequestId) && (
+            {historicalRequest && (
+              <section className="mb-8" aria-label="Susijusi užklausa">
+                <h2 className="mb-3 text-base font-semibold text-neutral-900">Susijusi užklausa</h2>
+                <RequestCard
+                  request={historicalRequest}
+                  trip={trips.find((trip) => trip.id === (historicalRequest.driver_trip_id ?? historicalRequest.trip_id)) ?? null}
+                  isDriverView={role === 'driver'}
+                  isOffer={historicalRequest.request_type === 'driver_offer'}
+                  highlighted
+                />
+              </section>
+            )}
+            {focusRequestId && requestsLoaded && !focusedRequestInActiveSections && !historicalRequest && (
               <div role="status" className="mb-6 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-900">
-                Ši užklausa arba pasiūlymas nebėra aktyvus arba susijusi kelionė nepasiekiama.
+                Ši užklausa arba pasiūlymas nebeprieinamas.
               </div>
             )}
             {/* Driver: incoming requests */}

@@ -40,7 +40,7 @@ export function RequestCard({
   highlighted = false,
 }: {
   request: RideRequest;
-  trip: Trip;
+  trip: Trip | null;
   isDriverView: boolean;
   onAccept?: () => void;
   onReject?: () => void;
@@ -56,7 +56,7 @@ export function RequestCard({
   const StatusIcon = status.icon;
 
   const hasDriverCoords =
-    trip.from_lat !== null && trip.from_lng !== null && trip.to_lat !== null && trip.to_lng !== null;
+    trip !== null && trip.from_lat !== null && trip.from_lng !== null && trip.to_lat !== null && trip.to_lng !== null;
   const hasRequestCoords =
     request.pickup_lat !== null &&
     request.pickup_lng !== null &&
@@ -66,10 +66,10 @@ export function RequestCard({
   const detour =
     hasDriverCoords && hasRequestCoords
       ? calculateDetour(
-          trip.from_lat!,
-          trip.from_lng!,
-          trip.to_lat!,
-          trip.to_lng!,
+          trip!.from_lat!,
+          trip!.from_lng!,
+          trip!.to_lat!,
+          trip!.to_lng!,
           request.pickup_lat,
           request.pickup_lng,
           request.dropoff_lat,

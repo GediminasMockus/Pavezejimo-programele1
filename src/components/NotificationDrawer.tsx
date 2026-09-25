@@ -269,7 +269,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenTrip, o
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-neutral-900">{notification.title}</p>
+                        <p className={`text-sm ${notification.read ? 'font-medium text-neutral-700' : 'font-semibold text-neutral-900'}`}>{notification.title}</p>
                         {!notification.read && (
                           <span className="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-1.5" />
                         )}
