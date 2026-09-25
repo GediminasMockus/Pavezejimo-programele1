@@ -219,6 +219,7 @@
   .app-background { background: radial-gradient(ellipse at 5% 8%, rgb(var(--accent-peach) / 0.82), transparent 34rem), radial-gradient(ellipse at 92% 14%, rgb(var(--accent-violet-200) / 0.72), transparent 32rem), radial-gradient(ellipse at 70% 90%, rgb(var(--accent-teal-soft) / 0.85), transparent 36rem), rgb(var(--canvas)); }
   .badge-warning { @apply border-warning-200 bg-warning-50 text-warning-800; }
   .trip-card { @apply surface-card min-w-0 p-4 sm:p-5; overflow-wrap: anywhere; border-top: 4px solid rgb(var(--accent-teal)); background: linear-gradient(160deg, rgb(var(--accent-teal-soft) / 0.55), rgb(var(--surface)) 32%); }
+  .trip-card > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
   .trip-card-passenger { border-top-color: rgb(var(--accent-violet-600)); background: linear-gradient(160deg, rgb(var(--accent-violet-100) / 0.6), rgb(var(--surface)) 32%); }
   .trip-card-highlight { @apply border-primary-400 ring-2 ring-primary-200; }
   .trip-route { @apply mt-4 rounded-xl border border-primary-100 bg-primary-50 p-3 text-base font-semibold leading-snug text-neutral-900; border-color: rgb(var(--accent-teal) / 0.23); background: rgb(var(--accent-teal-soft) / 0.75); }
@@ -253,13 +254,13 @@
   .modal-header > div { min-width: 0; }
   .modal-header h2 { @apply text-lg font-semibold text-neutral-900; }
   .modal-header p { @apply mt-1 text-xs text-neutral-500; }
-  .notification-panel { @apply flex min-h-0 w-full max-w-md flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-surface shadow-overlay; height: min(42rem, calc(100dvh - 2rem)); border-top: 5px solid rgb(var(--accent-coral)); }
+  .notification-panel { @apply flex min-h-0 w-full max-w-md flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-surface shadow-overlay; height: min(42rem, calc(100dvh - 2rem)); border-top: 5px solid rgb(var(--accent-coral)); padding-bottom: env(safe-area-inset-bottom); }
   .notification-panel .modal-header { background: linear-gradient(105deg, rgb(var(--accent-peach) / 0.7), rgb(var(--accent-violet-50))); }
   .notice-driver { background: rgb(var(--accent-teal-soft)); border-color: rgb(var(--accent-teal) / 0.32); }
   .notice-passenger { background: rgb(var(--accent-violet-50)); border-color: rgb(var(--accent-violet-300)); }
   .text-driver { color: rgb(var(--accent-teal)); }
   .text-passenger { color: rgb(var(--accent-violet-700)); }
-  .notification-list { @apply min-h-0 flex-1 overflow-y-auto overscroll-contain; scrollbar-gutter: stable; }
+  .notification-list { @apply min-h-0 flex-1 overflow-y-auto overscroll-contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
   .notification-row { @apply block w-full border-l-2 border-transparent p-4 text-left transition-colors hover:bg-neutral-50; overflow-wrap: anywhere; border-radius: 0; }
   .notification-row:focus-visible { outline-offset: -3px; }
   .notification-row-unread { @apply border-l-primary-500 bg-primary-50/50; }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Car, Users, Route, Bell, Shield, LogOut, Settings as SettingsIcon, ArrowRight, Search, AlertCircle, List } from 'lucide-react';
-import { supabase, type TripRole } from '@/lib/supabase';
+import { supabase, type Notification, type TripRole } from '@/lib/supabase';
+import { notificationCutoff } from '@/lib/notificationRetention';
 import { emptyFilters, type FilterState } from '@/lib/tripFilters';
 import { useUnreadCount } from '@/lib/useUnreadCount';
 import { useLanguage } from '@/lib/useLanguage';
@@ -9,12 +10,13 @@ import { SettingsModal } from './SettingsModal';
 import { NotificationDrawer } from './NotificationDrawer';
 import { AddressInput, type AddressValue } from './AddressInput';
 
-export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenChat }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenChat?: (requestId: string) => void }) {
+export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpenChat, onOpenRequest }: { userId: string; onPick: (role: TripRole, filters?: FilterState, create?: boolean) => void; onSignOut: () => void; onOpenMatchedTrip?: (tripId: string, matchedTripRole: TripRole) => void; onOpenChat?: (requestId: string) => void; onOpenRequest?: (requestId: string, role?: TripRole) => void }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const unreadCount = useUnreadCount(userId);
+  const [recentEvents, setRecentEvents] = useState<Notification[]>([]);
   const [mode, setMode] = useState<TripRole>('passenger');
   const [from, setFrom] = useState<AddressValue>({ display_name: '', lat: null, lng: null });
   const [to, setTo] = useState<AddressValue>({ display_name: '', lat: null, lng: null });
@@ -23,9 +25,9 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
   const { isEnglish } = useLanguage();
 
   const text = isEnglish ? {
-    notifications: 'Notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', continueRide: 'Continue creating ride', hint: 'You can change filters later.', browseRides: 'Browse all rides', browseRequests: 'Browse passenger requests', browseRidesHint: 'Want to browse without a route filter?', browseRequestsHint: 'Want to see passengers without a route filter?', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
+    notifications: 'Notifications', activity: 'Needs your attention', allEvents: 'All notifications', settings: 'Settings', admin: 'Administration', signOut: 'Sign out', badge: 'Intercity rides', title1: 'Find someone', title2: 'going your way.', intro: 'Enter your route and time. We will show the most relevant rides or passengers.', need: 'Choose what you want to do', start: 'Plan your ride', looking: 'I need a ride', driving: 'I drive', from: 'From', to: 'To', when: 'When', findRide: 'Find rides', continueRide: 'Continue creating ride', hint: 'You can change filters later.', browseRides: 'Browse all rides', browseRequests: 'Browse passenger requests', browseRidesHint: 'Want to browse without a route filter?', browseRequestsHint: 'Want to see passengers without a route filter?', fromPlaceholder: 'City or pickup area', toPlaceholder: 'City or destination', optional: 'Optional', routeRequired: 'Enter both the departure and destination before searching.',
   } : {
-    notifications: 'Pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', continueRide: 'Tęsti kelionės kūrimą', hint: 'Filtrus galėsi pakeisti ir vėliau.', browseRides: 'Peržiūrėti visas keliones', browseRequests: 'Peržiūrėti keleivių užklausas', browseRidesHint: 'Nori peržiūrėti be maršruto filtro?', browseRequestsHint: 'Nori peržiūrėti keleivius be maršruto filtro?', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
+    notifications: 'Pranešimai', activity: 'Reikia jūsų dėmesio', allEvents: 'Visi pranešimai', settings: 'Nustatymai', admin: 'Administracija', signOut: 'Atsijungti', badge: 'Pavežėjimai tarp miestų', title1: 'Rask žmogų,', title2: 'važiuojantį tavo kryptimi.', intro: 'Įvesk maršrutą ir laiką. Parodysime tinkamiausias keliones arba keleivius.', need: 'Pasirink, ką nori daryti', start: 'Suplanuok kelionę', looking: 'Ieškau kelionės', driving: 'Vežu keleivius', from: 'Iš kur', to: 'Į kur', when: 'Kada', findRide: 'Rasti keliones', continueRide: 'Tęsti kelionės kūrimą', hint: 'Filtrus galėsi pakeisti ir vėliau.', browseRides: 'Peržiūrėti visas keliones', browseRequests: 'Peržiūrėti keleivių užklausas', browseRidesHint: 'Nori peržiūrėti be maršruto filtro?', browseRequestsHint: 'Nori peržiūrėti keleivius be maršruto filtro?', fromPlaceholder: 'Miestas arba paėmimo vieta', toPlaceholder: 'Miestas arba kelionės tikslas', optional: 'Nebūtina', routeRequired: 'Prieš paiešką nurodyk ir išvykimo, ir atvykimo vietą.',
   };
 
   useEffect(() => {
@@ -41,6 +43,36 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
     });
     return () => { cancelled = true; };
   }, [userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const { data } = await supabase.from('notifications').select('*')
+        .eq('user_id', userId).eq('read', false).gte('created_at', notificationCutoff())
+        .order('created_at', { ascending: false }).limit(3);
+      if (!cancelled && data) setRecentEvents(data as Notification[]);
+    };
+    void refresh();
+    const channel = supabase.channel(`home-activity-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => { void refresh(); })
+      .subscribe();
+    const timer = window.setInterval(() => { void refresh(); }, 30_000);
+    return () => { cancelled = true; window.clearInterval(timer); void supabase.removeChannel(channel); };
+  }, [userId]);
+
+  const openEvent = (event: Notification) => {
+    if (!event.read) {
+      setRecentEvents((items) => items.filter((item) => item.id !== event.id));
+      void supabase.rpc('mark_notification_read', { p_notification_id: event.id });
+    }
+    if (event.type === 'new_message' && event.related_request_id && onOpenChat) onOpenChat(event.related_request_id);
+    else if (event.type === 'new_offer' && event.related_request_id && onOpenRequest) onOpenRequest(event.related_request_id, 'passenger');
+    else if (event.type === 'new_request' && event.related_request_id && onOpenRequest) onOpenRequest(event.related_request_id, 'driver');
+    else if (event.type === 'auto_match_driver' && event.related_trip_id && onOpenMatchedTrip) onOpenMatchedTrip(event.related_trip_id, 'driver');
+    else if (event.type === 'auto_match_passenger' && event.related_trip_id && onOpenMatchedTrip) onOpenMatchedTrip(event.related_trip_id, 'passenger');
+    else if (event.related_request_id && onOpenRequest) onOpenRequest(event.related_request_id);
+    else setShowNotifications(true);
+  };
 
   const pick = (role: TripRole, filters?: FilterState, create = false) => {
     try { localStorage.setItem('pavezejimai_filters', JSON.stringify(filters ?? emptyFilters)); } catch { /* continue */ }
@@ -95,6 +127,10 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
             setShowNotifications(false);
             onOpenChat?.(requestId);
           }}
+          onOpenRequest={(requestId, role) => {
+            setShowNotifications(false);
+            onOpenRequest?.(requestId, role);
+          }}
         />
       )}
 
@@ -144,6 +180,21 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
             </form>
           </section>
         </div>
+        {recentEvents.length > 0 && (
+          <section className="mt-6 rounded-2xl border border-primary-200 bg-surface p-4 shadow-card" aria-label={text.activity}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-neutral-900">{text.activity}</h2>
+              <button type="button" onClick={() => setShowNotifications(true)} className="ui-button px-2 text-sm font-semibold text-primary-700 hover:underline">{text.allEvents}</button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {recentEvents.map((event) => (
+                <button key={event.id} type="button" onClick={() => openEvent(event)} className="ui-button flex min-h-16 items-center justify-between gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-left text-sm font-medium text-neutral-900 hover:bg-primary-100">
+                  <span className="min-w-0 break-words">{event.title}</span><ArrowRight className="h-4 w-4 shrink-0 text-primary-700" />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

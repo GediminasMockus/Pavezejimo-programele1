@@ -178,6 +178,33 @@ describe('user workflows', () => {
    fireEvent.click(notification);
    expect(onOpenChat).toHaveBeenCalledWith('request');
  });
+ it('opens the exact request from both unread and read notifications', async () => {
+   const onOpenRequest = vi.fn();
+   mock.notifications = [{
+     id: 'offer-notice', user_id: 'passenger', type: 'new_offer', title: 'Naujas pasiūlymas',
+     message: 'Vairuotojas pasiūlė kelionę', related_trip_id: null, related_request_id: 'offer-123',
+     read: false, created_at: new Date().toISOString(),
+   }];
+   const view = render(<NotificationDrawer userId="passenger" onClose={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
+   expect(onOpenRequest).toHaveBeenCalledWith('offer-123', 'passenger');
+   view.unmount();
+   mock.notifications = [{ ...(mock.notifications[0] as object), read: true }];
+   render(<NotificationDrawer userId="passenger" onClose={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
+   expect(onOpenRequest).toHaveBeenCalledTimes(2);
+ });
+ it('shows a recent home event that opens its request directly', async () => {
+   const onOpenRequest = vi.fn();
+   mock.notifications = [{
+     id: 'request-notice', user_id: 'driver', type: 'new_request', title: 'Nauja užklausa',
+     message: 'Keleivis nori prisijungti', related_trip_id: null, related_request_id: 'request-456',
+     read: false, created_at: new Date().toISOString(),
+   }];
+   render(<HomeScreen userId="driver" onPick={() => {}} onSignOut={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /nauja užklausa/i }));
+   expect(onOpenRequest).toHaveBeenCalledWith('request-456', 'driver');
+ });
  it('passes the entered route to search and creation', async () => {
    const onPick=vi.fn();
    render(<HomeScreen userId="passenger" onPick={onPick} onSignOut={() => {}} />);
