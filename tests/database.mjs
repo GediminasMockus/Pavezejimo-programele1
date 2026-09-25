@@ -103,6 +103,11 @@ const passengerTrip=await asUser(ids[1],()=>rpc('create_my_trip',[payload('passe
 const driverTrip=await asUser(ids[0],()=>rpc('create_my_trip',[payload('driver',3)]));
 const offer=await asUser(ids[0],async()=> (await query("INSERT INTO public.ride_requests(trip_id,driver_trip_id,driver_id,passenger_id,passenger_name,pickup_location,dropoff_location,request_type,seats_needed) VALUES($1,$2,$3,$4,'Passenger','Pickup','Dropoff','driver_offer',1) RETURNING *",[passengerTrip.id,driverTrip.id,ids[0],ids[1]])).rows[0]);
 assert.equal(offer.seats_needed,2,'server uses passenger party size');
+assert.equal(offer.pickup_location,passengerTrip.from_location,'offer uses the canonical address');
+assert.equal(offer.pickup_lat,passengerTrip.from_lat,'offer preserves precise latitude');
+assert.equal(offer.pickup_lng,passengerTrip.from_lng,'offer preserves precise longitude');
+assert.equal(offer.dropoff_lat,passengerTrip.to_lat);
+assert.equal(offer.dropoff_lng,passengerTrip.to_lng);
 await asUser(ids[1],async()=>{
  const related=(await query('SELECT * FROM public.get_request_related_trips() WHERE id=$1',[driverTrip.id])).rows[0];
  assert.ok(related,'passenger can load the public trip card for a pending driver offer');
@@ -162,4 +167,19 @@ await query('UPDATE public.trips SET departure_time=$1 WHERE id=$2',['2035-09-12
 const outside=await asUser(ids[1],()=>query("SELECT id FROM public.search_trips('driver',$1::jsonb,NULL,NULL) WHERE id=$2",[JSON.stringify({date:'2035-09-12',dateFrom:'2035-09-12T07:00:00Z',dateTo:'2035-09-13T07:00:00Z'}),dateTrip.id]));
 assert.equal(outside.rows.length,0);
 console.log('Local date boundaries, summer/winter time and DST tests passed.');
+// Production lacked the older validation trigger: verify the dedicated repair independently.
+await db.exec('BEGIN; ALTER TABLE public.ride_requests DISABLE TRIGGER validate_request_before_insert');
+await query("SELECT set_config('request.jwt.claim.sub',$1,true)",[ids[0]]);
+const canonical=(await query("INSERT INTO public.ride_requests(trip_id,driver_trip_id,driver_id,passenger_id,passenger_name,pickup_location,pickup_lat,pickup_lng,dropoff_location,dropoff_lat,dropoff_lng,request_type,seats_needed,status) VALUES($1,$2,$3,$4,'Passenger','Public area',54.69,25.28,'Public area',54.90,23.90,'driver_offer',2,'rejected') RETURNING *",[passengerTrip.id,driverTrip.id,ids[0],ids[1]])).rows[0];
+assert.equal(canonical.pickup_lat,passengerTrip.from_lat);
+assert.equal(canonical.pickup_location,passengerTrip.from_location);
+assert.equal(canonical.dropoff_lng,passengerTrip.to_lng);
+await query("UPDATE public.ride_requests SET pickup_lat=round($1::numeric,2),pickup_lng=round($2::numeric,2),dropoff_lat=round($3::numeric,2),dropoff_lng=round($4::numeric,2) WHERE id=$5",[passengerTrip.from_lat,passengerTrip.from_lng,passengerTrip.to_lat,passengerTrip.to_lng,offer.id]);
+await db.exec('DROP TRIGGER canonical_driver_offer_route_before_insert ON public.ride_requests');
+await db.exec(fs.readFileSync('supabase/migrations/20260925190224_canonical_driver_offer_route.sql','utf8'));
+const repaired=(await query('SELECT * FROM public.ride_requests WHERE id=$1',[offer.id])).rows[0];
+assert.equal(repaired.pickup_lat,passengerTrip.from_lat);
+assert.equal(repaired.dropoff_lng,passengerTrip.to_lng);
+await db.exec('ROLLBACK');
+console.log('Canonical offer coordinates and historical repair tests passed.');
 await db.close();
