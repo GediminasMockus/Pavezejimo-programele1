@@ -142,13 +142,7 @@ export function RequestCard({
       )}
 
       {isDriverView && !isOffer && detour && (
-        <div className={`mt-3 rounded-xl p-3 text-sm ${
-          detour.detour < 5
-            ? 'bg-neutral-50 border border-neutral-200 text-neutral-700'
-            : detour.detour < 15
-              ? 'bg-warning-50 border border-warning-200 text-warning-700'
-              : 'bg-danger-50 border border-danger-200 text-danger-700'
-        }`}>
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
           <div className="flex items-center gap-1.5 font-semibold mb-1">
             <Route className="w-4 h-4" />
             Preliminarus nuokrypis tiesia linija
@@ -158,6 +152,7 @@ export function RequestCard({
             {formatDistance(detour.newDistance)}{' '}
             <span className="font-bold">(+{formatDistance(detour.detour)})</span>
           </p>
+          <p className="mt-1 text-xs">Tikslų apvažiavimą keliu rasite maršruto peržiūroje.</p>
         </div>
       )}
 

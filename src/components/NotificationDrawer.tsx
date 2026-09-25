@@ -18,6 +18,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
   const dialogRef = useDialogFocus();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -94,6 +95,9 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
   }
 
   const unreadCount = notifications.filter(notification => !notification.read).length;
+  const visibleNotifications = filter === 'unread'
+    ? notifications.filter(notification => !notification.read)
+    : notifications;
 
   function getNotificationIcon(type: Notification['type']) {
     switch (type) {
@@ -182,6 +186,11 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
           </div>
         </div>
 
+        <div className="flex shrink-0 gap-2 border-b border-neutral-200 bg-surface px-3 py-2 sm:px-5" role="group" aria-label="Pranešimų filtras">
+          <button type="button" onClick={() => setFilter('all')} aria-pressed={filter === 'all'} className={`ui-button px-3 text-sm font-semibold ${filter === 'all' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}>Visi</button>
+          <button type="button" onClick={() => setFilter('unread')} aria-pressed={filter === 'unread'} className={`ui-button px-3 text-sm font-semibold ${filter === 'unread' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}>Neperskaityti ({unreadCount})</button>
+        </div>
+
         {/* Notifications list */}
         <div className="notification-list">
           {loading ? (
@@ -189,14 +198,14 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
               <Bell className="w-6 h-6 animate-pulse mb-2" />
               <p className="text-sm">Įkeliama…</p>
             </div>
-          ) : notifications.length === 0 ? (
+          ) : visibleNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
               <Bell className="w-8 h-8 mb-3 opacity-50" />
-              <p className="text-sm">Naujų ar nesenų pranešimų nėra</p>
+              <p className="text-sm">{filter === 'unread' ? 'Neperskaitytų pranešimų nėra' : 'Naujų ar nesenų pranešimų nėra'}</p>
             </div>
           ) : (
             <div className="divide-y divide-neutral-100">
-              {notifications.map((notification) => {
+              {visibleNotifications.map((notification) => {
                 const matchedTripRole =
                   notification.type === 'auto_match_driver'
                     ? 'driver'

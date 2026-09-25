@@ -20,6 +20,7 @@ import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
 import { fetchDrivingRoute } from '../src/lib/routing';
+import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', status: 'accepted', driver_confirmed: true, passenger_confirmed: true },
@@ -43,6 +44,19 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('keeps the background locked until the last touch dialog closes', () => {
+   vi.stubGlobal('matchMedia', () => ({ matches: true }));
+   const scrollTo = vi.fn();
+   vi.stubGlobal('scrollTo', scrollTo);
+   const Dialog = () => { useBodyScrollLock(); return <div />; };
+   const view = render(<><Dialog /><Dialog /></>);
+   expect(document.body.style.position).toBe('fixed');
+   view.rerender(<Dialog />);
+   expect(document.body.style.position).toBe('fixed');
+   view.unmount();
+   expect(document.body.style.position).toBe('');
+   expect(scrollTo).toHaveBeenCalledTimes(1);
+ });
  it('keeps old recurring listings visible but hides expired, deleted and completed listings', () => {
    const now = Date.parse('2030-09-15T12:00:00Z');
    expect(isDiscoverableTrip({ ...trip, is_recurring: true }, now)).toBe(true);
@@ -193,6 +207,20 @@ describe('user workflows', () => {
    render(<NotificationDrawer userId="passenger" onClose={() => {}} onOpenRequest={onOpenRequest} />);
    fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
    expect(onOpenRequest).toHaveBeenCalledTimes(2);
+ });
+ it('keeps read notifications in All while Unread only shows new items', async () => {
+   mock.notifications = [
+     { id: 'read', user_id: 'driver', type: 'trip_reminder', title: 'Senas įvykis', message: 'Perskaityta', read: true, created_at: new Date().toISOString() },
+     { id: 'unread', user_id: 'driver', type: 'trip_reminder', title: 'Naujas įvykis', message: 'Neperskaityta', read: false, created_at: new Date().toISOString() },
+   ];
+   render(<NotificationDrawer userId="driver" onClose={() => {}} />);
+   expect(await screen.findByRole('button', { name: 'Senas įvykis' })).toBeTruthy();
+   fireEvent.click(screen.getByRole('button', { name: 'Neperskaityti (1)' }));
+   expect(screen.queryByRole('button', { name: 'Senas įvykis' })).toBeNull();
+   fireEvent.click(screen.getByRole('button', { name: 'Naujas įvykis' }));
+   expect(screen.getByText('Neperskaitytų pranešimų nėra')).toBeTruthy();
+   fireEvent.click(screen.getByRole('button', { name: 'Visi' }));
+   expect(screen.getByRole('button', { name: 'Senas įvykis' })).toBeTruthy();
  });
  it('shows a recent home event that opens its request directly', async () => {
    const onOpenRequest = vi.fn();
