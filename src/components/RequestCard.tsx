@@ -18,6 +18,7 @@ import type { Trip, RideRequest, RequestStatus } from '@/lib/supabase';
 import { calculateDetour, formatDistance, haversineDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 import { CancelRequestModal } from '@/components/CancelRequestModal';
+import { useRoadDistance } from '@/lib/useRoadDistance';
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
   pending: { label: 'Laukia patvirtinimo', bg: 'bg-warning-100', text: 'text-warning-700', icon: Clock },
@@ -52,6 +53,7 @@ export function RequestCard({
   highlighted?: boolean;
 }) {
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const { ref: cardRef, distanceKm } = useRoadDistance(request.pickup_lat, request.pickup_lng, request.dropoff_lat, request.dropoff_lng);
   const status = STATUS_CONFIG[request.status];
   const StatusIcon = status.icon;
 
@@ -89,7 +91,7 @@ export function RequestCard({
   const isPending = request.status === 'pending';
 
   return (
-    <div id={`request-${request.id}`} data-status={request.status} className={`surface-card request-card min-w-0 scroll-mt-24 p-4 sm:p-5 animate-fade-in ${highlighted ? 'ring-4 ring-primary-300 ring-offset-2' : ''} ${request.status === 'accepted' ? 'order-first' : ''}`}>
+    <div ref={cardRef} id={`request-${request.id}`} data-status={request.status} className={`surface-card request-card min-w-0 scroll-mt-24 p-4 sm:p-5 animate-fade-in ${highlighted ? 'ring-4 ring-primary-300 ring-offset-2' : ''} ${request.status === 'accepted' ? 'order-first' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`badge ${status.bg} ${status.text}`}>
@@ -123,12 +125,12 @@ export function RequestCard({
           </div>
         </div>
         {passengerDist !== null && (
-          <div className="inline-flex shrink-0 flex-col items-center rounded-lg bg-neutral-100 px-2.5 py-1 text-neutral-600" title="Apytikris atstumas tiesia linija; kelio ilgį rasite maršruto peržiūroje">
+          <div className="inline-flex shrink-0 flex-col items-center rounded-lg bg-neutral-100 px-2.5 py-1 text-neutral-600" title={distanceKm === null ? 'Kelio atstumo apskaičiuoti nepavyko; rodomas atstumas tiesia linija' : 'Atstumas keliu pagal maršruto peržiūros šaltinį'}>
             <span className="inline-flex items-center gap-1">
             <Route className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">{formatDistance(passengerDist)}</span>
+            <span className="text-xs font-medium">{distanceKm === undefined ? '…' : formatDistance(distanceKm ?? passengerDist)}</span>
             </span>
-            <span className="text-[10px]">tiesia linija</span>
+            <span className="text-[10px]">{distanceKm === undefined ? 'skaičiuojama' : distanceKm === null ? 'tiesia linija' : 'keliu'}</span>
           </div>
         )}
       </div>

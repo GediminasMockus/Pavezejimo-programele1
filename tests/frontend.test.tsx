@@ -14,12 +14,13 @@ import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import { NotificationDrawer } from '../src/components/NotificationDrawer';
 import { RequestCard } from '../src/components/RequestCard';
+import { TripCard } from '../src/components/TripCard';
 import { FilterBar } from '../src/components/FilterBar';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
-import { fetchDrivingRoute } from '../src/lib/routing';
+import { fetchDrivingDistance, fetchDrivingRoute } from '../src/lib/routing';
 import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
@@ -88,6 +89,36 @@ describe('data helpers', () => {
    );
    expect(route?.distance).toBe(123.456);
    expect(route?.coordinates).toEqual([[54.1, 25.1], [55.2, 24.2]]);
+ });
+ it('uses the map routing provider for card kilometers and deduplicates identical routes', async () => {
+   const fetchMock = vi.fn().mockResolvedValue({
+     ok: true, json: async () => ({ routes: [{ distance: 98765 }] }),
+   });
+   vi.stubGlobal('fetch', fetchMock);
+   const points: [number, number][] = [[54.123, 25.456], [55.789, 24.321]];
+   const [first, second] = await Promise.all([fetchDrivingDistance(points), fetchDrivingDistance(points)]);
+   expect(first).toBe(98.765);
+   expect(second).toBe(first);
+   expect(fetchMock).toHaveBeenCalledTimes(1);
+   expect(fetchMock.mock.calls[0][0]).toContain('/25.456,54.123;24.321,55.789?overview=false');
+ });
+ it('loads road kilometers when a trip card enters view', async () => {
+   let showCard: (() => void) | undefined;
+   vi.stubGlobal('IntersectionObserver', class {
+     constructor(callback: IntersectionObserverCallback) {
+       showCard = () => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as IntersectionObserver);
+     }
+     observe() {}
+     disconnect() {}
+   });
+   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ routes: [{ distance: 123456 }] }) });
+   vi.stubGlobal('fetch', fetchMock);
+   render(<TripCard trip={{ ...trip, id: 'visible-card', from_lat: 54.681, to_lat: 54.891 }} />);
+   expect(screen.getByText('Kelio km skaičiuojami…')).toBeTruthy();
+   expect(fetchMock).not.toHaveBeenCalled();
+   showCard!();
+   expect(await screen.findByText('123 km keliu')).toBeTruthy();
+   expect(fetchMock).toHaveBeenCalledTimes(1);
  });
  it('keeps notifications for exactly 48 hours', () => {
    const now = new Date('2030-09-12T12:00:00Z').getTime();
