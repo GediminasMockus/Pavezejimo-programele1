@@ -9,14 +9,17 @@ interface NotificationDrawerProps {
   userId: string;
   onClose: () => void;
   onOpenMatch?: (tripId: string, matchedTripRole: TripRole) => void;
+  onOpenTrip?: (tripId: string) => void;
   onOpenRole?: (role: TripRole) => void;
+  onOpenRequest?: (requestId: string, role?: TripRole) => void;
   onOpenChat?: (requestId: string) => void;
 }
 
-export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, onOpenChat }: NotificationDrawerProps) {
+export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenTrip, onOpenRole, onOpenRequest, onOpenChat }: NotificationDrawerProps) {
   const dialogRef = useDialogFocus();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -93,6 +96,9 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
   }
 
   const unreadCount = notifications.filter(notification => !notification.read).length;
+  const visibleNotifications = filter === 'unread'
+    ? notifications.filter(notification => !notification.read)
+    : notifications;
 
   function getNotificationIcon(type: Notification['type']) {
     switch (type) {
@@ -181,6 +187,11 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
           </div>
         </div>
 
+        <div className="flex shrink-0 gap-2 border-b border-neutral-200 bg-surface px-3 py-2 sm:px-5" role="group" aria-label="Pranešimų filtras">
+          <button type="button" onClick={() => setFilter('all')} aria-pressed={filter === 'all'} className={`ui-button px-3 text-sm font-semibold ${filter === 'all' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}>Visi</button>
+          <button type="button" onClick={() => setFilter('unread')} aria-pressed={filter === 'unread'} className={`ui-button px-3 text-sm font-semibold ${filter === 'unread' ? 'bg-primary-100 text-primary-800' : 'text-neutral-600 hover:bg-neutral-100'}`}>Neperskaityti ({unreadCount})</button>
+        </div>
+
         {/* Notifications list */}
         <div className="notification-list">
           {loading ? (
@@ -188,14 +199,14 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
               <Bell className="w-6 h-6 animate-pulse mb-2" />
               <p className="text-sm">Įkeliama…</p>
             </div>
-          ) : notifications.length === 0 ? (
+          ) : visibleNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
               <Bell className="w-8 h-8 mb-3 opacity-50" />
-              <p className="text-sm">Naujų ar nesenų pranešimų nėra</p>
+              <p className="text-sm">{filter === 'unread' ? 'Neperskaitytų pranešimų nėra' : 'Naujų ar nesenų pranešimų nėra'}</p>
             </div>
           ) : (
             <div className="divide-y divide-neutral-100">
-              {notifications.map((notification) => {
+              {visibleNotifications.map((notification) => {
                 const matchedTripRole =
                   notification.type === 'auto_match_driver'
                     ? 'driver'
@@ -209,7 +220,9 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                       ? 'driver'
                       : null;
                 const canOpenMatch = Boolean(matchedTripRole && notification.related_trip_id && onOpenMatch);
+                const canOpenTrip = Boolean(notification.related_trip_id && !canOpenMatch && onOpenTrip);
                 const canOpenRole = Boolean(targetRole && onOpenRole);
+                const canOpenRequest = Boolean(notification.related_request_id && notification.type !== 'new_message' && onOpenRequest);
                 const canOpenChat = Boolean(
                   notification.type === 'new_message'
                   && notification.related_request_id
@@ -219,10 +232,14 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                   ? 'Atidaryti pokalbį'
                   : canOpenMatch
                   ? 'Peržiūrėti kelionę'
+                  : canOpenTrip
+                    ? 'Peržiūrėti kelionę'
                   : notification.type === 'new_offer'
                     ? 'Peržiūrėti pasiūlymą'
                     : notification.type === 'new_request'
                       ? 'Peržiūrėti užklausą'
+                      : canOpenRequest
+                        ? 'Peržiūrėti įvykį'
                       : null;
 
                 return (
@@ -234,8 +251,12 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                     if (!notification.read) void markAsRead(notification.id);
                     if (canOpenChat && notification.related_request_id) {
                       onOpenChat?.(notification.related_request_id);
+                    } else if (canOpenRequest && notification.related_request_id) {
+                      onOpenRequest?.(notification.related_request_id, targetRole ?? undefined);
                     } else if (canOpenMatch && matchedTripRole && notification.related_trip_id) {
                       onOpenMatch?.(notification.related_trip_id, matchedTripRole);
+                    } else if (canOpenTrip && notification.related_trip_id) {
+                      onOpenTrip?.(notification.related_trip_id);
                     } else if (canOpenRole && targetRole) {
                       onOpenRole?.(targetRole);
                     }
@@ -248,7 +269,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-neutral-900">{notification.title}</p>
+                        <p className={`text-sm ${notification.read ? 'font-medium text-neutral-700' : 'font-semibold text-neutral-900'}`}>{notification.title}</p>
                         {!notification.read && (
                           <span className="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full mt-1.5" />
                         )}
@@ -258,7 +279,7 @@ export function NotificationDrawer({ userId, onClose, onOpenMatch, onOpenRole, o
                         <p className="text-xs text-neutral-500">
                           {formatDistanceToNow(new Date(notification.created_at))}
                         </p>
-                        {actionLabel && (canOpenChat || canOpenMatch || canOpenRole) && (
+                        {actionLabel && (canOpenChat || canOpenMatch || canOpenTrip || canOpenRequest || canOpenRole) && (
                           <span className="text-xs font-semibold text-primary-700">
                             {actionLabel} →
                           </span>

@@ -14,12 +14,14 @@ import { TripForm } from '../src/components/TripForm';
 import { AddressInput, type AddressValue } from '../src/components/AddressInput';
 import { NotificationDrawer } from '../src/components/NotificationDrawer';
 import { RequestCard } from '../src/components/RequestCard';
+import { TripCard } from '../src/components/TripCard';
 import { FilterBar } from '../src/components/FilterBar';
 import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
-import { fetchDrivingRoute } from '../src/lib/routing';
+import { fetchDrivingDistance, fetchDrivingRoute } from '../src/lib/routing';
+import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
   request: { id: 'request', passenger_id: 'passenger', status: 'accepted', driver_confirmed: true, passenger_confirmed: true },
@@ -43,6 +45,19 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('keeps the background locked until the last touch dialog closes', () => {
+   vi.stubGlobal('matchMedia', () => ({ matches: true }));
+   const scrollTo = vi.fn();
+   vi.stubGlobal('scrollTo', scrollTo);
+   const Dialog = () => { useBodyScrollLock(); return <div />; };
+   const view = render(<><Dialog /><Dialog /></>);
+   expect(document.body.style.position).toBe('fixed');
+   view.rerender(<Dialog />);
+   expect(document.body.style.position).toBe('fixed');
+   view.unmount();
+   expect(document.body.style.position).toBe('');
+   expect(scrollTo).toHaveBeenCalledTimes(1);
+ });
  it('keeps old recurring listings visible but hides expired, deleted and completed listings', () => {
    const now = Date.parse('2030-09-15T12:00:00Z');
    expect(isDiscoverableTrip({ ...trip, is_recurring: true }, now)).toBe(true);
@@ -74,6 +89,36 @@ describe('data helpers', () => {
    );
    expect(route?.distance).toBe(123.456);
    expect(route?.coordinates).toEqual([[54.1, 25.1], [55.2, 24.2]]);
+ });
+ it('uses the map routing provider for card kilometers and deduplicates identical routes', async () => {
+   const fetchMock = vi.fn().mockResolvedValue({
+     ok: true, json: async () => ({ routes: [{ distance: 98765 }] }),
+   });
+   vi.stubGlobal('fetch', fetchMock);
+   const points: [number, number][] = [[54.123, 25.456], [55.789, 24.321]];
+   const [first, second] = await Promise.all([fetchDrivingDistance(points), fetchDrivingDistance(points)]);
+   expect(first).toBe(98.765);
+   expect(second).toBe(first);
+   expect(fetchMock).toHaveBeenCalledTimes(1);
+   expect(fetchMock.mock.calls[0][0]).toContain('/25.456,54.123;24.321,55.789?overview=false');
+ });
+ it('loads road kilometers when a trip card enters view', async () => {
+   let showCard: (() => void) | undefined;
+   vi.stubGlobal('IntersectionObserver', class {
+     constructor(callback: IntersectionObserverCallback) {
+       showCard = () => callback([{ isIntersecting: true } as IntersectionObserverEntry], this as IntersectionObserver);
+     }
+     observe() {}
+     disconnect() {}
+   });
+   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ routes: [{ distance: 123456 }] }) });
+   vi.stubGlobal('fetch', fetchMock);
+   render(<TripCard trip={{ ...trip, id: 'visible-card', from_lat: 54.681, to_lat: 54.891 }} />);
+   expect(screen.getByText('Kelio km skaičiuojami…')).toBeTruthy();
+   expect(fetchMock).not.toHaveBeenCalled();
+   showCard!();
+   expect(await screen.findByText('123 km keliu')).toBeTruthy();
+   expect(fetchMock).toHaveBeenCalledTimes(1);
  });
  it('keeps notifications for exactly 48 hours', () => {
    const now = new Date('2030-09-12T12:00:00Z').getTime();
@@ -177,6 +222,70 @@ describe('user workflows', () => {
    const notification = await screen.findByRole('button', { name: /nauja žinutė.*atidaryti pokalbį/i });
    fireEvent.click(notification);
    expect(onOpenChat).toHaveBeenCalledWith('request');
+ });
+ it('opens the exact request from both unread and read notifications', async () => {
+   const onOpenRequest = vi.fn();
+   mock.notifications = [{
+     id: 'offer-notice', user_id: 'passenger', type: 'new_offer', title: 'Naujas pasiūlymas',
+     message: 'Vairuotojas pasiūlė kelionę', related_trip_id: null, related_request_id: 'offer-123',
+     read: false, created_at: new Date().toISOString(),
+   }];
+   const view = render(<NotificationDrawer userId="passenger" onClose={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
+   expect(onOpenRequest).toHaveBeenCalledWith('offer-123', 'passenger');
+   view.unmount();
+   mock.notifications = [{ ...(mock.notifications[0] as object), read: true }];
+   render(<NotificationDrawer userId="passenger" onClose={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /naujas pasiūlymas.*peržiūrėti pasiūlymą/i }));
+   expect(onOpenRequest).toHaveBeenCalledTimes(2);
+ });
+ it('shows a rejected request even after its trip is no longer available', () => {
+   const rejected = {
+     id: 'old-request', status: 'rejected', request_type: 'passenger_request',
+     pickup_location: 'Vilnius', dropoff_location: 'Kaunas', seats_needed: 1,
+     passenger_name: 'Keleivis', driver_message: 'Vietų nėra', created_at: '2030-09-12T10:00:00Z',
+     pickup_lat: null, pickup_lng: null, dropoff_lat: null, dropoff_lng: null,
+   } as RideRequest;
+   render(<RequestCard request={rejected} trip={null} isDriverView={false} highlighted />);
+   expect(screen.getByText('Atmesta')).toBeTruthy();
+   expect(screen.getByText('Vietų nėra')).toBeTruthy();
+   expect(screen.queryByRole('button', { name: /Atšaukti užklausą|Patvirtinti/i })).toBeNull();
+ });
+ it('keeps read notifications in All while Unread only shows new items', async () => {
+   mock.notifications = [
+     { id: 'read', user_id: 'driver', type: 'trip_reminder', title: 'Senas įvykis', message: 'Perskaityta', read: true, created_at: new Date().toISOString() },
+     { id: 'unread', user_id: 'driver', type: 'trip_reminder', title: 'Naujas įvykis', message: 'Neperskaityta', read: false, created_at: new Date().toISOString() },
+   ];
+   render(<NotificationDrawer userId="driver" onClose={() => {}} />);
+   expect(await screen.findByRole('button', { name: 'Senas įvykis' })).toBeTruthy();
+   fireEvent.click(screen.getByRole('button', { name: 'Neperskaityti (1)' }));
+   expect(screen.queryByRole('button', { name: 'Senas įvykis' })).toBeNull();
+   fireEvent.click(screen.getByRole('button', { name: 'Naujas įvykis' }));
+   expect(screen.getByText('Neperskaitytų pranešimų nėra')).toBeTruthy();
+   fireEvent.click(screen.getByRole('button', { name: 'Visi' }));
+   expect(screen.getByRole('button', { name: 'Senas įvykis' })).toBeTruthy();
+ });
+ it('opens a trip reminder through its related trip, including after it was read', async () => {
+   const onOpenTrip = vi.fn();
+   mock.notifications = [{
+     id: 'reminder', user_id: 'driver', type: 'trip_reminder', title: 'Kelionės priminimas',
+     message: 'Artėja išvykimas', related_trip_id: 'own-trip-123', related_request_id: null,
+     read: true, created_at: new Date().toISOString(),
+   }];
+   render(<NotificationDrawer userId="driver" onClose={() => {}} onOpenTrip={onOpenTrip} />);
+   fireEvent.click(await screen.findByRole('button', { name: /kelionės priminimas.*peržiūrėti kelionę/i }));
+   expect(onOpenTrip).toHaveBeenCalledWith('own-trip-123');
+ });
+ it('shows a recent home event that opens its request directly', async () => {
+   const onOpenRequest = vi.fn();
+   mock.notifications = [{
+     id: 'request-notice', user_id: 'driver', type: 'new_request', title: 'Nauja užklausa',
+     message: 'Keleivis nori prisijungti', related_trip_id: null, related_request_id: 'request-456',
+     read: false, created_at: new Date().toISOString(),
+   }];
+   render(<HomeScreen userId="driver" onPick={() => {}} onSignOut={() => {}} onOpenRequest={onOpenRequest} />);
+   fireEvent.click(await screen.findByRole('button', { name: /nauja užklausa/i }));
+   expect(onOpenRequest).toHaveBeenCalledWith('request-456', 'driver');
  });
  it('passes the entered route to search and creation', async () => {
    const onPick=vi.fn();

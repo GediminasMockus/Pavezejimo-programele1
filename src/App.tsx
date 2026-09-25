@@ -55,6 +55,7 @@ type AppHistoryState = {
   filters?: FilterState;
   create?: boolean;
   focusTripId?: string | null;
+  focusRequestId?: string | null;
   chatRequestId?: string | null;
 };
 
@@ -73,6 +74,7 @@ function readAppHistoryState(state: unknown = window.history.state): AppHistoryS
       filters: value.filters ?? emptyFilters,
       create: value.create === true,
       focusTripId: typeof value.focusTripId === 'string' ? value.focusTripId : null,
+      focusRequestId: typeof value.focusRequestId === 'string' ? value.focusRequestId : null,
       chatRequestId: typeof value.chatRequestId === 'string' ? value.chatRequestId : null,
     };
   }
@@ -96,6 +98,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>(initialNavigation?.screen ?? 'home');
   const [activeRole, setActiveRole] = useState<TripRole | null>(initialNavigation?.role ?? null);
   const [focusTripId, setFocusTripId] = useState<string | null>(initialNavigation?.focusTripId ?? null);
+  const [focusRequestId, setFocusRequestId] = useState<string | null>(initialNavigation?.focusRequestId ?? null);
   const [chatRequestId, setChatRequestId] = useState<string | null>(initialNavigation?.chatRequestId ?? null);
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -134,6 +137,7 @@ export default function App() {
         setSearch(navigation.filters ?? emptyFilters);
         setStartForm(navigation.create ?? false);
         setFocusTripId(navigation.focusTripId ?? null);
+        setFocusRequestId(navigation.focusRequestId ?? null);
         setChatRequestId(navigation.chatRequestId ?? null);
         setActiveRole(navigation.role);
         setScreen('list');
@@ -142,6 +146,7 @@ export default function App() {
       setSearch(emptyFilters);
       setStartForm(false);
       setFocusTripId(null);
+      setFocusRequestId(null);
       setChatRequestId(null);
       setActiveRole(null);
       setScreen('home');
@@ -173,13 +178,14 @@ export default function App() {
 
   const userId = session.user.id;
 
-  const showList = (role: TripRole, filters: FilterState, create: boolean, tripId: string | null, requestId: string | null = null) => {
-    const navigation: AppHistoryState = { screen: 'list', role, filters, create, focusTripId: tripId, chatRequestId: requestId };
+  const showList = (role: TripRole, filters: FilterState, create: boolean, tripId: string | null, chatId: string | null = null, requestId: string | null = null) => {
+    const navigation: AppHistoryState = { screen: 'list', role, filters, create, focusTripId: tripId, chatRequestId: chatId, focusRequestId: requestId };
     window.history.pushState(browserStateWith(navigation), '');
     setSearch(filters);
     setStartForm(create);
     setFocusTripId(tripId);
-    setChatRequestId(requestId);
+    setFocusRequestId(requestId);
+    setChatRequestId(chatId);
     setActiveRole(role);
     setScreen('list');
   };
@@ -188,8 +194,31 @@ export default function App() {
     showList(matchedTripRole === 'driver' ? 'passenger' : 'driver', emptyFilters, false, tripId);
   };
 
+  const openNotificationTrip = async (tripId: string) => {
+    const { data } = await supabase.rpc('get_accessible_trips').eq('id', tripId).maybeSingle();
+    const trip = data as Trip | null;
+    if (!trip) {
+      error('Ši kelionė jau pasibaigė arba skelbimas nebeprieinamas.');
+      return;
+    }
+    showList(trip.role, emptyFilters, false, tripId);
+  };
+
   const openRole = (role: TripRole) => {
     showList(role, emptyFilters, false, null);
+  };
+
+  const openNotificationRequest = async (requestId: string, role?: TripRole) => {
+    if (!role) {
+      const { data: request } = await supabase.from('ride_requests')
+        .select('passenger_id, driver_id').eq('id', requestId).maybeSingle();
+      if (!request) {
+        error('Ši užklausa arba pasiūlymas nebeprieinamas.');
+        return;
+      }
+      role = request.passenger_id === userId ? 'passenger' : 'driver';
+    }
+    showList(role, emptyFilters, false, null, null, requestId);
   };
 
   const openNotificationChat = async (requestId: string) => {
@@ -220,22 +249,27 @@ export default function App() {
             showList(role, searchFilters ?? emptyFilters, create, null);
           }}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenTrip={openNotificationTrip}
           onOpenChat={openNotificationChat}
+          onOpenRequest={openNotificationRequest}
           onSignOut={() => supabase.auth.signOut()}
         />
       )}
       {screen === 'list' && activeRole && (
         <ListScreen
-          key={`${userId}:${activeRole}:${focusTripId ?? ''}:${chatRequestId ?? ''}`}
+          key={`${userId}:${activeRole}:${focusTripId ?? ''}:${focusRequestId ?? ''}:${chatRequestId ?? ''}`}
           role={activeRole}
           initialFilters={search}
           initialForm={startForm}
           focusTripId={focusTripId}
+          focusRequestId={focusRequestId}
           initialChatRequestId={chatRequestId}
           userId={userId}
           onOpenMatchedTrip={openMatchedTrip}
+          onOpenNotificationTrip={openNotificationTrip}
           onOpenRole={openRole}
           onOpenNotificationChat={openNotificationChat}
+          onOpenNotificationRequest={openNotificationRequest}
           onBack={() => {
             if (readAppHistoryState()?.screen === 'list' && window.history.length > 1) {
               window.history.back();
@@ -252,10 +286,11 @@ export default function App() {
   );
 }
 
-function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, initialChatRequestId, onOpenMatchedTrip, onOpenRole, onOpenNotificationChat }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; initialChatRequestId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; onOpenNotificationChat: (requestId: string) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
+function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, focusTripId, focusRequestId, initialChatRequestId, onOpenMatchedTrip, onOpenRole, onOpenNotificationChat, onOpenNotificationRequest, onOpenNotificationTrip }: { initialFilters: FilterState; initialForm: boolean; focusTripId: string | null; focusRequestId: string | null; initialChatRequestId: string | null; role: TripRole; userId: string; onBack: () => void; onOpenMatchedTrip: (tripId: string, matchedTripRole: TripRole) => void; onOpenRole: (role: TripRole) => void; onOpenNotificationChat: (requestId: string) => void; onOpenNotificationRequest: (requestId: string, role?: TripRole) => void; onOpenNotificationTrip: (tripId: string) => void; toast: { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void } }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [publicTripIds, setPublicTripIds] = useState<Set<string>>(new Set());
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
+  const [requestsLoaded, setRequestsLoaded] = useState(false);
   const [profiles, setProfiles] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -332,7 +367,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     if (!loadedOnce.current) setLoading(true);
     setError(null);
     try {
-      const [publicResult, privateTrips, requestRelatedTrips] = await Promise.all([
+      const [publicResult, privateTrips, requestRelatedTrips, focusedTripResult] = await Promise.all([
         withRetry(
           () => {
             const dateFrom = filters.date ? new Date(filters.date + 'T00:00:00') : null;
@@ -349,6 +384,9 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
         ),
         fetchAllRows<Trip>((from, to) => supabase.rpc('get_accessible_trips').order('id').range(from, to)),
         fetchAllRows<Trip>((from, to) => supabase.rpc('get_request_related_trips').order('id').range(from, to)),
+        focusTripId
+          ? supabase.from('public_trips').select('*').eq('id', focusTripId).maybeSingle()
+          : Promise.resolve({ data: null }),
       ]);
       if (version !== loadVersion.current) return;
       if (publicResult.error) {
@@ -357,6 +395,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       } else {
         const merged = new Map<string, Trip>();
         const publicTrips = (publicResult.data ?? []).slice(0, publicLimit) as Trip[];
+        const focusedTrip = focusedTripResult.data as Trip | null;
+        if (focusedTrip && !publicTrips.some((trip) => trip.id === focusedTrip.id)) publicTrips.push(focusedTrip);
         setHasMoreTrips((publicResult.data?.length ?? 0) > publicLimit);
         setPublicTripIds(new Set(publicTrips.map((trip) => trip.id)));
         for (const trip of requestRelatedTrips) merged.set(trip.id, trip);
@@ -368,7 +408,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
       setError('Nepavyko įkelti skelbimų. Bandykite vėliau.');
     }
     if (version === loadVersion.current) { loadedOnce.current = true; setLoading(false); }
-  }, [role, publicLimit, filters, userPos]);
+  }, [role, publicLimit, filters, userPos, focusTripId]);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -377,6 +417,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     } catch (err) {
       console.error('Failed to load requests:', err);
       setError('Nepavyko įkelti užklausų. Bandykite dar kartą.');
+    } finally {
+      setRequestsLoaded(true);
     }
   }, []);
 
@@ -441,8 +483,10 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
   const ownTrips = useMemo(() => visibleTrips.filter((t) => t.role === role && t.created_by === clientId).map(t => ({ ...t, available_seats: t.seats - allRequests.filter(r => (r.driver_trip_id ?? r.trip_id) === t.id && r.status === "accepted").reduce((sum, r) => sum + r.seats_needed, 0) })), [visibleTrips, role, clientId, allRequests]);
   const otherTrips = useMemo(() => visibleTrips.filter((t) => publicTripIds.has(t.id) && t.role === othersRole && t.created_by !== clientId && isDiscoverableTrip(t, now)), [visibleTrips, publicTripIds, othersRole, clientId, now]);
   const filteredOtherTrips = useMemo(
-    () => applyFilters(otherTrips, { ...filters, fromLocation: '', toLocation: '' }, userPos?.lat, userPos?.lng).sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
-    [otherTrips, filters, userPos],
+    () => applyFilters(otherTrips, { ...filters, fromLocation: '', toLocation: '' }, userPos?.lat, userPos?.lng)
+      .concat(otherTrips.filter((trip) => trip.id === focusTripId && !applyFilters([trip], { ...filters, fromLocation: '', toLocation: '' }, userPos?.lat, userPos?.lng).length))
+      .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()),
+    [otherTrips, filters, userPos, focusTripId],
   );
   const hasActiveFilters = Boolean(
     filters.fromLocation.trim()
@@ -496,6 +540,14 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
     return () => window.cancelAnimationFrame(frame);
   }, [focusTripId, loading, filteredOtherTrips.length]);
 
+  useEffect(() => {
+    if (!focusRequestId || loading || !requestsLoaded) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`request-${focusRequestId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRequestId, loading, requestsLoaded, allRequests]);
+
   const requestsByTrip = useMemo(() => {
     const map = new Map<string, RideRequest[]>();
     for (const r of allRequests) {
@@ -523,6 +575,14 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
 
   const pendingDriverRequests = driverRequests.filter((r) => r.status === 'pending');
   const acceptedDriverRequests = driverRequests.filter((r) => r.status === 'accepted');
+  const focusedRequest = focusRequestId ? allRequests.find((request) => request.id === focusRequestId) : null;
+  const focusedRequestInActiveSections = focusedRequest && [
+    ...pendingDriverRequests, ...acceptedDriverRequests,
+    ...displayableMySentOffers, ...displayableMyReceivedOffers, ...displayableMySentRequests,
+  ].some((request) => request.id === focusedRequest.id);
+  const historicalRequest = !focusedRequestInActiveSections && focusedRequest
+    && focusedRequest.status !== 'pending'
+    ? focusedRequest : null;
 
   async function updateRequestStatus(
     requestId: string,
@@ -819,6 +879,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
               if (request && trip) openChat(trip, request);
               else void onOpenNotificationChat(requestId);
             }}
+            onOpenRequest={onOpenNotificationRequest}
+            onOpenTrip={onOpenNotificationTrip}
           />
         )}
 
@@ -849,6 +911,29 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
           </div>
         ) : (
           <>
+            {focusTripId && !filteredOtherTrips.some((trip) => trip.id === focusTripId)
+              && !ownTrips.some((trip) => trip.id === focusTripId) && (
+                <div role="status" className="mb-6 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-900">
+                  Ši kelionė jau pasibaigė arba skelbimas nebeprieinamas.
+                </div>
+              )}
+            {historicalRequest && (
+              <section className="mb-8" aria-label="Susijusi užklausa">
+                <h2 className="mb-3 text-base font-semibold text-neutral-900">Susijusi užklausa</h2>
+                <RequestCard
+                  request={historicalRequest}
+                  trip={trips.find((trip) => trip.id === (historicalRequest.driver_trip_id ?? historicalRequest.trip_id)) ?? null}
+                  isDriverView={role === 'driver'}
+                  isOffer={historicalRequest.request_type === 'driver_offer'}
+                  highlighted
+                />
+              </section>
+            )}
+            {focusRequestId && requestsLoaded && !focusedRequestInActiveSections && !historicalRequest && (
+              <div role="status" className="mb-6 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-900">
+                Ši užklausa arba pasiūlymas nebeprieinamas.
+              </div>
+            )}
             {/* Driver: incoming requests */}
             {isDriver && (pendingDriverRequests.length > 0 || acceptedDriverRequests.length > 0) && (
               <section className="mb-8">
@@ -865,6 +950,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       return (
                         <RequestCard
                           key={r.id}
+                          highlighted={r.id === focusRequestId}
                           request={r}
                           trip={t}
                           isDriverView
@@ -889,6 +975,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                       return (
                         <RequestCard
                           key={r.id}
+                          highlighted={r.id === focusRequestId}
                           request={r}
                           trip={t}
                           isDriverView
@@ -916,7 +1003,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                   Mano aktyvūs pasiūlymai ({displayableMySentOffers.length})
                 </h2>
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
-                  {displayableMySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id)!; return <RequestCard key={r.id} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
+                  {displayableMySentOffers.map((r) => { const t = findTripById(r.driver_trip_id ?? r.trip_id)!; return <RequestCard key={r.id} highlighted={r.id === focusRequestId} request={r} trip={t} isDriverView={true} isOffer onCancel={() => updateRequestStatus(r.id, 'cancelled')} onChat={r.status === 'accepted' ? () => openChat(t, r) : undefined} onNavigation={r.status === 'accepted' ? () => openGoogleMapsNavigation(t, r) : undefined} />; })}
                 </div>
               </section>
             )}
@@ -931,7 +1018,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'flex flex-col gap-3'}>
                   {displayableMyReceivedOffers.map((r) => {
                     const t = findTripById(r.driver_trip_id ?? r.trip_id)!;
-                    return <RequestCard key={r.id} request={r} trip={t} isDriverView={false} isOffer
+                    return <RequestCard key={r.id} highlighted={r.id === focusRequestId} request={r} trip={t} isDriverView={false} isOffer
                       onAccept={() => updateRequestStatus(r.id, 'accepted')}
                       onReject={() => updateRequestStatus(r.id, 'rejected')}
                       onCancel={() => updateRequestStatus(r.id, 'cancelled')}
@@ -956,6 +1043,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     return (
                       <RequestCard
                         key={r.id}
+                        highlighted={r.id === focusRequestId}
                         request={r}
                         trip={t}
                         isDriverView={false}
@@ -985,8 +1073,8 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                     const tripRequests = requestsByTrip.get(t.id) ?? [];
                     const pendingCount = tripRequests.filter((r) => r.status === 'pending').length;
                     return (
+                      <div key={t.id} id={`trip-${t.id}`} className={t.id === focusTripId ? 'scroll-mt-24 rounded-2xl ring-4 ring-primary-300 ring-offset-2' : 'scroll-mt-24'}>
                       <TripCard
-                        key={t.id}
                         trip={t}
                         currentTime={now}
                         highlight
@@ -1003,6 +1091,7 @@ function ListScreen({ role, userId, onBack, toast, initialFilters, initialForm, 
                         userRating={t.created_by ? getUserRating(t.created_by) : null}
                         showPrivateDetails
                       />
+                      </div>
                     );
                   })}
                 </div>

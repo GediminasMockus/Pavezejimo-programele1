@@ -20,6 +20,7 @@ import {
 import type { Trip } from '@/lib/supabase';
 import { haversineDistance, formatDistance } from '@/lib/distance';
 import { formatDateTime, formatPrice, formatTripExpiryCountdown } from '@/lib/format';
+import { useRoadDistance } from '@/lib/useRoadDistance';
 
 export function TripCard({
   trip,
@@ -51,6 +52,7 @@ export function TripCard({
   currentTime?: number;
 }) {
   const [deleting, setDeleting] = useState(false);
+  const { ref: cardRef, distanceKm } = useRoadDistance<HTMLElement>(trip.from_lat, trip.from_lng, trip.to_lat, trip.to_lng);
 
   async function handleDelete() {
     setDeleting(true);
@@ -83,7 +85,7 @@ export function TripCard({
     .join(' · ');
 
   return (
-    <article className={`trip-card ${isDriver ? 'trip-card-driver' : 'trip-card-passenger'} animate-fade-in ${highlight ? 'trip-card-highlight' : ''}`}>
+    <article ref={cardRef} className={`trip-card ${isDriver ? 'trip-card-driver' : 'trip-card-passenger'} animate-fade-in ${highlight ? 'trip-card-highlight' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <span className={`badge ${isDriver ? 'badge-driver' : 'badge-passenger'}`}>
@@ -99,7 +101,7 @@ export function TripCard({
           )}
         </div>
         {(onEdit || onDeleteRequest) && (
-          <div className="-mr-2 -mt-2 flex shrink-0 items-center">
+          <div className="flex shrink-0 items-center self-start">
             {onEdit && <button onClick={onEdit} className="icon-button" aria-label={`Redaguoti skelbimą: ${trip.from_location} → ${trip.to_location}`}><Pencil className="h-4 w-4" /></button>}
             {onDeleteRequest && <button onClick={handleDelete} disabled={deleting} className="icon-button hover:bg-danger-50 hover:text-danger-700" aria-label={`Pašalinti skelbimą: ${trip.from_location} → ${trip.to_location}`}>{deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button>}
           </div>
@@ -122,7 +124,7 @@ export function TripCard({
           {userRating && userRating.total > 0 && <span className="inline-flex shrink-0 items-center gap-1 text-xs"><Star className="h-3 w-3 fill-neutral-500 text-neutral-500" />{userRating.avg.toFixed(1)}</span>}
         </button>
         <span className="inline-flex items-center gap-1.5"><Users className="h-4 w-4" />{trip.seats} {isDriver ? 'vietos' : 'keleiviai'}</span>
-        {distance !== null && <span className="inline-flex items-center gap-1.5 text-xs"><Route className="h-3.5 w-3.5" />≈ {formatDistance(distance)}</span>}
+        {distance !== null && <span className="inline-flex items-center gap-1.5 text-xs" title={distanceKm === null ? 'Kelio atstumo apskaičiuoti nepavyko; rodomas apytikris atstumas tiesia linija' : 'Atstumas keliu pagal tą patį maršruto šaltinį kaip žemėlapio peržiūroje'}><Route className="h-3.5 w-3.5" />{distanceKm === undefined ? 'Kelio km skaičiuojami…' : distanceKm === null ? `≈ ${formatDistance(distance)} tiesia linija` : `${formatDistance(distanceKm)} keliu`}</span>}
         {showPrivateDetails && trip.phone && <a href={`tel:${trip.phone}`} className="inline-flex min-h-11 items-center gap-1.5 text-primary-700 hover:underline"><Phone className="h-4 w-4" />{trip.phone}</a>}
       </div>
       {isDriver && carInfo && <div className="mt-2 flex items-start gap-2 text-xs text-neutral-500"><Car className="h-4 w-4 shrink-0" /><span>{showPrivateDetails ? carInfo : [trip.car_make, trip.car_color].filter(Boolean).join(' · ')}</span></div>}

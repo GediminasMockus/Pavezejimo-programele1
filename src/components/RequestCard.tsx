@@ -18,6 +18,7 @@ import type { Trip, RideRequest, RequestStatus } from '@/lib/supabase';
 import { calculateDetour, formatDistance, haversineDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 import { CancelRequestModal } from '@/components/CancelRequestModal';
+import { useRoadDistance } from '@/lib/useRoadDistance';
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; icon: typeof Clock }> = {
   pending: { label: 'Laukia patvirtinimo', bg: 'bg-warning-100', text: 'text-warning-700', icon: Clock },
@@ -37,9 +38,10 @@ export function RequestCard({
   onPreviewRoute,
   onNavigation,
   isOffer = false,
+  highlighted = false,
 }: {
   request: RideRequest;
-  trip: Trip;
+  trip: Trip | null;
   isDriverView: boolean;
   onAccept?: () => void;
   onReject?: () => void;
@@ -48,13 +50,15 @@ export function RequestCard({
   onPreviewRoute?: () => void;
   onNavigation?: () => void;
   isOffer?: boolean;
+  highlighted?: boolean;
 }) {
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const { ref: cardRef, distanceKm } = useRoadDistance(request.pickup_lat, request.pickup_lng, request.dropoff_lat, request.dropoff_lng);
   const status = STATUS_CONFIG[request.status];
   const StatusIcon = status.icon;
 
   const hasDriverCoords =
-    trip.from_lat !== null && trip.from_lng !== null && trip.to_lat !== null && trip.to_lng !== null;
+    trip !== null && trip.from_lat !== null && trip.from_lng !== null && trip.to_lat !== null && trip.to_lng !== null;
   const hasRequestCoords =
     request.pickup_lat !== null &&
     request.pickup_lng !== null &&
@@ -64,10 +68,10 @@ export function RequestCard({
   const detour =
     hasDriverCoords && hasRequestCoords
       ? calculateDetour(
-          trip.from_lat!,
-          trip.from_lng!,
-          trip.to_lat!,
-          trip.to_lng!,
+          trip!.from_lat!,
+          trip!.from_lng!,
+          trip!.to_lat!,
+          trip!.to_lng!,
           request.pickup_lat,
           request.pickup_lng,
           request.dropoff_lat,
@@ -87,7 +91,7 @@ export function RequestCard({
   const isPending = request.status === 'pending';
 
   return (
-    <div data-status={request.status} className={`surface-card request-card min-w-0 p-4 sm:p-5 animate-fade-in ${request.status === 'accepted' ? 'order-first' : ''}`}>
+    <div ref={cardRef} id={`request-${request.id}`} data-status={request.status} className={`surface-card request-card min-w-0 scroll-mt-24 p-4 sm:p-5 animate-fade-in ${highlighted ? 'ring-4 ring-primary-300 ring-offset-2' : ''} ${request.status === 'accepted' ? 'order-first' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`badge ${status.bg} ${status.text}`}>
@@ -121,9 +125,12 @@ export function RequestCard({
           </div>
         </div>
         {passengerDist !== null && (
-          <div className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-600">
+          <div className="inline-flex shrink-0 flex-col items-center rounded-lg bg-neutral-100 px-2.5 py-1 text-neutral-600" title={distanceKm === null ? 'Kelio atstumo apskaičiuoti nepavyko; rodomas atstumas tiesia linija' : 'Atstumas keliu pagal maršruto peržiūros šaltinį'}>
+            <span className="inline-flex items-center gap-1">
             <Route className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">{formatDistance(passengerDist)}</span>
+            <span className="text-xs font-medium">{distanceKm === undefined ? '…' : formatDistance(distanceKm ?? passengerDist)}</span>
+            </span>
+            <span className="text-[10px]">{distanceKm === undefined ? 'skaičiuojama' : distanceKm === null ? 'tiesia linija' : 'keliu'}</span>
           </div>
         )}
       </div>
@@ -137,13 +144,7 @@ export function RequestCard({
       )}
 
       {isDriverView && !isOffer && detour && (
-        <div className={`mt-3 rounded-xl p-3 text-sm ${
-          detour.detour < 5
-            ? 'bg-neutral-50 border border-neutral-200 text-neutral-700'
-            : detour.detour < 15
-              ? 'bg-warning-50 border border-warning-200 text-warning-700'
-              : 'bg-danger-50 border border-danger-200 text-danger-700'
-        }`}>
+        <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
           <div className="flex items-center gap-1.5 font-semibold mb-1">
             <Route className="w-4 h-4" />
             Preliminarus nuokrypis tiesia linija
@@ -153,6 +154,7 @@ export function RequestCard({
             {formatDistance(detour.newDistance)}{' '}
             <span className="font-bold">(+{formatDistance(detour.detour)})</span>
           </p>
+          <p className="mt-1 text-xs">Tikslų apvažiavimą keliu rasite maršruto peržiūroje.</p>
         </div>
       )}
 
