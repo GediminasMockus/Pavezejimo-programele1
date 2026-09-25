@@ -23,6 +23,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
   const [feedback, setFeedback] = useState<FeedbackEntry[]>([]);
   const [loadError, setLoadError] = useState('');
+  const [profilesError, setProfilesError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [tab, setTab] = useState<AdminTab>('feedback');
@@ -63,7 +64,12 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
           .limit(100),
         supabase.from('app_feedback').select('*').order('created_at', { ascending: false }).limit(100),
       ]);
-      if ([tRes,rRes,pRes,ratRes,allTRes,allRRes,feedbackRes].some(result => result.error)) setLoadError("Nepavyko įkelti dalies administravimo duomenų.");
+      if (pRes.error) {
+        setProfilesError(true);
+        setLoadError('Nepavyko įkelti vartotojų sąrašo. Pabandykite atidaryti administravimą iš naujo.');
+      } else if ([tRes,rRes,ratRes,allTRes,allRRes,feedbackRes].some(result => result.error)) {
+        setLoadError('Nepavyko įkelti dalies administravimo duomenų.');
+      }
       if (tRes.data) setCompletedTrips(tRes.data);
       if (rRes.data) setCompletedRequests(rRes.data);
       if (pRes.data) setProfiles(pRes.data);
@@ -143,7 +149,7 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
   const tabs: { id: AdminTab; label: string; count?: number }[] = [
     { id: 'feedback', label: 'Atsiliepimai', count: newFeedbackCount },
     { id: 'stats', label: 'Statistika' },
-    { id: 'users', label: 'Vartotojai', count: profiles.length },
+    { id: 'users', label: 'Vartotojai', count: loading || profilesError ? undefined : profiles.length },
     { id: 'trips', label: 'Skelbimai', count: allTrips.length },
     { id: 'requests', label: 'Užklausos', count: allRequests.length },
     { id: 'completed', label: 'Užbaigtos', count: completedTrips.length },
@@ -237,8 +243,8 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                   <Users className="w-5 h-5 text-neutral-600" />
                   <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">Vartotojai</span>
                 </div>
-                <p className="text-3xl font-bold text-neutral-900">{profiles.length}</p>
-                <p className="text-xs text-neutral-600 mt-1">{profiles.filter(p => p.is_admin).length} administratorių</p>
+                <p className="text-3xl font-bold text-neutral-900">{profilesError ? '—' : profiles.length}</p>
+                <p className="text-xs text-neutral-600 mt-1">{profilesError ? 'Nepavyko įkelti vartotojų' : `${profiles.filter(p => p.is_admin).length} administratorių`}</p>
               </div>
               <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -353,7 +359,9 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
             )
           ) : tab === 'users' ? (
             <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-              {profiles.length === 0 ? (
+              {profilesError ? (
+                <p role="alert" className="rounded-2xl border border-danger-200 bg-danger-50 p-4 text-sm text-danger-700">Nepavyko įkelti vartotojų. Uždarykite ir atidarykite administravimo langą iš naujo.</p>
+              ) : profiles.length === 0 ? (
                 <p className="text-center text-sm text-neutral-500 py-10">
                   Kol kas nėra registruotų vartotojų.
                 </p>
