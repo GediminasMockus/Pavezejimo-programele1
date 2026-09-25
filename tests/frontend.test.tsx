@@ -21,6 +21,7 @@ import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
 import { fetchDrivingDistance, fetchDrivingRoute } from '../src/lib/routing';
+import { photonResults } from '../supabase/functions/_shared/geocode';
 import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
   rpc: vi.fn(), from: vi.fn(),
@@ -45,6 +46,16 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('maps fallback Lithuanian address results to selectable coordinates', () => {
+   expect(photonResults([
+     { properties: { countrycode: 'LT', name: 'Radviliškis', city: 'Radviliškis' }, geometry: { coordinates: [23.55, 55.81] } },
+     { properties: { countrycode: 'LT', street: 'Jono Jablonskio g.', housenumber: '25', city: 'Šiauliai' }, geometry: { coordinates: [23.28, 55.92] } },
+     { properties: { countrycode: 'LV', name: 'Ryga' }, geometry: { coordinates: [24.1, 56.9] } },
+   ])).toEqual([
+     { display_name: 'Radviliškis, Lietuva', lat: '55.81', lon: '23.55', area: 'Radviliškis' },
+     { display_name: 'Jono Jablonskio g. 25, Šiauliai, Lietuva', lat: '55.92', lon: '23.28', area: 'Jono Jablonskio g., Šiauliai' },
+   ]);
+ });
  it('keeps the background locked until the last touch dialog closes', () => {
    vi.stubGlobal('matchMedia', () => ({ matches: true }));
    const scrollTo = vi.fn();
