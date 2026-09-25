@@ -378,14 +378,20 @@ describe('user workflows', () => {
    expect(screen.getByText(/užpildytos pagal jūsų paiešką/i)).toBeTruthy();
  });
 
- it('does not geocode while typing', async () => {
-   const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[]}); vi.stubGlobal('fetch',fetch);
-   function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <AddressInput value={value} onChange={setValue} placeholder="Address" />; }
+ it('suggests addresses after typing and saves the selected coordinates', async () => {
+   const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[{display_name:'Radviliškis, Lietuva',lat:'55.81',lon:'23.55',area:'Radviliškis'}]}); vi.stubGlobal('fetch',fetch);
+   function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <><AddressInput value={value} onChange={setValue} placeholder="Address" /><output>{value.lat},{value.lng}</output></>; }
    render(<Harness />);
-   fireEvent.change(screen.getByPlaceholderText('Address'),{target:{value:'Vilnius'}});
+   fireEvent.change(screen.getByPlaceholderText('Address'),{target:{value:'Rad'}});
+   fireEvent.change(screen.getByPlaceholderText('Address'),{target:{value:'Radviliškis'}});
    expect(fetch).not.toHaveBeenCalled();
-   fireEvent.click(screen.getByRole('button',{name:'Ieškoti adreso'}));
+   await new Promise(resolve => setTimeout(resolve, 500));
    await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));
+   expect(fetch.mock.calls[0][0]).toContain('mode=suggest');
+   fireEvent.click(await screen.findByRole('button',{name:'Radviliškis, Lietuva'}));
+   expect(screen.getByText('55.81,23.55')).toBeTruthy();
+   await new Promise(resolve => setTimeout(resolve, 500));
+   expect(fetch).toHaveBeenCalledTimes(1);
  });
 
  it('applies filters only after confirming them', () => {
