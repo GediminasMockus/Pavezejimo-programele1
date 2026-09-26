@@ -293,6 +293,7 @@
   .feedback-panel button[data-category='problem'][aria-pressed='true'] { border-color: rgb(var(--danger-500)); background: rgb(var(--danger-200)); }
   .feedback-panel button[data-category='suggestion'][aria-pressed='true'] { border-color: rgb(var(--primary-500)); background: rgb(var(--primary-200)); }
   .feedback-panel button[data-category='rating'][aria-pressed='true'] { border-color: rgb(var(--success-500)); background: rgb(var(--success-200)); }
+  .feedback-panel button[data-category][aria-pressed='true'] { border-width: 2px; border-color: rgb(var(--accent-violet-700)); box-shadow: 0 0 0 2px rgb(var(--accent-violet-100)); }
   .feedback-panel svg.fill-primary-400 { fill: rgb(var(--success-400)); color: rgb(var(--success-700)); }
   .home-toolbar { @apply mx-auto flex max-w-6xl items-center justify-end gap-2 px-4 py-4 sm:px-6; }
   .home-toolbar > button { border-color: rgb(var(--accent-violet-300)); background: rgb(var(--accent-violet-50)); color: rgb(var(--accent-violet-700)); }
