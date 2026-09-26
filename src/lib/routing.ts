@@ -3,6 +3,7 @@ export type RoutePoint = [lat: number, lng: number];
 export interface DrivingRoute {
   coordinates: RoutePoint[];
   distance: number;
+  legs?: DrivingRoute[];
 }
 
 const roadDistanceCache = new Map<string, Promise<number | null>>();
@@ -43,35 +44,49 @@ export function fetchDrivingDistance(points: RoutePoint[]): Promise<number | nul
   return request;
 }
 
-export async function fetchDrivingRoute(
+function parseCoordinates(raw: unknown): RoutePoint[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((coordinate: unknown): coordinate is [number, number] =>
+    Array.isArray(coordinate)
+    && coordinate.length >= 2
+    && Number.isFinite(coordinate[0])
+    && Number.isFinite(coordinate[1]))
+    .map(([lng, lat]: [number, number]) => [lat, lng]);
+}
+
+async function requestDrivingRoute(
   points: RoutePoint[],
   signal?: AbortSignal,
+  withLegs = false,
 ): Promise<DrivingRoute | null> {
   if (points.length < 2) return null;
 
   try {
     const coordinates = points.map(([lat, lng]) => `${lng},${lat}`).join(';');
     const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,
+      `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=${withLegs ? 'false' : 'full'}&geometries=geojson&steps=${withLegs ? 'true' : 'false'}`,
       { signal },
     );
     if (!response.ok) return null;
 
     const json = await response.json();
     const route = json.routes?.[0];
-    if (!route || !Number.isFinite(route.distance) || !Array.isArray(route.geometry?.coordinates)) return null;
-
-    const routeCoordinates: RoutePoint[] = route.geometry.coordinates
-      .filter((coordinate: unknown): coordinate is [number, number] =>
-        Array.isArray(coordinate)
-        && coordinate.length >= 2
-        && Number.isFinite(coordinate[0])
-        && Number.isFinite(coordinate[1]))
-      .map(([lng, lat]: [number, number]) => [lat, lng]);
+    if (!route || !Number.isFinite(route.distance)) return null;
+    const legs: DrivingRoute[] | undefined = withLegs && Array.isArray(route.legs)
+      ? route.legs.map((leg: { distance: number; steps?: Array<{ geometry?: { coordinates?: unknown } }> }) => ({
+        distance: leg.distance / 1000,
+        coordinates: (leg.steps ?? []).flatMap(step => parseCoordinates(step.geometry?.coordinates)),
+      }))
+      : undefined;
+    if (withLegs && (legs?.length !== points.length - 1 || legs.some(leg => !Number.isFinite(leg.distance) || leg.coordinates.length < 2))) return null;
+    const routeCoordinates = legs ? legs.flatMap(leg => leg.coordinates) : parseCoordinates(route.geometry?.coordinates);
 
     if (routeCoordinates.length < 2) return null;
-    return { coordinates: routeCoordinates, distance: route.distance / 1000 };
+    return { coordinates: routeCoordinates, distance: route.distance / 1000, ...(legs ? { legs } : {}) };
   } catch {
     return null;
   }
 }
+
+export const fetchDrivingRoute = (points: RoutePoint[], signal?: AbortSignal) => requestDrivingRoute(points, signal);
+export const fetchDrivingRouteWithLegs = (points: RoutePoint[], signal?: AbortSignal) => requestDrivingRoute(points, signal, true);
