@@ -209,8 +209,8 @@ export function AdminLogs({ onClose }: { onClose: () => void }) {
                 {visibleFeedback.map(entry => <article key={entry.id} className="min-w-0 rounded-2xl border border-neutral-200 bg-surface p-4 shadow-sm sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-800">{entry.category === 'problem' ? 'Problema' : entry.category === 'suggestion' ? 'Pasiūlymas' : 'Programėlės vertinimas'}</span>
-                      {entry.rating && <span className="text-sm font-semibold text-primary-700">★ {entry.rating}/5</span>}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${entry.category === 'problem' ? 'bg-danger-50 text-danger-700' : entry.category === 'suggestion' ? 'bg-primary-50 text-primary-700' : 'bg-success-50 text-success-700'}`}>{entry.category === 'problem' ? 'Problema' : entry.category === 'suggestion' ? 'Pasiūlymas' : 'Programėlės vertinimas'}</span>
+                      {entry.rating && <span className="text-sm font-semibold text-success-700">★ {entry.rating}/5</span>}
                     </div>
                     <time className="text-xs text-neutral-500" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time>
                   </div>

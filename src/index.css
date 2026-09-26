@@ -287,10 +287,13 @@
   .feedback-trigger { border-color: rgb(var(--accent-violet-300)); background: linear-gradient(110deg, rgb(var(--role-passenger)), rgb(var(--primary-600))); color: #fff; }
   .feedback-trigger:hover { background: linear-gradient(110deg, rgb(76 39 150), rgb(var(--primary-action-hover))); color: #fff; }
   .feedback-trigger span { background: rgb(255 255 255 / 0.24); color: #fff; }
-  .feedback-panel button[data-category='problem'][aria-pressed='true'] { border-color: rgb(var(--danger-400)); background: rgb(var(--danger-50)); color: rgb(var(--danger-700)); }
-  .feedback-panel button[data-category='suggestion'][aria-pressed='true'] { border-color: rgb(var(--accent-teal)); background: rgb(var(--accent-teal-soft)); color: rgb(var(--accent-teal)); }
-  .feedback-panel button[data-category='rating'][aria-pressed='true'] { border-color: rgb(var(--warning-400)); background: rgb(var(--warning-50)); color: rgb(var(--warning-700)); }
-  .feedback-panel svg.fill-primary-400 { fill: rgb(var(--warning-400)); color: rgb(var(--warning-600)); }
+  .feedback-panel button[data-category='problem'] { border-color: rgb(var(--danger-200)); color: rgb(var(--danger-700)); }
+  .feedback-panel button[data-category='suggestion'] { border-color: rgb(var(--primary-200)); color: rgb(var(--primary-700)); }
+  .feedback-panel button[data-category='rating'] { border-color: rgb(var(--success-200)); color: rgb(var(--success-700)); }
+  .feedback-panel button[data-category='problem'][aria-pressed='true'] { border-color: rgb(var(--danger-400)); background: rgb(var(--danger-50)); }
+  .feedback-panel button[data-category='suggestion'][aria-pressed='true'] { border-color: rgb(var(--primary-400)); background: rgb(var(--primary-50)); }
+  .feedback-panel button[data-category='rating'][aria-pressed='true'] { border-color: rgb(var(--success-400)); background: rgb(var(--success-50)); }
+  .feedback-panel svg.fill-primary-400 { fill: rgb(var(--success-400)); color: rgb(var(--success-700)); }
   .home-toolbar { @apply mx-auto flex max-w-6xl items-center justify-end gap-2 px-4 py-4 sm:px-6; }
   .home-toolbar > button { border-color: rgb(var(--accent-violet-300)); background: rgb(var(--accent-violet-50)); color: rgb(var(--accent-violet-700)); }
   .home-toolbar > button:nth-child(even) { border-color: rgb(var(--accent-teal) / 0.35); background: rgb(var(--accent-teal-soft)); color: rgb(var(--accent-teal)); }
