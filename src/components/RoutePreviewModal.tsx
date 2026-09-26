@@ -8,6 +8,9 @@ import { formatDistance } from '@/lib/distance';
 import { formatDateTime } from '@/lib/format';
 import { fetchDrivingRoute, type DrivingRoute, type RoutePoint } from '@/lib/routing';
 
+const driverLineColor = 'rgb(var(--role-driver))';
+const combinedLineColor = 'rgb(var(--role-passenger))';
+
 export function RoutePreviewModal({
   trip,
   request,
@@ -37,6 +40,7 @@ export function RoutePreviewModal({
     request.pickup_lng !== null &&
     request.dropoff_lat !== null &&
     request.dropoff_lng !== null;
+  const directLineColor = trip.role === 'driver' || hasRequestCoords ? driverLineColor : combinedLineColor;
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
@@ -99,27 +103,12 @@ export function RoutePreviewModal({
       if (controller.signal.aborted) return;
 
       if (hasDriverCoords) {
-        const tripColor = trip.role === 'driver' ? 'rgb(var(--role-driver))' : 'rgb(var(--role-passenger))';
-        L.marker([trip.from_lat!, trip.from_lng!], { icon: tripPin('Iš', tripColor) })
+        L.marker([trip.from_lat!, trip.from_lng!], { icon: tripPin('Iš', directLineColor) })
           .addTo(map)
           .bindPopup(mapPopup('Išvykimas', trip.from_location));
-        L.marker([trip.to_lat!, trip.to_lng!], { icon: tripPin('Į', tripColor) })
+        L.marker([trip.to_lat!, trip.to_lng!], { icon: tripPin('Į', directLineColor) })
           .addTo(map)
           .bindPopup(mapPopup('Atvykimas', trip.to_location));
-
-        if (driverRouteData) {
-          L.polyline(driverRouteData.coordinates, {
-            color: tripColor,
-            weight: 4,
-            opacity: 0.5,
-            dashArray: '10 8',
-          }).addTo(map);
-        } else {
-          L.polyline(
-            [[trip.from_lat!, trip.from_lng!], [trip.to_lat!, trip.to_lng!]],
-            { color: tripColor, weight: 4, opacity: 0.5, dashArray: '10 8' },
-          ).addTo(map);
-        }
 
         points.push([trip.from_lat!, trip.from_lng!]);
         points.push([trip.to_lat!, trip.to_lng!]);
@@ -134,30 +123,25 @@ export function RoutePreviewModal({
           .addTo(map)
           .bindPopup(mapPopup('Keleivio išlaipinimas', request!.dropoff_location));
 
-        if (fullRouteData) {
-          L.polyline(fullRouteData.coordinates, {
-            color: 'rgb(var(--role-passenger))',
-            weight: 5,
-            opacity: 0.85,
-          }).addTo(map);
-        } else {
-          L.polyline(
-            [
-              [trip.from_lat!, trip.from_lng!],
-              [request!.pickup_lat!, request!.pickup_lng!],
-              [request!.dropoff_lat!, request!.dropoff_lng!],
-              [trip.to_lat!, trip.to_lng!],
-            ],
-            { color: 'rgb(var(--role-passenger))', weight: 5, opacity: 0.85 },
-          ).addTo(map);
-        }
-
         points.push([request!.pickup_lat!, request!.pickup_lng!]);
         points.push([request!.dropoff_lat!, request!.dropoff_lng!]);
 
         if (driverRouteData && fullRouteData) {
           detour = Math.max(0, fullRouteData.distance - driverRouteData.distance);
         }
+      }
+
+      if (fullPoints) {
+        // Draw the wide solid route first. Its edges and gaps remain visible
+        // where the narrower dashed driver route follows the same road.
+        L.polyline(fullRouteData?.coordinates ?? fullPoints, {
+          color: combinedLineColor, weight: 10, opacity: 0.95, lineCap: 'round',
+        }).addTo(map);
+      }
+      if (driverPoints) {
+        L.polyline(driverRouteData?.coordinates ?? driverPoints, {
+          color: directLineColor, weight: 5, opacity: 1, dashArray: '8 12', lineCap: 'round',
+        }).addTo(map);
       }
 
       if (points.length > 0) {
@@ -175,7 +159,7 @@ export function RoutePreviewModal({
 
     void buildRoute();
     return () => controller.abort();
-  }, [trip, request, hasDriverCoords, hasRequestCoords]);
+  }, [trip, request, hasDriverCoords, hasRequestCoords, directLineColor]);
 
   const driverDist = routeInfo.driverRoute?.distance ?? null;
   const passengerDist = routeInfo.passengerRoute?.distance ?? null;
@@ -215,8 +199,8 @@ export function RoutePreviewModal({
             {hasDriverCoords && (
               <div className="rounded-xl bg-primary-50 border border-primary-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-primary-900 mb-1">
-                  <span className="w-4 h-1 rounded bg-primary-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgb(var(--role-driver)) 0 6px, transparent 6px 12px)' }} />
-                  Tiesioginis vairuotojo maršrutas
+                  <svg width="36" height="12" aria-hidden="true" className="shrink-0"><line x1="2" y1="6" x2="34" y2="6" stroke={directLineColor} strokeWidth="5" strokeDasharray="8 12" strokeLinecap="round" /></svg>
+                  Tiesioginis {trip.role === 'driver' ? 'vairuotojo' : 'keleivio'} maršrutas
                 </div>
                 <div className="text-sm text-primary-800">
                   {trip.from_location} → {trip.to_location}
@@ -233,7 +217,7 @@ export function RoutePreviewModal({
             {hasRequestCoords && (
               <div className="rounded-xl bg-primary-50 border border-primary-200 p-3">
                 <div className="flex items-center gap-1.5 text-sm font-semibold text-primary-900 mb-1">
-                  <span className="w-4 h-1 rounded bg-primary-500" />
+                  <span className="h-1.5 w-9 shrink-0 rounded" style={{ backgroundColor: combinedLineColor }} />
                   Keleivio atkarpa
                 </div>
                 <div className="text-sm text-primary-800">
@@ -248,19 +232,19 @@ export function RoutePreviewModal({
               </div>
             )}
 
-            {hasDriverCoords && hasRequestCoords && fullDist !== null && (
+            {hasDriverCoords && hasRequestCoords && (
               <div className="rounded-xl border border-primary-200 bg-primary-50 p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-primary-900">
-                  <span className="h-1 w-4 rounded bg-primary-600" />
-                  Visas patvirtintas maršrutas
+                  <span className="h-1.5 w-9 shrink-0 rounded" style={{ backgroundColor: combinedLineColor }} />
+                  Visas {request?.status === 'accepted' ? 'patvirtintas' : 'siūlomas'} maršrutas
                 </div>
                 <div className="text-sm text-primary-800">
                   Vairuotojo pradžia → keleivio paėmimas → keleivio išlaipinimas → vairuotojo tikslas
                 </div>
-                <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-primary-700">
+                {fullDist !== null && <div className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-primary-700">
                   <RouteIcon className="h-3.5 w-3.5" />
                   {formatDistance(fullDist)}
-                </div>
+                </div>}
               </div>
             )}
 
