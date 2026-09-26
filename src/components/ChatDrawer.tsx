@@ -55,6 +55,7 @@ export function ChatDrawer({
   const isDriverSide = request?.request_type === 'driver_offer' ? request.driver_id === clientId : trip.created_by === clientId;
   const canConfirm = !!request && (isPassengerSide || isDriverSide);
   const bothConfirmed = myConfirmed && otherConfirmed;
+  const completionStarted = myConfirmed || otherConfirmed;
   const matchId = activeMatch?.id ?? null;
   const canSendMessages = requestStatus === 'accepted';
 
@@ -264,7 +265,7 @@ export function ChatDrawer({
     setConfirming(false);
     if (confirmError || !data) {
       setError(confirmError?.message === 'trip has not started'
-        ? 'Kelionę galėsite patvirtinti po išvykimo laiko.'
+        ? 'Kelionės įvykimą galėsite pažymėti po išvykimo laiko.'
         : confirmError?.message === 'ride is not accepted'
           ? 'Ši kelionė dar nepatvirtinta vairuotojo.'
           : 'Nepavyko patvirtinti kelionės.');
@@ -384,37 +385,27 @@ export function ChatDrawer({
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                {request?.status !== 'accepted' ? (
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success-100 text-success-700 text-xs font-semibold">
-                      <CheckCheck className="w-4 h-4" />
-                      Kelionė patvirtinta
-                    </span>
-                  </div>
-                ) : (
+                {requestStatus === 'accepted' && (
                   <>
                     <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        myConfirmed ? 'bg-success-100 text-success-700' : 'bg-neutral-200 text-neutral-500'
-                      }`}>
-                        <Check className="w-3.5 h-3.5" />
-                        Jūs {myConfirmed ? 'patvirtinote' : 'nepatvirtinote'}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success-100 text-success-700 text-xs font-semibold">
+                        <CheckCheck className="w-4 h-4" />
+                        Kelionė patvirtinta
                       </span>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        otherConfirmed ? 'bg-success-100 text-success-700' : 'bg-neutral-200 text-neutral-500'
-                      }`}>
-                        <Check className="w-3.5 h-3.5" />
-                        Kita pusė {otherConfirmed ? 'patvirtino' : 'laukia'}
-                      </span>
+                      {completionStarted && (
+                        <span className="text-xs text-neutral-600">
+                          Kelionės įvykimas: {myConfirmed ? 'jūs pažymėjote' : 'jūs dar nepažymėjote'}; {otherConfirmed ? 'kita pusė pažymėjo' : 'kita pusė dar nepažymėjo'}.
+                        </span>
+                      )}
                     </div>
-                    {!myConfirmed && !bothConfirmed && (
+                    {!myConfirmed && (
                       <button
                         onClick={handleConfirm}
                         disabled={confirming}
                         className="ui-button flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-600 text-on-primary text-sm font-semibold hover:bg-primary-700 active:scale-95 transition-all disabled:opacity-60"
                       >
                         {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        Kelionė įvyko
+                        Pažymėti, kad kelionė įvyko
                       </button>
                     )}
                   </>
