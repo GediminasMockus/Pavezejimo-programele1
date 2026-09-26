@@ -20,7 +20,7 @@ import type { Trip, RideRequest } from '../src/lib/supabase';
 import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
-import { fetchDrivingDistance, fetchDrivingRoute } from '../src/lib/routing';
+import { fetchDrivingDistance, fetchDrivingRoute, fetchDrivingRouteWithLegs } from '../src/lib/routing';
 import { photonResults } from '../supabase/functions/_shared/geocode';
 import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
@@ -100,6 +100,19 @@ describe('data helpers', () => {
    );
    expect(route?.distance).toBe(123.456);
    expect(route?.coordinates).toEqual([[54.1, 25.1], [55.2, 24.2]]);
+ });
+ it('separates the driving route at pickup and dropoff', async () => {
+   const makeLeg = (distance: number, coordinates: number[][]) => ({ distance, steps: [{ geometry: { coordinates } }] });
+   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ routes: [{ distance: 18000, legs: [
+     makeLeg(3000, [[25.1, 54.1], [25.2, 54.2]]),
+     makeLeg(12000, [[25.2, 54.2], [24.2, 55.2]]),
+     makeLeg(3000, [[24.2, 55.2], [24.1, 55.3]]),
+   ] }] }) });
+   vi.stubGlobal('fetch', fetchMock);
+   const route = await fetchDrivingRouteWithLegs([[54.1, 25.1], [54.2, 25.2], [55.2, 24.2], [55.3, 24.1]]);
+   expect(fetchMock.mock.calls[0][0]).toContain('overview=false&geometries=geojson&steps=true');
+   expect(route?.legs?.map(leg => leg.distance)).toEqual([3, 12, 3]);
+   expect(route?.legs?.[1].coordinates).toEqual([[54.2, 25.2], [55.2, 24.2]]);
  });
  it('uses the map routing provider for card kilometers and deduplicates identical routes', async () => {
    const fetchMock = vi.fn().mockResolvedValue({
