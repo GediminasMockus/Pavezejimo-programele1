@@ -407,6 +407,14 @@ describe('user workflows', () => {
    expect(screen.getByText(/užpildytos pagal jūsų paiešką/i)).toBeTruthy();
  });
 
+ it('asks for the missing pickup rather than the already filled profile name', async () => {
+   render(<RequestModal trip={trip} userId="passenger" onClose={() => {}} onSubmitted={() => {}} />);
+   await waitFor(() => expect(screen.getByDisplayValue('Tester')).toBeTruthy());
+   fireEvent.click(screen.getByRole('button', { name: 'Siųsti užklausą vairuotojui' }));
+   expect(screen.getByText('Nurodykite paėmimo vietą.')).toBeTruthy();
+   expect(screen.queryByText('Įrašykite savo vardą.')).toBeNull();
+ });
+
  it('suggests addresses after typing and saves the selected coordinates', async () => {
    const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>[{display_name:'Radviliškis, Lietuva',lat:'55.81',lon:'23.55',area:'Radviliškis'}]}); vi.stubGlobal('fetch',fetch);
    function Harness() { const [value,setValue]=useState<AddressValue>({display_name:'',lat:null,lng:null}); return <><AddressInput value={value} onChange={setValue} placeholder="Address" /><output>{value.lat},{value.lng}</output></>; }
