@@ -71,7 +71,9 @@ export function RequestModal({ trip, passengerTrip, initialRoute, userId, onClos
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    if (!passengerName.trim() || !pickupAddr.display_name.trim() || !dropoffAddr.display_name.trim()) return setFormError('Užpildykite vardą, iš kur ir į kur laukus.');
+    if (!passengerName.trim()) return setFormError('Įrašykite savo vardą.');
+    if (!pickupAddr.display_name.trim()) return setFormError('Nurodykite paėmimo vietą.');
+    if (!dropoffAddr.display_name.trim()) return setFormError('Nurodykite išlaipinimo vietą.');
     if (!Number.isInteger(seats) || seats < 1 || seats > 8) return setFormError('Keleivių skaičius turi būti nuo 1 iki 8.');
     if (passengerName.trim().length > 80 || pickupAddr.display_name.trim().length > 160 || dropoffAddr.display_name.trim().length > 160 || notes.trim().length > 500) return setFormError('Kai kurie laukai per ilgi. Sutrumpinkite tekstą.');
     if (phone.trim() && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone.trim())) return setFormError('Įveskite teisingą telefono numerį.');
