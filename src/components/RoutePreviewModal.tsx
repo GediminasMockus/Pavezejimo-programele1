@@ -272,7 +272,7 @@ export function RoutePreviewModal({
 
             {!hasDriverCoords && (
               <p className="text-sm text-neutral-500">
-                Vairuotojas nenurodė tikslių koordinačių, todėl maršrutas žemėlapyje nerodomas.
+                Skelbime neišsaugotos išvykimo arba atvykimo vietos koordinatės. Skelbimo autorius turi jį redaguoti ir pasirinkti abi vietas iš adresų paieškos pasiūlymų, kad maršrutas būtų rodomas žemėlapyje.
               </p>
             )}
           </div>

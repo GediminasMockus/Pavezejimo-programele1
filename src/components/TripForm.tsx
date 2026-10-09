@@ -98,6 +98,15 @@ export function TripForm({
       return;
     }
 
+    if (fromAddr.lat === null || fromAddr.lng === null || !Number.isFinite(fromAddr.lat) || !Number.isFinite(fromAddr.lng)) {
+      setFormError('Pasirinkite išvykimo vietą iš adresų paieškos pasiūlymų, kad maršrutas būtų rodomas žemėlapyje.');
+      return;
+    }
+    if (toAddr.lat === null || toAddr.lng === null || !Number.isFinite(toAddr.lat) || !Number.isFinite(toAddr.lng)) {
+      setFormError('Pasirinkite atvykimo vietą iš adresų paieškos pasiūlymų, kad maršrutas būtų rodomas žemėlapyje.');
+      return;
+    }
+
     const departure = new Date(departureTime);
     if (Number.isNaN(departure.getTime())) {
       setFormError('Pasirinkite teisingą išvykimo laiką.');

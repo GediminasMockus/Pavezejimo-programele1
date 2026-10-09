@@ -374,6 +374,17 @@ describe('user workflows', () => {
    expect(document.body.style.overflow).toBe('');
  });
 
+ it.each([
+   ['from_lat', 'Pasirinkite išvykimo vietą'],
+   ['to_lng', 'Pasirinkite atvykimo vietą'],
+ ] as const)('does not save a trip with missing %s coordinates', async (field, message) => {
+   mock.rpc.mockClear();
+   render(<TripForm role="driver" userId="driver" editTrip={{ ...trip, [field]: null }} onClose={() => {}} onSubmitted={() => {}} />);
+   fireEvent.submit(screen.getByLabelText('Iš kur').closest('form')!);
+   expect(await screen.findByText(new RegExp(message))).toBeTruthy();
+   expect(mock.rpc).not.toHaveBeenCalledWith('update_my_trip', expect.anything());
+ });
+
  it('prefills a best-match request from the passenger listing', () => {
    const passengerTrip = {
      ...trip,
