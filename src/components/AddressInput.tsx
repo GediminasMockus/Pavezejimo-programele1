@@ -36,7 +36,7 @@ export function AddressInput({ id, value, onChange, placeholder }: {
         signal: current.signal,
         headers: { Authorization: 'Bearer ' + session.access_token, apikey: import.meta.env.VITE_SUPABASE_ANON_KEY },
       });
-      if (!response.ok) throw new Error(response.status === 429 ? 'Palaukite prieš kartodami paiešką.' : 'Adresų paieška nepasiekiama. Galite įvesti adresą ranka.');
+      if (!response.ok) throw new Error(response.status === 429 ? 'Palaukite prieš kartodami paiešką.' : 'Adresų paieška nepasiekiama. Bandykite dar kartą.');
       const data = await response.json();
       if (!current.signal.aborted) { setSuggestions(data); if (!data.length) setError('Adreso nerasta. Patikslinkite paiešką.'); }
     } catch (cause) {

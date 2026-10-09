@@ -21,6 +21,7 @@ import { evaluateCorridor } from '../supabase/functions/_shared/corridor';
 import { formatTripExpiryCountdown } from '../src/lib/format';
 import { isNotificationFresh, NOTIFICATION_RETENTION_MS } from '../src/lib/notificationRetention';
 import { fetchDrivingDistance, fetchDrivingRoute, fetchDrivingRouteWithLegs } from '../src/lib/routing';
+import { resolveCityCoordinates } from '../src/lib/cityCoordinates';
 import { photonResults } from '../supabase/functions/_shared/geocode';
 import { useBodyScrollLock } from '../src/lib/useBodyScrollLock';
 const mock = vi.hoisted(() => ({
@@ -46,6 +47,32 @@ const trip = { id: 'trip', role: 'driver', status: 'active', created_by: 'driver
  from_location: 'Vilnius', to_location: 'Kaunas', from_lat: 54.68, from_lng: 25.27, to_lat: 54.89, to_lng: 23.9,
  departure_time: '2030-09-12T12:00:00Z', price: 10, price_unit: 'asmeniui', name: 'Driver' } as Trip;
 describe('data helpers', () => {
+ it('resolves a city-only entry to the locality point, ignoring streets in that city', async () => {
+   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [
+     { display_name: 'Vilniaus g., Klaipėda, Lietuva', area: 'Vilniaus g., Klaipėda', lat: '55.70', lon: '21.14' },
+     { display_name: 'Klaipėda, Klaipėdos miesto savivaldybė, Lietuva', area: 'Klaipėda', lat: '55.7127529', lon: '21.1350469' },
+   ] }));
+   expect(await resolveCityCoordinates({ display_name: 'Klaipeda, Lietuva', lat: null, lng: null }))
+     .toEqual({ display_name: 'Klaipeda, Lietuva', lat: 55.7127529, lng: 21.1350469, area: 'Klaipėda' });
+ });
+ it('preserves a selected exact address and never guesses a manually entered street address', async () => {
+   const fetchMock = vi.fn();
+   vi.stubGlobal('fetch', fetchMock);
+   const selected = { display_name: 'Vilnius', lat: 54.68, lng: 25.28 };
+   const street = { display_name: 'Gedimino pr. 10, Vilnius', lat: null, lng: null };
+   expect(await resolveCityCoordinates(selected)).toBe(selected);
+   expect(await resolveCityCoordinates(street)).toBe(street);
+   expect(fetchMock).not.toHaveBeenCalled();
+ });
+ it('does not guess a city location when lookup fails or returns ambiguous places', async () => {
+   const value = { display_name: 'Vilnius', lat: null, lng: null };
+   const result = { display_name: 'Vilnius, Lietuva', area: 'Vilnius', lat: '54.68', lon: '25.28' };
+   const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false })
+     .mockResolvedValueOnce({ ok: true, json: async () => [result, { ...result, lat: '54.69' }] });
+   vi.stubGlobal('fetch', fetchMock);
+   expect(await resolveCityCoordinates(value)).toBe(value);
+   expect(await resolveCityCoordinates(value)).toBe(value);
+ });
  it('maps fallback Lithuanian address results to selectable coordinates', () => {
    expect(photonResults([
      { properties: { countrycode: 'LT', name: 'Radviliškis', city: 'Radviliškis' }, geometry: { coordinates: [23.55, 55.81] } },
@@ -378,11 +405,28 @@ describe('user workflows', () => {
    ['from_lat', 'Pasirinkite išvykimo vietą'],
    ['to_lng', 'Pasirinkite atvykimo vietą'],
  ] as const)('does not save a trip with missing %s coordinates', async (field, message) => {
+   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [] }));
    mock.rpc.mockClear();
    render(<TripForm role="driver" userId="driver" editTrip={{ ...trip, [field]: null }} onClose={() => {}} onSubmitted={() => {}} />);
    fireEvent.submit(screen.getByLabelText('Iš kur').closest('form')!);
    expect(await screen.findByText(new RegExp(message))).toBeTruthy();
    expect(mock.rpc).not.toHaveBeenCalledWith('update_my_trip', expect.anything());
+ });
+
+ it('saves typed city names with city-center coordinates', async () => {
+   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [
+     { display_name: 'Vilnius, Lietuva', area: 'Vilnius', lat: '54.6870458', lon: '25.2829111' },
+     { display_name: 'Kaunas, Lietuva', area: 'Kaunas', lat: '54.8982139', lon: '23.9044817' },
+   ] }));
+   mock.rpc.mockClear();
+   const submitted = vi.fn();
+   render(<TripForm role="driver" userId="driver" editTrip={{ ...trip, from_lat: null, from_lng: null, to_lat: null, to_lng: null,
+     from_area: 'Vilnius', to_area: 'Kaunas', car_color: 'Juoda', car_make: 'Toyota', car_plate: 'ABC123' }} onClose={() => {}} onSubmitted={submitted} />);
+   fireEvent.submit(screen.getByLabelText('Iš kur').closest('form')!);
+   await waitFor(() => expect(mock.rpc).toHaveBeenCalledWith('update_my_trip', expect.objectContaining({
+     p_trip: expect.objectContaining({ from_lat: 54.6870458, from_lng: 25.2829111, to_lat: 54.8982139, to_lng: 23.9044817 }),
+   })));
+   expect(submitted).toHaveBeenCalled();
  });
 
  it('prefills a best-match request from the passenger listing', () => {

@@ -22,6 +22,7 @@ import {
 } from '@/lib/supabase';
 import { AddressInput, type AddressValue } from '@/components/AddressInput';
 import { toLocalInput } from '@/lib/format';
+import { resolveCityCoordinates } from '@/lib/cityCoordinates';
 
 export function TripForm({
   role,
@@ -91,6 +92,7 @@ export function TripForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setFormError(null);
 
     if (!fromAddr.display_name.trim() || !toAddr.display_name.trim() || !name.trim()) {
@@ -98,11 +100,19 @@ export function TripForm({
       return;
     }
 
-    if (fromAddr.lat === null || fromAddr.lng === null || !Number.isFinite(fromAddr.lat) || !Number.isFinite(fromAddr.lng)) {
+    setSubmitting(true);
+    const [resolvedFrom, resolvedTo] = await Promise.all([
+      resolveCityCoordinates(fromAddr), resolveCityCoordinates(toAddr),
+    ]);
+    setSubmitting(false);
+    setFromAddr(resolvedFrom);
+    setToAddr(resolvedTo);
+
+    if (resolvedFrom.lat === null || resolvedFrom.lng === null || !Number.isFinite(resolvedFrom.lat) || !Number.isFinite(resolvedFrom.lng)) {
       setFormError('Pasirinkite išvykimo vietą iš adresų paieškos pasiūlymų, kad maršrutas būtų rodomas žemėlapyje.');
       return;
     }
-    if (toAddr.lat === null || toAddr.lng === null || !Number.isFinite(toAddr.lat) || !Number.isFinite(toAddr.lng)) {
+    if (resolvedTo.lat === null || resolvedTo.lng === null || !Number.isFinite(resolvedTo.lat) || !Number.isFinite(resolvedTo.lng)) {
       setFormError('Pasirinkite atvykimo vietą iš adresų paieškos pasiūlymų, kad maršrutas būtų rodomas žemėlapyje.');
       return;
     }
@@ -149,10 +159,10 @@ export function TripForm({
       role,
       from_location: fromAddr.display_name.trim(),
       to_location: toAddr.display_name.trim(),
-      from_lat: fromAddr.lat,
-      from_lng: fromAddr.lng,
-      to_lat: toAddr.lat,
-      to_lng: toAddr.lng,
+      from_lat: resolvedFrom.lat,
+      from_lng: resolvedFrom.lng,
+      to_lat: resolvedTo.lat,
+      to_lng: resolvedTo.lng,
       departure_time: departure.toISOString(),
       name: name.trim(),
       seats,
@@ -218,6 +228,8 @@ export function TripForm({
         </div>
 
         <form onSubmit={handleSubmit} className="min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 flex flex-col gap-4">
+          <fieldset disabled={submitting} className="contents">
+          <p className="text-xs text-neutral-500">Nurodžius tik miestą, maršrutas skaičiuojamas nuo miesto centro. Tiksliam adresui pasirinkite paieškos pasiūlymą.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Iš kur" inputId="trip-from" icon={<MapPin className="w-4 h-4" />}>
               <AddressInput
@@ -433,6 +445,7 @@ export function TripForm({
               <span>Paskelbti skelbimą</span>
             )}
           </button>
+          </fieldset>
         </form>
       </div>
     </div>
