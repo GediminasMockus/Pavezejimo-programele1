@@ -110,7 +110,7 @@ export function TripCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <time dateTime={trip.departure_time} className="inline-flex items-center gap-2 text-sm font-medium text-neutral-700"><Clock className="h-4 w-4 text-neutral-500" />{formatDateTime(trip.departure_time)}</time>
-        {priceStr ? <span className="ml-auto text-base font-semibold tabular-nums text-neutral-900">{priceStr}</span> : <span className="ml-auto badge">Nemokamai</span>}
+        {priceStr ? <span className="ml-auto text-base font-semibold tabular-nums text-neutral-900">{priceStr}</span> : <span className="ml-auto inline-flex items-center rounded-full border border-green-500 bg-green-500 px-3 py-1 text-sm font-bold text-white shadow-sm">Nemokamai</span>}
       </div>
       <div className="trip-route">
         <div className="trip-route-stop"><MapPin /><span className="min-w-0">{trip.from_location}</span></div>
