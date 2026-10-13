@@ -22,7 +22,8 @@ export function formatTime(iso: string): string {
 }
 
 export function formatPrice(trip: Pick<Trip, 'price' | 'price_unit'>): string | null {
-  if (trip.price === null || trip.price === undefined) return null;
+  // Missing, zero, or negative prices are displayed as "Nemokamai" by the card.
+  if (trip.price === null || trip.price === undefined || Number(trip.price) <= 0) return null;
   const language = getLanguage();
   const formatted = Number(trip.price).toLocaleString(language === 'en' ? 'en-GB' : 'lt-LT', {
     minimumFractionDigits: 0,
