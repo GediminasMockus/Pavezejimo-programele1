@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const HOURS_OLD = 24;
-const REMINDER_COOLDOWN_DAYS = 7;
+const HOURS_OLD = 1;
+const REMINDER_COOLDOWN_HOURS = 24;
 const APP_URL = process.env.APP_URL || 'https://pavezejimo-programele1.vercel.app';
 
 export default async function handler(req, res) {
@@ -32,15 +32,13 @@ export default async function handler(req, res) {
 
   const now = Date.now();
   const oldEnough = new Date(now - HOURS_OLD * 60 * 60 * 1000).toISOString();
-  const notTooOld = new Date(now - 48 * 60 * 60 * 1000).toISOString();
-  const cooldownCutoff = new Date(now - REMINDER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const cooldownCutoff = new Date(now - REMINDER_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
 
   const { data: notifications, error: notificationsError } = await supabase
     .from('notifications')
     .select('id, user_id')
     .eq('read', false)
     .lte('created_at', oldEnough)
-    .gte('created_at', notTooOld)
     .limit(5000);
 
   if (notificationsError) {
@@ -83,8 +81,7 @@ export default async function handler(req, res) {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('read', false)
-      .lte('created_at', oldEnough)
-      .gte('created_at', notTooOld);
+      .lte('created_at', oldEnough);
 
     if (unreadCountError || !unreadCount) {
       if (unreadCountError) errors.push({ userId, reason: 'unread count failed' });
@@ -109,7 +106,7 @@ export default async function handler(req, res) {
       <p>Sveiki! Pavežėjimo programėlėje turite <strong>${unreadCount}</strong> neperskaitytų pranešimų.</p>
       <p>Prisijunkite ir peržiūrėkite pranešimus, kad nepraleistumėte kelionės užklausos ar atsakymo.</p>
       <p><a href="${APP_URL}" style="display:inline-block;padding:12px 18px;background:#166534;color:#fff;text-decoration:none;border-radius:8px">Peržiūrėti pranešimus</a></p>
-      <p style="font-size:12px;color:#666">Šis priminimas siunčiamas, nes jūsų paskyroje liko neperskaitytų pranešimų.</p>
+      <p style="font-size:12px;color:#666">Šį priminimą siunčiame, nes jūsų paskyroje vis dar yra neperskaitytų pranešimų. Jei juos jau peržiūrėjote, šį laišką galite ignoruoti.</p>
     </body></html>`;
 
     let emailResponse;
