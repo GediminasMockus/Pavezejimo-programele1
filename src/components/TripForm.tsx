@@ -1,5 +1,5 @@
 import { useDialogFocus } from '@/lib/useDialogFocus';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   MapPin,
   Clock,
@@ -23,6 +23,7 @@ import {
 import { AddressInput, type AddressValue } from '@/components/AddressInput';
 import { toLocalInput } from '@/lib/format';
 import { resolveCityCoordinates } from '@/lib/cityCoordinates';
+import { haversineDistance } from '@/lib/distance';
 
 export function TripForm({
   role,
@@ -74,6 +75,9 @@ export function TripForm({
   const [isRecurring, setIsRecurring] = useState(editTrip?.is_recurring ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [priceWarningOpen, setPriceWarningOpen] = useState(false);
+  const priceWarningConfirmed = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (editTrip) return;
@@ -153,6 +157,19 @@ export function TripForm({
       return;
     }
 
+    // Warn about unusually high prices relative to the route distance. This is a warning, not a hard price limit.
+    if (!editTrip && parsedPrice !== null && parsedPrice > 0 && !priceWarningConfirmed.current) {
+      const directDistanceKm = haversineDistance(resolvedFrom.lat, resolvedFrom.lng, resolvedTo.lat, resolvedTo.lng);
+      const estimatedRoadDistanceKm = directDistanceKm * 1.3;
+      const priceThreshold = priceUnit === 'asmeniui'
+        ? Math.max(3, estimatedRoadDistanceKm * 0.30)
+        : Math.max(5, estimatedRoadDistanceKm * 0.60);
+      if (parsedPrice > priceThreshold) {
+        setPriceWarningOpen(true);
+        return;
+      }
+    }
+
     if (!fromArea.trim() || !toArea.trim()) { setFormError("Nurodykite viešai rodomus miestus arba vietoves."); return; }
     const payload: NewTrip = {
       from_area: fromArea.trim(), to_area: toArea.trim(),
@@ -227,7 +244,7 @@ export function TripForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 flex flex-col gap-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 flex flex-col gap-4">
           <fieldset disabled={submitting} className="contents">
           <p className="text-xs text-neutral-500">Nurodžius tik miestą, maršrutas skaičiuojamas nuo miesto centro. Tiksliam adresui pasirinkite paieškos pasiūlymą.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -328,14 +345,14 @@ export function TripForm({
                   type="text"
                   inputMode="decimal"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => { setPrice(e.target.value); priceWarningConfirmed.current = false; }}
                   placeholder="pvz. 5"
                   className="form-input flex-1"
                 />
                 <select
                   aria-label="Kainos vienetas"
                   value={priceUnit}
-                  onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
+                  onChange={(e) => { setPriceUnit(e.target.value as PriceUnit); priceWarningConfirmed.current = false; }}
                   className="form-input w-auto flex-shrink-0"
                 >
                   <option value="asmeniui">/ asm.</option>
@@ -425,6 +442,16 @@ export function TripForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="text-sm">Išvykimo vieta (vieša)<input className="form-input" value={fromArea} onChange={e => setFromArea(e.target.value)} maxLength={100} /></label><label className="text-sm">Atvykimo vieta (vieša)<input className="form-input" value={toArea} onChange={e => setToArea(e.target.value)} maxLength={100} /></label></div>
           <p className="text-xs text-neutral-500">Automatiškai įrašoma gatvė, rajonas ir miestas be namo numerio. Jei norite, viešą vietą galite dar labiau sutrumpinti. Tikslų adresą ir kontaktus matys tik patvirtintos kelionės dalyviai.</p>
+          {priceWarningOpen && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alertdialog" aria-label="Perspėjimas dėl kainos">
+              <p className="font-semibold">Ar tikrai norite nurodyti tokią kainą?</p>
+              <p className="mt-1">Nurodyta kaina atrodo didelė pagal kelionės atstumą. Ši programėlė paremta geranoriškumu — prašome rinktis kuo mažesnę, sąžiningą ir kelionės išlaidoms adekvačią kainą.</p>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" className="btn-secondary" onClick={() => setPriceWarningOpen(false)}>Grįžti ir pakeisti kainą</button>
+                <button type="button" className="btn-primary" onClick={() => { priceWarningConfirmed.current = true; setPriceWarningOpen(false); requestAnimationFrame(() => formRef.current?.requestSubmit()); }}>Patvirtinu, tęsti</button>
+              </div>
+            </div>
+          )}
           {formError && (
             <p className="text-sm text-danger-700 bg-danger-50 rounded-lg px-3 py-2">{formError}</p>
           )}
