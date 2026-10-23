@@ -29,7 +29,7 @@
   "crons": [
     {
       "path": "/api/cron/unread-reminders",
-      "schedule": "0 9 * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
