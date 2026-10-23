@@ -4,13 +4,6 @@ const HOURS_OLD = 24;
 const REMINDER_COOLDOWN_DAYS = 7;
 const APP_URL = process.env.APP_URL || 'https://pavezejimo-programele1.vercel.app';
 
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -67,7 +60,7 @@ export default async function handler(req, res) {
   let skipped = 0;
   const errors = [];
 
-  for (const [userId, notificationIds] of notificationIdsByUser) {
+  for (const userId of notificationIdsByUser.keys()) {
     const { data: previousReminder, error: reminderLookupError } = await supabase
       .from('notification_email_reminders')
       .select('last_sent_at')
