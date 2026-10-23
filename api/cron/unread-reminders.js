@@ -101,7 +101,9 @@ export default async function handler(req, res) {
 
     const subject = unreadCount === 1
       ? 'Turite neperskaitytą pranešimą'
-      : `Turite ${unreadCount} neperskaitytus pranešimus`;
+      : unreadCount >= 2 && unreadCount <= 4
+        ? `Turite ${unreadCount} neperskaitytus pranešimus`
+        : `Turite ${unreadCount} neperskaitytų pranešimų`;
     const html = `<!doctype html><html lang="lt"><body style="font-family:Arial,sans-serif;color:#222;line-height:1.6">
       <h2>Jūsų laukia pranešimas</h2>
       <p>Sveiki! Pavežėjimo programėlėje turite <strong>${unreadCount}</strong> neperskaitytų pranešimų.</p>
