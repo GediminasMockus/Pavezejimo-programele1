@@ -11,7 +11,7 @@ import {
   Route,
   Pencil,
   Briefcase,
-  Hand,
+  Mail,
   Clock,
   Repeat,
   Map as MapIcon,
@@ -134,7 +134,7 @@ export function TripCard({
       {(onPreviewRoute || onChat || onSelect) && <div className="trip-actions">
         {onPreviewRoute && <button type="button" onClick={onPreviewRoute} className="btn-secondary" aria-label={`Peržiūrėti maršrutą žemėlapyje: ${trip.from_location} → ${trip.to_location}`}><MapIcon className="h-4 w-4" />{onSelect ? 'Maršrutas' : 'Peržiūrėti maršrutą žemėlapyje'}</button>}
         {onChat && !onSelect && <button onClick={onChat} className="btn-primary" aria-label={`Susisiekti dėl kainos: ${trip.from_location} → ${trip.to_location}`}><MessageSquare className="h-4 w-4" />Susisiekti dėl kainos</button>}
-        {onSelect && <button onClick={onSelect} className="btn-primary" aria-label={`${selectLabel ?? 'Pasirinkti šį skelbimą'}: ${trip.from_location} → ${trip.to_location}`}><Hand className="h-4 w-4" />{selectLabel ?? 'Pasirinkti'}</button>}
+        {onSelect && <button onClick={onSelect} className="btn-primary" aria-label={`${selectLabel ?? 'Pasirinkti šį skelbimą'}: ${trip.from_location} → ${trip.to_location}`}><Mail className="h-4 w-4" />{selectLabel ?? 'Pasirinkti'}</button>}
       </div>}
       {pendingCount !== undefined && pendingCount > 0 && <div className="badge badge-warning mt-3"><Clock />{pendingCount} {pendingCount === 1 ? 'laukianti užklausa' : 'laukiančios užklausos'}</div>}
     </article>
