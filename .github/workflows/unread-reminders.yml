@@ -1,0 +1,24 @@
+name: Unread notification email reminders
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger unread reminder check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing repository secret CRON_SECRET"
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --max-time 60 \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "https://pavezejimo-programele1.vercel.app/api/cron/unread-reminders"
