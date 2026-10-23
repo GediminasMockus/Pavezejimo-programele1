@@ -17,12 +17,12 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const fromEmail = process.env.BREVO_FROM_EMAIL;
 
-  if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !fromEmail) {
+  if (!supabaseUrl || !serviceRoleKey || !brevoApiKey || !fromEmail) {
     return res.status(500).json({
-      error: 'Missing required environment variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL',
+      error: 'Missing required environment variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BREVO_API_KEY, BREVO_FROM_EMAIL',
     });
   }
 
@@ -114,17 +114,21 @@ export default async function handler(req, res) {
 
     let emailResponse;
     try {
-      emailResponse = await fetch('https://api.resend.com/emails', {
+      const senderMatch = fromEmail.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
+      const sender = senderMatch
+        ? { name: senderMatch[1].replace(/^['\"]|['\"]$/g, '') || 'Pavežėjimo programėlė', email: senderMatch[2].trim() }
+        : { name: 'Pavežėjimo programėlė', email: fromEmail.trim() };
+      emailResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${resendApiKey}`,
+          'api-key': brevoApiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: fromEmail,
-          to: [email],
+          sender,
+          to: [{ email }],
           subject,
-          html,
+          htmlContent: html,
         }),
       });
     } catch {
