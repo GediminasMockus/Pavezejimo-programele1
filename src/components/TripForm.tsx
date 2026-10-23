@@ -253,6 +253,7 @@ export function TripForm({
                 id="trip-from"
                 value={fromAddr}
                 onChange={value => {
+                  priceWarningConfirmed.current = false;
                   setFromAddr(value);
                   if (value.area) {
                     setFromArea(value.area);
@@ -270,6 +271,7 @@ export function TripForm({
                 id="trip-to"
                 value={toAddr}
                 onChange={value => {
+                  priceWarningConfirmed.current = false;
                   setToAddr(value);
                   if (value.area) {
                     setToArea(value.area);
