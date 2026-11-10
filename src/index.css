@@ -317,6 +317,10 @@
   .home-search button[type='submit'] { background: linear-gradient(110deg, rgb(98 52 184), rgb(var(--primary-600))); }
   .home-search[data-mode='driver'] button[type='submit'] { background: linear-gradient(110deg, rgb(0 119 122), rgb(15 100 154)); }
   .home-search button[type='submit']:hover { filter: brightness(0.9); }
+  .home-browse-action { border-color: rgb(var(--accent-violet-300)); background: linear-gradient(110deg, rgb(var(--accent-violet-600)), rgb(var(--primary-600))); color: rgb(var(--on-primary)); box-shadow: var(--shadow-card); }
+  .home-browse-action:hover { filter: brightness(0.92); box-shadow: 0 8px 20px -10px rgb(var(--accent-violet-700) / 0.7); }
+  .home-search[data-mode='driver'] .home-browse-action { border-color: rgb(var(--accent-teal)); background: linear-gradient(110deg, rgb(var(--accent-teal)), rgb(15 100 154)); }
+  .home-search[data-mode='driver'] .home-browse-action:hover { box-shadow: 0 8px 20px -10px rgb(var(--accent-teal) / 0.7); }
   .leaflet-container { font-family: inherit; }
   .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: rgb(var(--surface)); color: rgb(var(--neutral-900)); }
   .leaflet-popup-content { overflow-wrap: anywhere; }

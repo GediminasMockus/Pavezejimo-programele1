@@ -175,7 +175,7 @@ export function HomeScreen({ userId, onPick, onSignOut, onOpenMatchedTrip, onOpe
                   <button
                     type="button"
                     onClick={() => openResults(mode, emptyFilters)}
-                    className="ui-button min-h-11 inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-neutral-700 bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className="ui-button home-browse-action w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/30"
                   >
                     <List className="w-4 h-4" />
                     {mode === 'passenger' ? text.browseRides : text.browseRequests}
